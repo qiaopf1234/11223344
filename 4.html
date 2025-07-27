@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>教育数据SQL生成工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#36CFC9',
+                        accent: '#722ED1',
+                        success: '#52C41A',
+                        warning: '#FAAD14',
+                        dark: '#1D2129',
+                        'dark-2': '#4E5969'
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto { content-visibility: auto; }
+            .sidebar-active { @apply bg-primary/10 text-primary border-l-4 border-primary; }
+        }
+    </style>
+    <style>
+        .page-content { display: none; }
+        .page-content.active { display: block; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+    </style>
+</head>
+<body class="bg-gray-50 font-sans">
+    <div class="flex h-screen overflow-hidden">
+        <!-- 侧边栏 -->
+        <aside class="w-64 bg-white shadow-lg h-full overflow-y-auto">
+            <div class="p-4 border-b flex items-center">
+                <div class="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white mr-3">
+                    <i class="fa fa-database"></i>
+                </div>
+                <h1 class="font-bold text-lg">教育数据工具</h1>
+            </div>
+            
+            <!-- 菜单 -->
+            <div class="p-2">
+                <!-- 教育装备统计 -->
+                <div class="mb-2">
+                    <div class="menu-header flex items-center p-2 cursor-pointer" data-menu="equip">
+                        <i class="fa fa-cogs w-6"></i>
+                        <span class="ml-2">教育厅教育装备统计</span>
+                        <i class="fa fa-chevron-down ml-auto text-xs"></i>
+                    </div>
+                    <div class="menu-sub" id="equip-sub" class="pl-8 hidden">
+                        <div class="menu-item p-2 hover:bg-gray-100" data-page="search">学校/账号搜索</div>
+                        <div class="menu-item p-2 hover:bg-gray-100" data-page="single-sql">单学校生成SQL</div>
+                        <div class="menu-item p-2 hover:bg-gray-100" data-page="multi-sql">多学校生成SQL</div>
+                        <div class="menu-item p-2 hover:bg-gray-100" data-page="query-sql">学校填表状态查询</div>
+                        <div class="menu-item p-2 hover:bg-gray-100" data-page="is-filled">查询学校是否填报</div>
+                    </div>
+                </div>
+                
+                <!-- 电子证照 -->
+                <div>
+                    <div class="menu-header flex items-center p-2 cursor-pointer" data-menu="cert">
+                        <i class="fa fa-id-card-o w-6"></i>
+                        <span class="ml-2">教育厅电子证照</span>
+                        <i class="fa fa-chevron-down ml-auto text-xs"></i>
+                    </div>
+                    <div class="menu-sub" id="cert-sub" class="pl-8 hidden">
+                        <div class="menu-item p-2 hover:bg-gray-100" data-page="high-school">查询高中学生信息</div>
+                        <div class="menu-item p-2 hover:bg-gray-100" data-page="vocational-cert">中职毕业证书号</div>
+                        <div class="menu-item p-2 hover:bg-gray-100" data-page="vocational-school">查询中职学校</div>
+                        <div class="menu-item p-2 hover:bg-gray-100" data-page="empty-cert">毕业证书号为空查询</div>
+                        <div class="menu-item p-2 hover:bg-gray-100" data-page="import-student">学生表插入信息</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- 主内容区 -->
+        <main class="flex-1 flex flex-col overflow-hidden">
+            <!-- 顶部标题 -->
+            <header class="h-16 bg-white shadow-sm flex items-center px-6">
+                <h2 id="page-title" class="text-xl font-semibold">学校/账号搜索</h2>
+            </header>
+            
+            <!-- 内容区域 -->
+            <div class="flex-1 overflow-y-auto p-6">
+                <!-- 1. 学校/账号搜索 -->
+                <div id="search" class="page-content active">
+                    <div class="bg-white rounded-lg shadow p-6 mb-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <h3 class="text-lg font-bold">学校/账号搜索</h3>
+                                <p class="text-gray-500 text-sm">支持账号或学校名称模糊搜索</p>
+                            </div>
+                            <button id="load-data" class="bg-primary text-white px-4 py-2 rounded flex items-center">
+                                <i class="fa fa-upload mr-2"></i>加载数据
+                            </button>
+                        </div>
+                        
+                        <input type="text" id="search-input" placeholder="请输入账号或学校名称" 
+                            class="w-full p-2 border border-gray-200 rounded mb-4">
+                        
+                        <div class="border rounded">
+                            <div class="bg-gray-50 p-3 border-b flex justify-between">
+                                <span>搜索结果</span>
+                                <span id="result-count">0 条记录</span>
+                            </div>
+                            <div class="max-h-80 overflow-y-auto">
+                                <ul id="search-results" class="divide-y">
+                                    <li class="p-3 text-center text-gray-500">请加载数据文件</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 2. 单学校生成SQL -->
+                <div id="single-sql" class="page-content">
+                    <div class="bg-white rounded-lg shadow p-6 mb-6">
+                        <h3 class="text-lg font-bold mb-4">单学校生成SQL</h3>
+                        <p class="text-gray-500 text-sm mb-4">0：待编辑，1：旗县待审核，2：盟市待审核，3：盟市已审核</p>
+                        
+                        <input type="text" id="single-search" placeholder="请输入学校名称" 
+                            class="w-full p-2 border border-gray-200 rounded mb-4">
+                        
+                        <div class="border rounded mb-4">
+                            <div class="bg-gray-50 p-3 border-b">
+                                <span>学校列表</span>
+                            </div>
+                            <div class="max-h-40 overflow-y-auto">
+                                <ul id="single-results" class="divide-y">
+                                    <li class="p-3 text-center text-gray-500">请先加载数据</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <button id="generate-single" class="bg-warning text-white px-4 py-2 rounded w-full">
+                            单学校生成SQL语句
+                        </button>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-bold mb-4">生成结果</h3>
+                        <div class="relative">
+                            <pre id="single-result" class="bg-gray-50 p-4 rounded overflow-x-auto max-h-60"></pre>
+                            <button id="copy-single" class="absolute top-2 right-2 bg-white px-2 py-1 rounded text-sm text-primary">
+                                <i class="fa fa-copy"></i> 复制
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 3. 多学校生成SQL -->
+                <div id="multi-sql" class="page-content">
+                    <div class="bg-white rounded-lg shadow p-6 mb-6">
+                        <h3 class="text-lg font-bold mb-4">多学校生成SQL</h3>
+                        
+                        <input type="text" id="multi-search" placeholder="请输入学校名称" 
+                            class="w-full p-2 border border-gray-200 rounded mb-4">
+                        
+                        <div class="border rounded mb-4">
+                            <div class="bg-gray-50 p-3 border-b flex justify-between">
+                                <span>学校列表（可多选）</span>
+                                <div>
+                                    <button id="clear-multi" class="text-gray-500 text-sm">清空选择</button>
+                                </div>
+                            </div>
+                            <div class="max-h-40 overflow-y-auto">
+                                <ul id="multi-results" class="divide-y">
+                                    <li class="p-3 text-center text-gray-500">请先加载数据</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <button id="generate-multi" class="bg-primary text-white px-4 py-2 rounded w-full">
+                            多学校生成SQL语句
+                        </button>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-bold mb-4">生成结果</h3>
+                        <div class="relative">
+                            <pre id="multi-result" class="bg-gray-50 p-4 rounded overflow-x-auto max-h-60"></pre>
+                            <button id="copy-multi" class="absolute top-2 right-2 bg-white px-2 py-1 rounded text-sm text-primary">
+                                <i class="fa fa-copy"></i> 复制
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 4. 学校填表状态查询 -->
+                <div id="query-sql" class="page-content">
+                    <div class="bg-white rounded-lg shadow p-6 mb-6">
+                        <h3 class="text-lg font-bold mb-4">学校填表状态查询</h3>
+                        <p class="text-gray-500 text-sm mb-4">状态码：0=待编辑，1=旗县待审核，2=盟市待审核，3=盟市已审核</p>
+                        
+                        <input type="text" id="query-input" placeholder="请输入表名（如：表7）" 
+                            class="w-full p-2 border border-gray-200 rounded mb-4">
+                        
+                        <button id="generate-query" class="bg-primary text-white px-4 py-2 rounded w-full">
+                            生成查询语句
+                        </button>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-bold mb-4">生成结果</h3>
+                        <div class="relative">
+                            <pre id="query-result" class="bg-gray-50 p-4 rounded overflow-x-auto max-h-60"></pre>
+                            <button id="copy-query" class="absolute top-2 right-2 bg-white px-2 py-1 rounded text-sm text-primary">
+                                <i class="fa fa-copy"></i> 复制
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 5. 查询学校是否填报 -->
+                <div id="is-filled" class="page-content">
+                    <div class="bg-white rounded-lg shadow p-6 mb-6">
+                        <h3 class="text-lg font-bold mb-4">查询学校是否填报</h3>
+                        <p class="text-gray-500 text-sm mb-4">生成所有表的查询语句（表1-表8）</p>
+                        
+                        <button id="generate-filled" class="bg-primary text-white px-4 py-2 rounded w-full">
+                            生成所有表查询语句
+                        </button>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-bold mb-4">生成结果</h3>
+                        <div class="relative">
+                            <pre id="filled-result" class="bg-gray-50 p-4 rounded overflow-x-auto max-h-60"></pre>
+                            <button id="copy-filled" class="absolute top-2 right-2 bg-white px-2 py-1 rounded text-sm text-primary">
+                                <i class="fa fa-copy"></i> 复制
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 6. 查询高中学生信息 -->
+                <div id="high-school" class="page-content">
+                    <div class="bg-white rounded-lg shadow p-6 mb-6">
+                        <h3 class="text-lg font-bold mb-4">查询高中学生信息</h3>
+                        
+                        <input type="text" id="student-id" placeholder="请输入学生身份证号" 
+                            class="w-full p-2 border border-gray-200 rounded mb-4">
+                        
+                        <button id="generate-student" class="bg-primary text-white px-4 py-2 rounded w-full">
+                            生成查询语句
+                        </button>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-bold mb-4">生成结果</h3>
+                        <div class="relative">
+                            <pre id="student-result" class="bg-gray-50 p-4 rounded overflow-x-auto max-h-60"></pre>
+                            <button id="copy-student" class="absolute top-2 right-2 bg-white px-2 py-1 rounded text-sm text-primary">
+                                <i class="fa fa-copy"></i> 复制
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 7. 中职学校毕业证书号 -->
+                <div id="vocational-cert" class="page-content">
+                    <div class="bg-white rounded-lg shadow p-6 mb-6">
+                        <h3 class="text-lg font-bold mb-4">查询中职学校毕业证书号</h3>
+                        
+                        <input type="text" id="voc-cert-school" placeholder="请输入学校名称" 
+                            class="w-full p-2 border border-gray-200 rounded mb-4">
+                        
+                        <button id="generate-voc-cert" class="bg-primary text-white px-4 py-2 rounded w-full">
+                            生成查询语句
+                        </button>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-bold mb-4">生成结果</h3>
+                        <div class="relative">
+                            <pre id="voc-cert-result" class="bg-gray-50 p-4 rounded overflow-x-auto max-h-60"></pre>
+                            <button id="copy-voc-cert" class="absolute top-2 right-2 bg-white px-2 py-1 rounded text-sm text-primary">
+                                <i class="fa fa-copy"></i> 复制
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 8. 查询中职学校 -->
+                <div id="vocational-school" class="page-content">
+                    <div class="bg-white rounded-lg shadow p-6 mb-6">
+                        <h3 class="text-lg font-bold mb-4">查询中职学校</h3>
+                        
+                        <input type="text" id="voc-school" placeholder="请输入学校名称" 
+                            class="w-full p-2 border border-gray-200 rounded mb-4">
+                        
+                        <button id="generate-voc-school" class="bg-primary text-white px-4 py-2 rounded w-full">
+                            生成查询语句
+                        </button>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-bold mb-4">生成结果</h3>
+                        <div class="relative">
+                            <pre id="voc-school-result" class="bg-gray-50 p-4 rounded overflow-x-auto max-h-60"></pre>
+                            <button id="copy-voc-school" class="absolute top-2 right-2 bg-white px-2 py-1 rounded text-sm text-primary">
+                                <i class="fa fa-copy"></i> 复制
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 9. 毕业证书号为空查询 -->
+                <div id="empty-cert" class="page-content">
+                    <div class="bg-white rounded-lg shadow p-6 mb-6">
+                        <h3 class="text-lg font-bold mb-4">查询学校毕业证书号为空的</h3>
+                        
+                        <input type="text" id="empty-cert-school" placeholder="请输入学校名称" 
+                            class="w-full p-2 border border-gray-200 rounded mb-4">
+                        
+                        <button id="generate-empty-cert" class="bg-primary text-white px-4 py-2 rounded w-full">
+                            生成查询语句
+                        </button>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-bold mb-4">生成结果</h3>
+                        <div class="relative">
+                            <pre id="empty-cert-result" class="bg-gray-50 p-4 rounded overflow-x-auto max-h-60"></pre>
+                            <button id="copy-empty-cert" class="absolute top-2 right-2 bg-white px-2 py-1 rounded text-sm text-primary">
+                                <i class="fa fa-copy"></i> 复制
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 10. 学生表插入信息 -->
+                <div id="import-student" class="page-content">
+                    <div class="bg-white rounded-lg shadow p-6 mb-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-lg font-bold">学生表插入信息</h3>
+                            <div class="flex gap-2">
+                                <button id="export-template" class="bg-secondary text-white px-4 py-2 rounded">
+                                    <i class="fa fa-download mr-2"></i>导出模板
+                                </button>
+                                <label for="student-file" class="bg-primary text-white px-4 py-2 rounded cursor-pointer">
+                                    <i class="fa fa-upload mr-2"></i>选择文件
+                                    <input id="student-file" type="file" accept=".xlsx" class="hidden">
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h3 class="text-lg font-bold mb-4">生成结果</h3>
+                        <div class="relative">
+                            <pre id="import-result" class="bg-gray-50 p-4 rounded overflow-x-auto max-h-60"></pre>
+                            <button id="copy-import" class="absolute top-2 right-2 bg-white px-2 py-1 rounded text-sm text-primary">
+                                <i class="fa fa-copy"></i> 复制
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 通知提示 -->
+    <div id="toast" class="fixed top-4 right-4 px-4 py-2 rounded shadow-lg bg-success text-white opacity-0 transition-opacity duration-300"></div>
+
+    <script>
+        // 全局数据
+        const app = {
+            schoolRecords: [],
+            selectedSchools: new Set(),
+            tableMapping: {
+                "表1": "tbl_equ_laboratory_staff",
+                "表2": "tbl_equ_laboratory_room1",
+                "表3": "tbl_equ_laboratory_equipment",
+                "表4": "tbl_equ_laboratory_activity",
+                "表5": "tbl_equ_library_staff",
+                "表6": "tbl_equ_library_room",
+                "表7": "tbl_equ_library_build",
+                "表8": "tbl_equ_electrifyed_status"
+            }
+        };
+
+        // 页面初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            // 菜单切换
+            document.querySelectorAll('.menu-header').forEach(header => {
+                header.addEventListener('click', () => {
+                    const menuId = header.getAttribute('data-menu');
+                    document.querySelectorAll('.menu-sub').forEach(sub => sub.classList.add('hidden'));
+                    document.getElementById(`${menuId}-sub`).classList.remove('hidden');
+                });
+            });
+            
+            // 默认展开第一个菜单
+            document.querySelector('.menu-header').click();
+
+            // 页面切换
+            document.querySelectorAll('.menu-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const pageId = item.getAttribute('data-page');
+                    document.querySelectorAll('.page-content').forEach(page => page.classList.remove('active'));
+                    document.getElementById(pageId).classList.add('active');
+                    document.getElementById('page-title').textContent = item.textContent;
+                    
+                    // 高亮选中菜单
+                    document.querySelectorAll('.menu-item').forEach(i => i.classList.remove('sidebar-active'));
+                    item.classList.add('sidebar-active');
+                });
+            });
+
+            // 加载数据
+            document.getElementById('load-data').addEventListener('click', loadSchoolData);
+
+            // 搜索功能
+            document.getElementById('search-input').addEventListener('input', debounce(() => {
+                searchSchools('search-input', 'search-results');
+            }, 300));
+            document.getElementById('single-search').addEventListener('input', debounce(() => {
+                searchSchools('single-search', 'single-results');
+            }, 300));
+            document.getElementById('multi-search').addEventListener('input', debounce(() => {
+                searchSchools('multi-search', 'multi-results', true);
+            }, 300));
+
+            // 清空多选择
+            document.getElementById('clear-multi').addEventListener('click', () => {
+                app.selectedSchools.clear();
+                renderMultiResults();
+            });
+
+            // SQL生成按钮
+            document.getElementById('generate-single').addEventListener('click', generateSingleSQL);
+            document.getElementById('generate-multi').addEventListener('click', generateMultiSQL);
+            document.getElementById('generate-query').addEventListener('click', generateQuerySQL);
+            document.getElementById('generate-filled').addEventListener('click', generateFilledSQL);
+            document.getElementById('generate-student').addEventListener('click', generateStudentSQL);
+            document.getElementById('generate-voc-cert').addEventListener('click', generateVocCertSQL);
+            document.getElementById('generate-voc-school').addEventListener('click', generateVocSchoolSQL);
+            document.getElementById('generate-empty-cert').addEventListener('click', generateEmptyCertSQL);
+
+            // 学生信息导入
+            document.getElementById('export-template').addEventListener('click', exportStudentTemplate);
+            document.getElementById('student-file').addEventListener('change', importStudentData);
+
+            // 复制功能
+            setupCopyButton('copy-single', 'single-result');
+            setupCopyButton('copy-multi', 'multi-result');
+            setupCopyButton('copy-query', 'query-result');
+            setupCopyButton('copy-filled', 'filled-result');
+            setupCopyButton('copy-student', 'student-result');
+            setupCopyButton('copy-voc-cert', 'voc-cert-result');
+            setupCopyButton('copy-voc-school', 'voc-school-result');
+            setupCopyButton('copy-empty-cert', 'empty-cert-result');
+            setupCopyButton('copy-import', 'import-result');
+        });
+
+        // 加载学校数据
+        function loadSchoolData() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.xlsx';
+            input.onchange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, { type: 'array' });
+                        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                        const json = XLSX.utils.sheet_to_json(sheet);
+                        
+                        app.schoolRecords = json.map(item => ({
+                            name: item['部门名称'] || '',
+                            account: item['登录名称'] || ''
+                        }));
+                        
+                        searchSchools('search-input', 'search-results');
+                        showToast('数据加载成功');
+                    } catch (err) {
+                        showToast('数据加载失败', 'error');
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            };
+            input.click();
+        }
+
+        // 搜索学校
+        function searchSchools(inputId, resultId, isMulti = false) {
+            const keyword = document.getElementById(inputId).value.toLowerCase();
+            const results = document.getElementById(resultId);
+            const filtered = app.schoolRecords.filter(item => 
+                item.name.toLowerCase().includes(keyword) || 
+                item.account.toLowerCase().includes(keyword)
+            );
+
+            document.getElementById('result-count').textContent = `${filtered.length} 条记录`;
+            
+            if (filtered.length === 0) {
+                results.innerHTML = '<li class="p-3 text-center text-gray-500">无匹配记录</li>';
+                return;
+            }
+
+            results.innerHTML = '';
+            filtered.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'p-3 hover:bg-gray-50';
+                li.innerHTML = `
+                    <div class="flex justify-between">
+                        <div>
+                            <div>${item.name}</div>
+                            <div class="text-sm text-gray-500">账号: ${item.account}</div>
+                        </div>
+                        ${isMulti ? `<div class="flex items-center">
+                            <input type="checkbox" class="multi-checkbox" data-name="${item.name}">
+                        </div>` : ''}
+                    </div>
+                `;
+                
+                // 单选逻辑
+                if (!isMulti) {
+                    li.addEventListener('click', () => {
+                        document.querySelectorAll(`#${resultId} li`).forEach(el => 
+                            el.classList.remove('bg-primary/10')
+                        );
+                        li.classList.add('bg-primary/10');
+                    });
+                }
+                
+                results.appendChild(li);
+            });
+
+            // 多选逻辑
+            if (isMulti) {
+                document.querySelectorAll('.multi-checkbox').forEach(checkbox => {
+                    checkbox.checked = app.selectedSchools.has(checkbox.getAttribute('data-name'));
+                    checkbox.addEventListener('change', (e) => {
+                        const name = e.target.getAttribute('data-name');
+                        if (e.target.checked) {
+                            app.selectedSchools.add(name);
+                        } else {
+                            app.selectedSchools.delete(name);
+                        }
+                    });
+                });
+            }
+        }
+
+        // 重新渲染多选择结果
+        function renderMultiResults() {
+            const input = document.getElementById('multi-search');
+            const keyword = input.value;
+            input.value = '';
+            input.value = keyword;
+        }
+
+        // 生成单学校SQL
+        function generateSingleSQL() {
+            const selected = document.querySelector('#single-results li.bg-primary\\/10');
+            if (!selected) {
+                showToast('请选择学校', 'warning');
+                return;
+            }
+
+            const schoolName = selected.querySelector('div div:first-child').textContent;
+            const sql = `
+表1-- 实验室及功能教室管理人员基本情况
+UPDATE tbl_equ_laboratory_staff e
+JOIN sys_user u ON u.id = e.create_by
+JOIN sys_dept d ON u.dept_id = d.id
+SET e.state = 0
+WHERE d.name = '${schoolName}' AND e.state = 3 and e.version ='2024';
+
+表2-- 实验室及功能教室基本情况
+UPDATE tbl_equ_laboratory_room1 e
+JOIN sys_user u ON u.id = e.create_by
+JOIN sys_dept d ON u.dept_id = d.id
+SET e.state = 0
+WHERE d.name = '${schoolName}' AND e.state = 3 and e.version ='2024';
+
+表3-- 实验室及功能教室仪器配备情况
+UPDATE tbl_equ_laboratory_equipment e
+JOIN sys_user u ON u.id = e.create_by
+JOIN sys_dept d ON u.dept_id = d.id
+SET e.state = 0
+WHERE d.name = '${schoolName}' AND e.state = 3 and e.version ='2024';
+
+表4-- 创新实验室课程或活动开展情况
+UPDATE tbl_equ_laboratory_activity e
+JOIN sys_user u ON u.id = e.create_by
+JOIN sys_dept d ON u.dept_id = d.id
+SET e.state = 0
+WHERE d.name = '${schoolName}' AND e.state = 3 and e.version ='2024';
+
+表5-- 图书馆（室）工作人员基本情况
+UPDATE tbl_equ_library_staff e
+JOIN sys_user u ON u.id = e.create_by
+JOIN sys_dept d ON u.dept_id = d.id
+SET e.state = 0
+WHERE d.name = '${schoolName}' AND e.state = 3 and e.version ='2024';
+
+表6-- 图书馆（室）基本情况
+UPDATE tbl_equ_library_room e
+JOIN sys_user u ON u.id = e.create_by
+JOIN sys_dept d ON u.dept_id = d.id
+SET e.state = 0
+WHERE d.name = '${schoolName}' AND e.state = 3 and e.version ='2024';
+
+表7-- 图书馆（室）活动开展情况
+UPDATE tbl_equ_library_build e
+JOIN sys_user u ON u.id = e.create_by
+JOIN sys_dept d ON u.dept_id = d.id
+SET e.state = 0
+WHERE d.name = '${schoolName}' AND e.state = 3 and e.version ='2024';
+
+表8-- 电化教育开展基本情况
+UPDATE tbl_equ_electrifyed_status e
+JOIN sys_user u ON u.id = e.create_by
+JOIN sys_dept d ON u.dept_id = d.id
+SET e.state = 0
+WHERE d.name = '${schoolName}' AND e.state = 3 and e.version ='2024';
+            `;
+            document.getElementById('single-result').textContent = sql;
+        }
+
+        // 生成多学校SQL
+        function generateMultiSQL() {
+            if (app.selectedSchools.size === 0) {
+                showToast('请选择学校', 'warning');
+                return;
+            }
+
+            const schools = Array.from(app.selectedSchools).map(name => `'${name}'`).join(', ');
+            const sql = `
+表1-- 实验室及功能教室管理人员基本情况
+UPDATE tbl_equ_laboratory_staff e
+JOIN sys_user u ON u.id = e.create_by
+JOIN sys_dept d ON u.dept_id = d.id
+SET e.state = 0
+WHERE d.name IN (${schools}) AND e.state = 3 and e.version ='2024';
+
+表2-- 实验室及功能教室基本情况
+UPDATE tbl_equ_laboratory_room1 e
+JOIN sys_user u ON u.id = e.create_by
+JOIN sys_dept d ON u.dept_id = d.id
+SET e.state = 0
+WHERE d.name IN (${schools}) AND e.state = 3 and e.version ='2024';
+
+表3-- 实验室及功能教室仪器配备情况
+UPDATE tbl_equ_laboratory_equipment e
+JOIN sys_user u ON u.id = e.create_by
+JOIN sys_dept d ON u.dept_id = d.id
+SET e.state = 0
+WHERE d.name IN (${schools}) AND e.state = 3 and e.version ='2024';
+
+表4-- 创新实验室课程或活动开展情况
+UPDATE tbl_equ_laboratory_activity e
+JOIN sys_user u ON u.id = e.create_by
+JOIN sys_dept d ON u.dept_id = d.id
+SET e.state = 0
+WHERE d.name IN (${schools}) AND e.state = 3 and e.version ='2024';
+
+表5-- 图书馆（室）工作人员基本情况
+UPDATE tbl_equ_library_staff e
+JOIN sys_user u ON u.id = e.create_by
+JOIN sys_dept d ON u.dept_id = d.id
+SET e.state = 0
+WHERE d.name IN (${schools}) AND e.state = 3 and e.version ='2024';
+
+表6-- 图书馆（室）基本情况
+UPDATE tbl_equ_library_room e
+JOIN sys_user u ON u.id = e.create_by
+JOIN sys_dept d ON u.dept_id = d.id
+SET e.state = 0
+WHERE d.name IN (${schools}) AND e.state = 3 and e.version ='2024';
+
+表7-- 图书馆（室）活动开展情况
+UPDATE tbl_equ_library_build e
+JOIN sys_user u ON u.id = e.create_by
+JOIN sys_dept d ON u.dept_id = d.id
+SET e.state = 0
+WHERE d.name IN (${schools}) AND e.state = 3 and e.version ='2024';
+
+表8-- 电化教育开展基本情况
+UPDATE tbl_equ_electrifyed_status e
+JOIN sys_user u ON u.id = e.create_by
+JOIN sys_dept d ON u.dept_id = d.id
+SET e.state = 0
+WHERE d.name IN (${schools}) AND e.state = 3 and e.version ='2024';
+            `;
+            document.getElementById('multi-result').textContent = sql;
+        }
+
+        // 生成查询SQL
+        function generateQuerySQL() {
+            const tableName = document.getElementById('query-input').value;
+            if (!app.tableMapping[tableName]) {
+                showToast('请输入正确表名（如：表1）', 'warning');
+                return;
+            }
+
+            const realTable = app.tableMapping[tableName];
+            let sql = '';
+            ['0', '1', '2', '3'].forEach(status => {
+                sql += `-- 状态码: ${status}
+SELECT e.state, r.name, d.name, pd.name, ppd.name
+FROM sys_dept d
+JOIN sys_user u ON u.dept_id = d.id
+JOIN sys_user_role ur ON ur.user_id = u.id
+JOIN sys_role r ON r.id = ur.role_id and r.code = 'xue_xiao'
+JOIN sys_dept pd ON pd.id = d.parent_id
+JOIN sys_dept ppd ON ppd.id = pd.parent_id
+LEFT JOIN ${realTable} e ON e.create_by = u.id and e.version = '2024'
+WHERE e.state = '${status}';\n\n`;
+            });
+            document.getElementById('query-result').textContent = sql;
+        }
+
+        // 生成是否填报SQL
+        function generateFilledSQL() {
+            let sql = '';
+            Object.entries(app.tableMapping).forEach(([alias, table]) => {
+                sql += `-- ${alias} 查询
+SELECT e.state, r.name, d.name, pd.name, ppd.name
+FROM sys_dept d
+JOIN sys_user u ON u.dept_id = d.id
+JOIN sys_user_role ur ON ur.user_id = u.id
+JOIN sys_role r ON r.id = ur.role_id and r.code = 'xue_xiao'
+JOIN sys_dept pd ON pd.id = d.parent_id
+JOIN sys_dept ppd ON ppd.id = pd.parent_id
+LEFT JOIN ${table} e ON e.create_by = u.id and e.version = '2024'
+WHERE e.create_by IS NULL;\n\n`;
+            });
+            document.getElementById('filled-result').textContent = sql;
+        }
+
+        // 生成高中学生查询SQL
+        function generateStudentSQL() {
+            const id = document.getElementById('student-id').value;
+            if (!id) {
+                showToast('请输入身份证号', 'warning');
+                return;
+            }
+            const sql = `SELECT * FROM kdsj_zxxs_by WHERE sfzjh='${id}';`;
+            document.getElementById('student-result').textContent = sql;
+        }
+
+        // 生成中职证书查询SQL
+        function generateVocCertSQL() {
+            const school = document.getElementById('voc-cert-school').value;
+            if (!school) {
+                showToast('请输入学校名称', 'warning');
+                return;
+            }
+            const sql = `SELECT count(*) from kdsj_zzxs_zhizheng where zsh is not null and xxmc = '${school}';`;
+            document.getElementById('voc-cert-result').textContent = sql;
+        }
+
+        // 生成中职学校查询SQL
+        function generateVocSchoolSQL() {
+            const school = document.getElementById('voc-school').value;
+            if (!school) {
+                showToast('请输入学校名称', 'warning');
+                return;
+            }
+            const sql = `SELECT * FROM kdsj_zz_xx WHERE xxmc='${school}';`;
+            document.getElementById('voc-school-result').textContent = sql;
+        }
+
+        // 生成空证书查询SQL
+        function generateEmptyCertSQL() {
+            const school = document.getElementById('empty-cert-school').value;
+            if (!school) {
+                showToast('请输入学校名称', 'warning');
+                return;
+            }
+            const sql = `SELECT count(*) from kdsj_zzxs_zhizheng where zsh is null and xxmc = '${school}';`;
+            document.getElementById('empty-cert-result').textContent = sql;
+        }
+
+        // 导出学生模板
+        function exportStudentTemplate() {
+            const ws = XLSX.utils.json_to_sheet([{
+                '学生姓名': '张三',
+                '性别码': '1',
+                '性别': '男',
+                '身份证件号': '110101********1234',
+                '民族码': '1',
+                '民族': '汉族',
+                '出生日期': '2006-01-01',
+                '户口所在地码': '',
+                '户口所在地': '',
+                '入学年月': '2022-09',
+                '毕业年月': '2025-06',
+                '学校名称': '',
+                '班级名称': '',
+                '制证日期': '',
+                '学段状态码': ''
+            }]);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '学生信息表');
+            XLSX.writeFile(wb, '学生信息模板.xlsx');
+            showToast('模板导出成功');
+        }
+
+        // 导入学生数据
+        function importStudentData(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets['学生信息表'];
+                    const json = XLSX.utils.sheet_to_json(sheet);
+                    
+                    let sql = '';
+                    json.forEach(row => {
+                        const values = [
+                            row['学生姓名'] || '',
+                            row['性别码'] || '',
+                            row['性别'] || '',
+                            row['身份证件号'] || '',
+                            row['民族码'] || '',
+                            row['民族'] || '',
+                            row['出生日期'] || '',
+                            row['户口所在地码'] || '',
+                            row['户口所在地'] || '',
+                            row['入学年月'] || '',
+                            row['毕业年月'] || '',
+                            row['学校名称'] || '',
+                            row['班级名称'] || '',
+                            row['制证日期'] || '',
+                            row['学段状态码'] || ''
+                        ].map(v => v ? `'${v.toString().replace(/'/g, "''")}'` : 'NULL');
+                        
+                        sql += `INSERT INTO \`kdsj_zxxs_by\` VALUES (${values.join(', ')}, NULL, NULL, NULL, NULL, NULL, NULL);\n`;
+                    });
+                    
+                    document.getElementById('import-result').textContent = sql;
+                    showToast('数据导入成功');
+                } catch (err) {
+                    showToast('数据导入失败', 'error');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // 复制功能
+        function setupCopyButton(btnId, targetId) {
+            document.getElementById(btnId).addEventListener('click', () => {
+                const text = document.getElementById(targetId).textContent;
+                navigator.clipboard.writeText(text);
+                showToast('复制成功');
+            });
+        }
+
+        // 提示框
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `fixed top-4 right-4 px-4 py-2 rounded shadow-lg text-white opacity-0 transition-opacity duration-300 ${
+                type === 'success' ? 'bg-success' : 'bg-warning'
+            }`;
+            toast.style.opacity = '1';
+            setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+        }
+
+        // 防抖函数
+        function debounce(func, wait) {
+            let timeout;
+            return () => {
+                clearTimeout(timeout);
+                timeout = setTimeout(func, wait);
+            };
+        }
+    </script>
+</body>
+</html>
