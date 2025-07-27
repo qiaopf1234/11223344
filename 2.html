@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数值占比计算器</title>
+    <!-- 引入外部资源 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.8/dist/chart.umd.min.js"></script>
+    
+    <!-- Tailwind配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#165DFF',
+                        secondary: '#36CFC9',
+                        accent: '#722ED1',
+                        success: '#52C41A',
+                        warning: '#FAAD14',
+                        danger: '#F5222D',
+                        dark: '#1D2129',
+                        'dark-2': '#4E5969',
+                        'light-1': '#F2F3F5',
+                        'light-2': '#E5E6EB'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        mono: ['Consolas', 'Monaco', 'monospace']
+                    },
+                    boxShadow: {
+                        'card': '0 2px 14px 0 rgba(0, 0, 0, 0.06)',
+                        'card-hover': '0 6px 20px 0 rgba(0, 0, 0, 0.1)'
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- 自定义工具类 -->
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .transition-height {
+                transition: max-height 0.3s ease-in-out;
+            }
+            .gradient-text {
+                @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent;
+            }
+            .input-focus {
+                @apply focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all;
+            }
+            .card-animate {
+                @apply transition-all duration-300 hover:shadow-card-hover hover:-translate-y-1;
+            }
+        }
+    </style>
+    
+    <style>
+        /* 基础动画定义 */
+        .fade-enter {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        .fade-enter-active {
+            opacity: 1;
+            transform: translateY(0);
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        .scale-enter {
+            transform: scale(0.95);
+            opacity: 0;
+        }
+        .scale-enter-active {
+            transform: scale(1);
+            opacity: 1;
+            transition: transform 0.3s, opacity 0.3s;
+        }
+        /* 滚动条美化 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a1a1a1;
+        }
+    </style>
+</head>
+
+<body class="bg-gradient-to-br from-light-1 to-white min-h-screen font-sans text-dark">
+    <div class="max-w-4xl mx-auto px-4 py-8 md:py-12">
+        <!-- 标题区域 -->
+        <div class="text-center mb-8">
+            <h1 class="text-[clamp(2rem,5vw,3rem)] font-bold gradient-text mb-2">数值占比计算器</h1>
+            <p class="text-dark-2 max-w-2xl mx-auto">输入一组数值，快速计算每个数值的百分比，并以图表形式直观展示</p>
+        </div>
+        
+        <!-- 主要内容区 -->
+        <div class="bg-white rounded-2xl shadow-card p-6 md:p-8 mb-8 card-animate">
+            <!-- 输入区域 -->
+            <div class="mb-8">
+                <h2 class="text-xl font-bold text-dark mb-4">输入数值</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4">
+                    <!-- 数值输入框 -->
+                    <div class="md:col-span-9">
+                        <div class="relative">
+                            <textarea id="valuesInput" placeholder="请输入一组数值，用空格、逗号或换行分隔（例如：10 20 30 40）" 
+                                class="w-full h-32 px-4 py-3 border border-light-2 rounded-lg input-focus resize-none"></textarea>
+                            <div class="absolute bottom-3 right-3 text-xs text-dark-2">
+                                <span id="charCount">0</span> 字符
+                            </div>
+                        </div>
+                        
+                        <!-- 预设按钮 -->
+                        <div class="flex flex-wrap gap-2 mt-3">
+                            <button class="preset-btn px-3 py-1 bg-light-1 hover:bg-light-2 rounded text-sm transition-colors" data-values="10 20 30 40">
+                                示例1: 10 20 30 40
+                            </button>
+                            <button class="preset-btn px-3 py-1 bg-light-1 hover:bg-light-2 rounded text-sm transition-colors" data-values="5 15 25 35 45">
+                                示例2: 5 15 25 35 45
+                            </button>
+                            <button class="preset-btn px-3 py-1 bg-light-1 hover:bg-light-2 rounded text-sm transition-colors" data-values="1 2 3 4 5 6 7 8 9 10">
+                                示例3: 1-10
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- 选项设置 -->
+                    <div class="md:col-span-3">
+                        <div class="bg-light-1 rounded-lg p-4 h-full">
+                            <h3 class="font-medium text-dark mb-3">计算选项</h3>
+                            
+                            <div class="space-y-3">
+                                <div>
+                                    <label class="block text-sm text-dark-2 mb-1">小数位数</label>
+                                    <select id="decimalPlaces" class="w-full px-3 py-2 border border-light-2 rounded input-focus">
+                                        <option value="0">0位</option>
+                                        <option value="1">1位</option>
+                                        <option value="2" selected>2位</option>
+                                        <option value="3">3位</option>
+                                        <option value="4">4位</option>
+                                    </select>
+                                </div>
+                                
+                                <div>
+                                    <label class="block text-sm text-dark-2 mb-1">排序方式</label>
+                                    <select id="sortMethod" class="w-full px-3 py-2 border border-light-2 rounded input-focus">
+                                        <option value="none">不排序</option>
+                                        <option value="asc">升序排列</option>
+                                        <option value="desc">降序排列</option>
+                                        <option value="percentAsc">百分比升序</option>
+                                        <option value="percentDesc">百分比降序</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="pt-2">
+                                    <button id="calculateBtn" class="w-full bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg flex items-center justify-center transition-all">
+                                        <i class="fa fa-calculator mr-2"></i> 计算百分比
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 结果区域 -->
+            <div id="resultSection" class="hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- 饼图区域 -->
+                    <div class="lg:col-span-1">
+                        <div class="bg-light-1 rounded-xl p-4 h-full">
+                            <h3 class="font-medium text-dark mb-3">占比饼图</h3>
+                            <div class="h-64 relative">
+                                <canvas id="pieChart"></canvas>
+                                <div id="chartPlaceholder" class="absolute inset-0 flex items-center justify-center text-dark-2">
+                                    <i class="fa fa-pie-chart text-4xl mb-2"></i>
+                                    <div class="text-center">
+                                        <div>计算后显示</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 结果表格 -->
+                    <div class="lg:col-span-2">
+                        <div class="bg-white border border-light-2 rounded-xl overflow-hidden">
+                            <div class="bg-light-1 px-4 py-3 border-b flex items-center justify-between">
+                                <h3 class="font-medium text-dark">计算结果</h3>
+                                <div class="flex space-x-2">
+                                    <button id="copyBtn" class="text-dark-2 hover:text-primary text-sm flex items-center">
+                                        <i class="fa fa-copy mr-1"></i> 复制
+                                    </button>
+                                    <button id="saveHistoryBtn" class="text-dark-2 hover:text-primary text-sm flex items-center">
+                                        <i class="fa fa-save mr-1"></i> 保存
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full">
+                                    <thead>
+                                        <tr class="bg-light-1 text-left">
+                                            <th class="px-4 py-3 text-sm font-medium text-dark-2">原始数值</th>
+                                            <th class="px-4 py-3 text-sm font-medium text-dark-2">百分比</th>
+                                            <th class="px-4 py-3 text-sm font-medium text-dark-2">进度条</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="resultTable">
+                                        <!-- 结果将通过JavaScript动态添加 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="px-4 py-3 bg-light-1 border-t text-sm text-dark-2">
+                                <div>总和: <span id="totalValue">0</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 历史记录区域 -->
+        <div class="bg-white rounded-2xl shadow-card p-6 md:p-8 card-animate">
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-xl font-bold text-dark">历史记录</h2>
+                <button id="clearHistoryBtn" class="text-dark-2 hover:text-danger text-sm flex items-center">
+                    <i class="fa fa-trash mr-1"></i> 清空历史
+                </button>
+            </div>
+            
+            <div id="historyList" class="space-y-3">
+                <div class="text-center text-dark-2 py-8">
+                    <i class="fa fa-history text-3xl mb-2"></i>
+                    <div>暂无计算历史</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 通知提示组件 -->
+    <div id="toast" class="fixed top-6 right-6 px-6 py-3 rounded-lg shadow-lg transform translate-x-full opacity-0 transition-all duration-300 flex items-center z-50"></div>
+
+    <script>
+        // 存储历史记录
+        let calculationHistory = JSON.parse(localStorage.getItem('calculationHistory')) || [];
+        
+        // 字符计数
+        document.getElementById('valuesInput').addEventListener('input', function() {
+            document.getElementById('charCount').textContent = this.value.length;
+        });
+        
+        // 预设按钮
+        document.querySelectorAll('.preset-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const values = this.getAttribute('data-values');
+                document.getElementById('valuesInput').value = values;
+                document.getElementById('charCount').textContent = values.length;
+                
+                // 添加输入动画
+                const inputEl = document.getElementById('valuesInput');
+                inputEl.classList.add('scale-enter');
+                setTimeout(() => {
+                    inputEl.classList.add('scale-enter-active');
+                }, 10);
+                setTimeout(() => {
+                    inputEl.classList.remove('scale-enter', 'scale-enter-active');
+                }, 300);
+            });
+        });
+        
+        // 计算按钮
+        document.getElementById('calculateBtn').addEventListener('click', calculatePercentages);
+        
+        // 支持按Enter键计算
+        document.getElementById('valuesInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                calculatePercentages();
+            }
+        });
+        
+        // 复制按钮
+        document.getElementById('copyBtn').addEventListener('click', function() {
+            const resultTable = document.getElementById('resultTable');
+            let text = '';
+            
+            resultTable.querySelectorAll('tr').forEach(row => {
+                const value = row.querySelector('td:nth-child(1)').textContent;
+                const percentage = row.querySelector('td:nth-child(2)').textContent;
+                text += `${value}: ${percentage}\n`;
+            });
+            
+            navigator.clipboard.writeText(text).then(function() {
+                showToast('成功', '计算结果已复制到剪贴板', 'success');
+            });
+        });
+        
+        // 保存到历史记录
+        document.getElementById('saveHistoryBtn').addEventListener('click', function() {
+            const valuesInput = document.getElementById('valuesInput').value;
+            const decimalPlaces = document.getElementById('decimalPlaces').value;
+            const sortMethod = document.getElementById('sortMethod').value;
+            
+            if (!valuesInput.trim()) {
+                showToast('提示', '请先输入数值', 'warning');
+                return;
+            }
+            
+            // 获取当前结果
+            const resultTable = document.getElementById('resultTable');
+            const results = [];
+            
+            resultTable.querySelectorAll('tr').forEach(row => {
+                const value = parseFloat(row.querySelector('td:nth-child(1)').textContent);
+                const percentage = parseFloat(row.querySelector('td:nth-child(2)').textContent);
+                results.push({ value, percentage });
+            });
+            
+            const total = parseFloat(document.getElementById('totalValue').textContent);
+            
+            // 保存到历史记录
+            const historyItem = {
+                id: Date.now(),
+                values: valuesInput,
+                decimalPlaces,
+                sortMethod,
+                results,
+                total,
+                timestamp: new Date().toLocaleString()
+            };
+            
+            calculationHistory.unshift(historyItem);
+            
+            // 限制历史记录数量
+            if (calculationHistory.length > 10) {
+                calculationHistory.pop();
+            }
+            
+            // 保存到localStorage
+            localStorage.setItem('calculationHistory', JSON.stringify(calculationHistory));
+            
+            // 更新历史记录UI
+            updateHistoryList();
+            
+            showToast('成功', '已保存到历史记录', 'success');
+        });
+        
+        // 清空历史记录
+        document.getElementById('clearHistoryBtn').addEventListener('click', function() {
+            if (calculationHistory.length === 0) {
+                showToast('提示', '历史记录已为空', 'info');
+                return;
+            }
+            
+            if (confirm('确定要清空所有历史记录吗？')) {
+                calculationHistory = [];
+                localStorage.setItem('calculationHistory', JSON.stringify(calculationHistory));
+                updateHistoryList();
+                showToast('成功', '历史记录已清空', 'success');
+            }
+        });
+        
+        // 计算百分比
+        function calculatePercentages() {
+            try {
+                const valuesInput = document.getElementById('valuesInput').value;
+                const decimalPlaces = parseInt(document.getElementById('decimalPlaces').value);
+                const sortMethod = document.getElementById('sortMethod').value;
+                
+                if (!valuesInput.trim()) {
+                    showToast('提示', '请输入数值', 'warning');
+                    return;
+                }
+                
+                // 解析输入值（支持空格、逗号、换行作为分隔符）
+                const inputValues = valuesInput.trim().split(/[,\s\n]+/);
+                const values = inputValues.map(val => parseFloat(val));
+                
+                // 验证输入
+                if (values.some(isNaN)) {
+                    showToast('输入错误', '请输入有效的数字', 'error');
+                    return;
+                }
+                
+                if (values.length < 2) {
+                    showToast('提示', '请至少输入两个数值', 'warning');
+                    return;
+                }
+                
+                // 计算总和
+                const total = values.reduce((acc, val) => acc + val, 0);
+                
+                // 计算百分比
+                let percentages = values.map(val => (val / total) * 100);
+                
+                // 创建结果数组
+                let results = values.map((val, index) => ({
+                    value: val,
+                    percentage: percentages[index]
+                }));
+                
+                // 排序
+                switch (sortMethod) {
+                    case 'asc':
+                        results.sort((a, b) => a.value - b.value);
+                        break;
+                    case 'desc':
+                        results.sort((a, b) => b.value - a.value);
+                        break;
+                    case 'percentAsc':
+                        results.sort((a, b) => a.percentage - b.percentage);
+                        break;
+                    case 'percentDesc':
+                        results.sort((a, b) => b.percentage - a.percentage);
+                        break;
+                }
+                
+                // 显示结果
+                displayResults(results, total, decimalPlaces);
+                
+                // 添加结果区域显示动画
+                const resultSection = document.getElementById('resultSection');
+                resultSection.classList.remove('hidden');
+                resultSection.classList.add('fade-enter');
+                setTimeout(() => {
+                    resultSection.classList.add('fade-enter-active');
+                }, 10);
+                setTimeout(() => {
+                    resultSection.classList.remove('fade-enter', 'fade-enter-active');
+                }, 300);
+                
+            } catch (error) {
+                showToast('错误', '计算过程中出现错误: ' + error.message, 'error');
+            }
+        }
+        
+        // 显示计算结果
+        function displayResults(results, total, decimalPlaces) {
+            const resultTable = document.getElementById('resultTable');
+            const totalValue = document.getElementById('totalValue');
+            const chartPlaceholder = document.getElementById('chartPlaceholder');
+            
+            // 清空表格
+            resultTable.innerHTML = '';
+            
+            // 填充表格
+            results.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.className = index % 2 === 0 ? 'bg-white' : 'bg-light-1/50';
+                
+                // 格式化百分比
+                const formattedPercentage = item.percentage.toFixed(decimalPlaces) + '%';
+                
+                // 计算进度条宽度
+                const progressWidth = Math.min(100, item.percentage * 2); // 最大宽度为100%
+                
+                // 生成随机颜色
+                const hue = (360 / results.length) * index;
+                const color = `hsl(${hue}, 70%, 50%)`;
+                
+                row.innerHTML = `
+                    <td class="px-4 py-3 font-medium">${item.value}</td>
+                    <td class="px-4 py-3">${formattedPercentage}</td>
+                    <td class="px-4 py-3">
+                        <div class="w-full bg-light-2 rounded-full h-2.5">
+                            <div class="h-2.5 rounded-full" style="width: ${progressWidth}%; background-color: ${color}"></div>
+                        </div>
+                    </td>
+                `;
+                
+                resultTable.appendChild(row);
+            });
+            
+            // 更新总和
+            totalValue.textContent = total.toFixed(decimalPlaces);
+            
+            // 创建饼图
+            createPieChart(results, decimalPlaces);
+            
+            // 隐藏占位符
+            chartPlaceholder.classList.add('hidden');
+        }
+        
+        // 创建饼图
+        function createPieChart(results, decimalPlaces) {
+            const ctx = document.getElementById('pieChart').getContext('2d');
+            
+            // 清除现有图表
+            if (window.pieChartInstance) {
+                window.pieChartInstance.destroy();
+            }
+            
+            // 准备数据
+            const labels = results.map(item => item.value);
+            const data = results.map(item => item.percentage);
+            
+            // 生成颜色
+            const colors = results.map((_, index) => {
+                const hue = (360 / results.length) * index;
+                return `hsl(${hue}, 70%, 50%)`;
+            });
+            
+            // 创建图表
+            window.pieChartInstance = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 2,
+                        borderColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                font: {
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    return `${label}: ${value.toFixed(decimalPlaces)}%`;
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        animateScale: true,
+                        animateRotate: true,
+                        duration: 1000,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            });
+        }
+        
+        // 更新历史记录列表
+        function updateHistoryList() {
+            const historyList = document.getElementById('historyList');
+            
+            // 清空历史列表
+            historyList.innerHTML = '';
+            
+            if (calculationHistory.length === 0) {
+                historyList.innerHTML = `
+                    <div class="text-center text-dark-2 py-8">
+                        <i class="fa fa-history text-3xl mb-2"></i>
+                        <div>暂无计算历史</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            // 添加历史记录项
+            calculationHistory.forEach(item => {
+                const historyItem = document.createElement('div');
+                historyItem.className = 'border border-light-2 rounded-lg p-4 hover:bg-light-1/50 transition-colors';
+                
+                // 格式化数值列表
+                const valuesList = item.values.split(/[,\s\n]+/).slice(0, 5).join(', ');
+                const truncatedValues = item.values.split(/[,\s\n]+/).length > 5 ? valuesList + '...' : valuesList;
+                
+                historyItem.innerHTML = `
+                    <div class="flex flex-col md:flex-row md:items-center justify-between">
+                        <div>
+                            <div class="font-medium text-dark">${truncatedValues}</div>
+                            <div class="text-sm text-dark-2 mt-1">
+                                <span>${item.timestamp}</span>
+                                <span class="mx-2">•</span>
+                                <span>${item.results.length}个数值</span>
+                            </div>
+                        </div>
+                        <div class="mt-3 md:mt-0 flex space-x-2">
+                            <button class="load-history-btn px-3 py-1 bg-primary/10 hover:bg-primary/20 text-primary rounded text-sm transition-colors" data-id="${item.id}">
+                                <i class="fa fa-history mr-1"></i> 加载
+                            </button>
+                            <button class="delete-history-btn px-3 py-1 bg-danger/10 hover:bg-danger/20 text-danger rounded text-sm transition-colors" data-id="${item.id}">
+                                <i class="fa fa-trash mr-1"></i> 删除
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                historyList.appendChild(historyItem);
+            });
+            
+            // 添加加载历史记录事件
+            document.querySelectorAll('.load-history-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    const item = calculationHistory.find(item => item.id === id);
+                    
+                    if (item) {
+                        // 填充输入框
+                        document.getElementById('valuesInput').value = item.values;
+                        document.getElementById('charCount').textContent = item.values.length;
+                        
+                        // 设置选项
+                        document.getElementById('decimalPlaces').value = item.decimalPlaces;
+                        document.getElementById('sortMethod').value = item.sortMethod;
+                        
+                        // 显示结果
+                        displayResults(item.results, item.total, parseInt(item.decimalPlaces));
+                        
+                        // 显示结果区域
+                        const resultSection = document.getElementById('resultSection');
+                        resultSection.classList.remove('hidden');
+                        
+                        showToast('成功', '已加载历史记录', 'success');
+                    }
+                });
+            });
+            
+            // 添加删除历史记录事件
+            document.querySelectorAll('.delete-history-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    calculationHistory = calculationHistory.filter(item => item.id !== id);
+                    
+                    // 保存到localStorage
+                    localStorage.setItem('calculationHistory', JSON.stringify(calculationHistory));
+                    
+                    // 更新历史记录UI
+                    updateHistoryList();
+                    
+                    showToast('成功', '已删除历史记录', 'success');
+                });
+            });
+        }
+        
+        // 显示通知提示
+        function showToast(title, message, type = 'info') {
+            const toast = document.getElementById('toast');
+            let bgColor, icon;
+            
+            switch (type) {
+                case 'success':
+                    bgColor = 'bg-success text-white';
+                    icon = 'fa-check-circle';
+                    break;
+                case 'error':
+                    bgColor = 'bg-danger text-white';
+                    icon = 'fa-exclamation-circle';
+                    break;
+                case 'warning':
+                    bgColor = 'bg-warning text-white';
+                    icon = 'fa-exclamation-triangle';
+                    break;
+                default:
+                    bgColor = 'bg-primary text-white';
+                    icon = 'fa-info-circle';
+            }
+            
+            toast.className = `fixed top-6 right-6 px-6 py-3 rounded-lg shadow-lg transform translate-x-full opacity-0 transition-all duration-300 flex items-center z-50 ${bgColor}`;
+            toast.innerHTML = `
+                <i class="fa ${icon} mr-3 text-lg"></i>
+                <div>
+                    <div class="font-medium">${title}</div>
+                    <div class="text-sm">${message}</div>
+                </div>
+            `;
+            
+            // 显示通知
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full', 'opacity-0');
+            }, 10);
+            
+            // 自动隐藏
+            setTimeout(() => {
+                toast.classList.add('translate-x-full', 'opacity-0');
+            }, 3000);
+        }
+        
+        // 初始化历史记录
+        document.addEventListener('DOMContentLoaded', function() {
+            updateHistoryList();
+        });
+    </script>
+</body>
+</html>    
