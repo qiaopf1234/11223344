@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>巡检记录自动填充工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <style>
+        .file-drop { border: 2px dashed #ccc; padding: 20px; text-align: center; cursor: pointer; }
+        .file-drop:hover { border-color: #165DFF; }
+        .btn { padding: 8px 16px; background-color: #165DFF; color: white; border: none; cursor: pointer; }
+        .btn:hover { background-color: #0d47a1; }
+        .preview-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .preview-table th, .preview-table td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+        .serial-col { background-color: #e6f4ff; } /* 序号列高亮 */
+        .date-col { background-color: #e6ffe6; } /* 时间列高亮 */
+        .inspector-col { background-color: #fff6cc; } /* 巡检人列高亮 */
+        .report-col { background-color: #f9e6ff; } /* 报告列高亮 */
+    </style>
+</head>
+<body class="bg-gray-50 p-4">
+    <div class="max-w-4xl mx-auto bg-white rounded-lg shadow-md p-6">
+        <h1 class="text-xl font-bold mb-4">巡检记录自动填充工具</h1>
+        <p class="text-gray-600 mb-6">生成的内容将自动居中显示，字体为宋体11号</p>
+        
+        <!-- 文件上传 -->
+        <div class="mb-6">
+            <div class="file-drop mb-4" id="fileDropArea">
+                <i class="fa fa-file-word-o text-4xl text-gray-400 mb-2"></i>
+                <p>拖放或点击选择Word文档</p>
+            </div>
+            <input type="file" id="fileInput" accept=".docx" class="hidden">
+        </div>
+        
+        <!-- 填充设置 -->
+        <div id="fillSettings" class="mt-6 hidden">
+            <h3 class="font-medium mb-4">填充设置</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <!-- 日期设置 -->
+                <div>
+                    <label for="startDate" class="block mb-2">起始日期：</label>
+                    <input type="date" id="startDate" class="border p-2 w-full">
+                </div>
+                
+                <!-- 巡检人设置 -->
+                <div>
+                    <label for="inspector" class="block mb-2">巡检人姓名：</label>
+                    <input type="text" id="inspector" class="border p-2 w-full" placeholder="输入巡检人姓名">
+                </div>
+            </div>
+            
+            <!-- 巡检报告设置 -->
+            <div class="mb-4">
+                <label for="inspectionReport" class="block mb-2">巡检报告内容：</label>
+                <textarea id="inspectionReport" rows="3" class="border p-2 w-full" placeholder="输入巡检报告内容（支持{序号}和{日期}变量）"></textarea>
+                <p class="text-sm text-gray-500 mt-1">提示：可使用 {序号} 和 {日期} 变量，例如"第{序号}次巡检正常"</p>
+            </div>
+            
+            <button id="processBtn" class="btn mt-2 w-full">开始填充并下载</button>
+        </div>
+        
+        <!-- 预览区域 -->
+        <div id="previewArea" class="mt-6 hidden">
+            <h3 class="font-medium mb-2">填充预览（前5行）</h3>
+            <div class="overflow-x-auto">
+                <table class="preview-table">
+                    <thead id="previewHeader"></thead>
+                    <tbody id="previewBody"></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- 状态提示 -->
+        <div id="statusMsg" class="mt-4 p-3 rounded"></div>
+    </div>
+
+    <script>
+        // 元素获取
+        const fileDropArea = document.getElementById('fileDropArea');
+        const fileInput = document.getElementById('fileInput');
+        const fillSettings = document.getElementById('fillSettings');
+        const startDate = document.getElementById('startDate');
+        const inspector = document.getElementById('inspector');
+        const inspectionReport = document.getElementById('inspectionReport');
+        const processBtn = document.getElementById('processBtn');
+        const previewArea = document.getElementById('previewArea');
+        const previewHeader = document.getElementById('previewHeader');
+        const previewBody = document.getElementById('previewBody');
+        const statusMsg = document.getElementById('statusMsg');
+        
+        let uploadedFile = null;
+        
+        // 初始化日期为今天
+        startDate.valueAsDate = new Date();
+        
+        // 文件上传处理
+        fileDropArea.addEventListener('click', () => fileInput.click());
+        fileDropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileDropArea.classList.add('bg-blue-50');
+        });
+        fileDropArea.addEventListener('dragleave', () => {
+            fileDropArea.classList.remove('bg-blue-50');
+        });
+        fileDropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileDropArea.classList.remove('bg-blue-50');
+            if (e.dataTransfer.files.length) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length) {
+                handleFile(fileInput.files[0]);
+            }
+        });
+        
+        // 处理上传文件
+        function handleFile(file) {
+            if (!file.name.endsWith('.docx')) {
+                showStatus('请上传.docx格式的Word文档', 'error');
+                return;
+            }
+            
+            uploadedFile = file;
+            showStatus('文档已上传，请设置填充内容', 'success');
+            fillSettings.classList.remove('hidden');
+        }
+        
+        // 处理文档核心逻辑
+        processBtn.addEventListener('click', async () => {
+            if (!uploadedFile || !startDate.value || !inspector.value.trim() || !inspectionReport.value.trim()) {
+                showStatus('请上传文件并填写所有必填项', 'error');
+                return;
+            }
+            
+            showStatus('正在填充数据...', 'info');
+            
+            try {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        // 加载文档（docx本质是zip包）
+                        const arrayBuffer = e.target.result;
+                        const zip = await JSZip.loadAsync(arrayBuffer);
+                        
+                        // 读取文档核心XML
+                        const documentXml = await zip.file('word/document.xml').async('string');
+                        const parser = new DOMParser();
+                        const xmlDoc = parser.parseFromString(documentXml, 'text/xml');
+                        
+                        // 找到第一个表格
+                        const tables = xmlDoc.querySelectorAll('w\\:tbl, tbl');
+                        if (tables.length === 0) {
+                            throw new Error('文档中未找到表格');
+                        }
+                        const table = tables[0];
+                        const rows = table.querySelectorAll('w\\:tr, tr');
+                        
+                        if (rows.length <= 1) {
+                            throw new Error('表格至少需要标题行和一行数据');
+                        }
+                        
+                        // 提取表头用于预览
+                        const headerCells = rows[0].querySelectorAll('w\\:tc, tc');
+                        const headerData = Array.from(headerCells).map(cell => {
+                            const textNodes = cell.querySelectorAll('w\\:t, t');
+                            return Array.from(textNodes).map(n => n.textContent).join('');
+                        });
+                        
+                        // 准备预览数据
+                        const previewData = [headerData];
+                        
+                        // 获取用户设置
+                        const startDateObj = new Date(startDate.value);
+                        const inspectorName = inspector.value.trim();
+                        const reportTemplate = inspectionReport.value.trim();
+                        
+                        // 从第二行开始填充（跳过标题行）
+                        for (let i = 1; i < rows.length; i++) {
+                            const row = rows[i];
+                            const cells = row.querySelectorAll('w\\:tc, tc');
+                            
+                            // 确保表格有足够的列
+                            if (cells.length < 4) {
+                                throw new Error(`第${i+1}行表格列数不足，至少需要4列`);
+                            }
+                            
+                            // 1. 填充序号列（第1列）
+                            const serialNumber = i;
+                            fillCellContent(xmlDoc, cells[0], serialNumber.toString(), '宋体', 11);
+                            
+                            // 2. 填充时间列（第2列）
+                            const currentDate = new Date(startDateObj);
+                            currentDate.setDate(startDateObj.getDate() + (i - 1));
+                            const formattedDate = currentDate.toLocaleDateString('zh-CN', {
+                                year: 'numeric',
+                                month: '2-digit',
+                                day: '2-digit'
+                            }).replace(/\//g, '.');
+                            fillCellContent(xmlDoc, cells[1], formattedDate, '宋体', 11);
+                            
+                            // 3. 填充巡检人列（第3列）
+                            fillCellContent(xmlDoc, cells[2], inspectorName, '宋体', 11);
+                            
+                            // 4. 填充巡检报告列（第4列）
+                            const reportContent = reportTemplate
+                                .replace(/{序号}/g, serialNumber)
+                                .replace(/{日期}/g, formattedDate);
+                            fillCellContent(xmlDoc, cells[3], reportContent, '宋体', 11);
+                            
+                            // 收集预览数据
+                            const rowData = Array.from(cells).map(cell => {
+                                const textNodes = cell.querySelectorAll('w\\:t, t');
+                                return Array.from(textNodes).map(n => n.textContent).join('');
+                            });
+                            previewData.push(rowData);
+                        }
+                        
+                        // 显示预览
+                        previewTable(previewData);
+                        
+                        // 保存修改并下载
+                        const modifiedXml = new XMLSerializer().serializeToString(xmlDoc);
+                        zip.file('word/document.xml', modifiedXml);
+                        const updatedDocx = await zip.generateAsync({ type: 'arraybuffer' });
+                        downloadFile(updatedDocx, '每日巡检记录_填充后.docx');
+                        
+                        showStatus('数据填充完成！所有内容已居中显示', 'success');
+                        
+                    } catch (error) {
+                        showStatus('处理失败: ' + error.message, 'error');
+                        console.error(error);
+                    }
+                };
+                reader.readAsArrayBuffer(uploadedFile);
+                
+            } catch (error) {
+                showStatus('发生错误: ' + error.message, 'error');
+            }
+        });
+        
+        // 填充单元格内容并设置字体和居中对齐
+        function fillCellContent(xmlDoc, cell, content, fontName, fontSize) {
+            // 清空原有内容
+            const existingTexts = Array.from(cell.querySelectorAll('w\\:t, t'));
+            existingTexts.forEach(textNode => {
+                textNode.textContent = '';
+            });
+            
+            // 设置单元格水平居中
+            let tcPr = cell.querySelector('w\\:tcPr, tcPr');
+            if (!tcPr) {
+                tcPr = cell.appendChild(xmlDoc.createElement('w:tcPr'));
+            }
+            
+            // 添加水平居中设置
+            let hAlign = tcPr.querySelector('w\\:hAlign, hAlign');
+            if (!hAlign) {
+                hAlign = tcPr.appendChild(xmlDoc.createElement('w:hAlign'));
+            }
+            hAlign.setAttribute('w:val', 'center'); // 水平居中
+            
+            // 如果没有文本节点，创建一个
+            let textNode;
+            if (existingTexts.length === 0) {
+                const p = cell.querySelector('w\\:p, p') || cell.appendChild(xmlDoc.createElement('w:p'));
+                
+                // 设置段落居中
+                let pPr = p.querySelector('w\\:pPr, pPr');
+                if (!pPr) {
+                    pPr = p.appendChild(xmlDoc.createElement('w:pPr'));
+                }
+                
+                let jc = pPr.querySelector('w\\:jc, jc');
+                if (!jc) {
+                    jc = pPr.appendChild(xmlDoc.createElement('w:jc'));
+                }
+                jc.setAttribute('w:val', 'center'); // 段落居中
+                
+                const r = p.appendChild(xmlDoc.createElement('w:r'));
+                
+                // 设置字体属性
+                const rPr = r.appendChild(xmlDoc.createElement('w:rPr'));
+                const rFonts = rPr.appendChild(xmlDoc.createElement('w:rFonts'));
+                rFonts.setAttribute('w:ascii', fontName);
+                rFonts.setAttribute('w:eastAsia', fontName);
+                rFonts.setAttribute('w:hAnsi', fontName);
+                
+                // 设置字号
+                const sz = rPr.appendChild(xmlDoc.createElement('w:sz'));
+                sz.setAttribute('w:val', (fontSize * 2).toString()); // Word使用磅值的2倍
+                
+                textNode = r.appendChild(xmlDoc.createElement('w:t'));
+            } else {
+                textNode = existingTexts[0];
+                
+                // 确保有段落属性并设置居中
+                const p = textNode.closest('w\\:p, p');
+                let pPr = p.querySelector('w\\:pPr, pPr');
+                if (!pPr) {
+                    pPr = p.appendChild(xmlDoc.createElement('w:pPr'));
+                }
+                
+                let jc = pPr.querySelector('w\\:jc, jc');
+                if (!jc) {
+                    jc = pPr.appendChild(xmlDoc.createElement('w:jc'));
+                }
+                jc.setAttribute('w:val', 'center'); // 段落居中
+                
+                // 确保有rPr节点
+                let rPr = textNode.parentNode.querySelector('w\\:rPr, rPr');
+                if (!rPr) {
+                    rPr = textNode.parentNode.appendChild(xmlDoc.createElement('w:rPr'));
+                }
+                
+                // 设置字体
+                let rFonts = rPr.querySelector('w\\:rFonts, rFonts');
+                if (!rFonts) {
+                    rFonts = rPr.appendChild(xmlDoc.createElement('w:rFonts'));
+                }
+                rFonts.setAttribute('w:ascii', fontName);
+                rFonts.setAttribute('w:eastAsia', fontName);
+                rFonts.setAttribute('w:hAnsi', fontName);
+                
+                // 设置字号
+                let sz = rPr.querySelector('w\\:sz, sz');
+                if (!sz) {
+                    sz = rPr.appendChild(xmlDoc.createElement('w:sz'));
+                }
+                sz.setAttribute('w:val', (fontSize * 2).toString());
+            }
+            
+            // 设置内容
+            textNode.textContent = content;
+        }
+        
+        // 预览表格
+        function previewTable(tableData) {
+            previewHeader.innerHTML = '';
+            previewBody.innerHTML = '';
+            previewArea.classList.remove('hidden');
+            
+            // 表头
+            const headerTr = document.createElement('tr');
+            tableData[0].forEach((text, idx) => {
+                const th = document.createElement('th');
+                th.textContent = text;
+                // 标记各列
+                if (idx === 0) th.classList.add('serial-col');
+                if (idx === 1) th.classList.add('date-col');
+                if (idx === 2) th.classList.add('inspector-col');
+                if (idx === 3) th.classList.add('report-col');
+                headerTr.appendChild(th);
+            });
+            previewHeader.appendChild(headerTr);
+            
+            // 数据行（最多显示5行）
+            const maxRows = Math.min(6, tableData.length);
+            for (let i = 1; i < maxRows; i++) {
+                const tr = document.createElement('tr');
+                tableData[i].forEach((text, idx) => {
+                    const td = document.createElement('td');
+                    td.textContent = text;
+                    // 标记各列
+                    if (idx === 0) td.classList.add('serial-col');
+                    if (idx === 1) td.classList.add('date-col');
+                    if (idx === 2) td.classList.add('inspector-col');
+                    if (idx === 3) td.classList.add('report-col');
+                    tr.appendChild(td);
+                });
+                previewBody.appendChild(tr);
+            }
+        }
+        
+        // 下载文件
+        function downloadFile(buffer, fileName) {
+            const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        // 显示状态消息
+        function showStatus(message, type = 'info') {
+            statusMsg.textContent = message;
+            statusMsg.className = 'mt-4 p-3 rounded';
+            
+            if (type === 'success') statusMsg.classList.add('bg-green-100', 'text-green-800');
+            else if (type === 'error') statusMsg.classList.add('bg-red-100', 'text-red-800');
+            else statusMsg.classList.add('bg-blue-100', 'text-blue-800');
+        }
+    </script>
+    <!-- 引入处理ZIP文件的库（docx本质是ZIP） -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</body>
+</html>
