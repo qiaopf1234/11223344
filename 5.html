@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel 上报次数统计工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3b82f6',
+                        secondary: '#64748b',
+                        accent: '#06b6d4',
+                        success: '#10b981',
+                        error: '#ef4444',
+                        warning: '#f59e0b',
+                        info: '#3b82f6',
+                        light: '#f8fafc',
+                        dark: '#1e293b',
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'card': '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
+                        'hover': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                    }
+                },
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+            }
+            .scrollbar-hide {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+            .animate-pulse-slow {
+                animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 font-inter text-gray-800 min-h-screen flex flex-col">
+    <!-- 导航栏 -->
+    <header class="bg-white shadow-sm sticky top-0 z-10">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fa fa-bar-chart text-primary text-2xl"></i>
+                <h1 class="text-xl font-semibold">Excel 上报次数统计工具</h1>
+            </div>
+            <div class="text-sm text-gray-500">版本 1.0.0</div>
+        </div>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="flex-grow container mx-auto px-4 py-8">
+        <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-card overflow-hidden transition-all duration-300 hover:shadow-hover">
+            <!-- 工具介绍 -->
+            <div class="bg-primary text-white p-6">
+                <h2 class="text-2xl font-bold mb-2">Excel 上报次数统计</h2>
+                <p class="opacity-90">分析Excel数据，生成上报次数统计报表</p>
+            </div>
+            
+            <!-- 文件上传区域 -->
+            <div class="p-6 space-y-6">
+                <div class="space-y-4">
+                    <div class="grid md:grid-cols-3 gap-4 items-center">
+                        <label for="inputFile" class="font-medium text-gray-700">输入文件</label>
+                        <div class="md:col-span-2">
+                            <div class="relative">
+                                <input type="text" id="inputFileName" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none" placeholder="请选择Excel文件" readonly>
+                                <button id="browseBtn" class="absolute right-2 top-1/2 -translate-y-1/2 bg-primary hover:bg-primary/90 text-white px-4 py-1.5 rounded-lg transition-all text-sm flex items-center">
+                                    <i class="fa fa-folder-open mr-2"></i>浏览...
+                                </button>
+                                <input type="file" id="inputFile" accept=".xlsx,.xls" class="hidden">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="grid md:grid-cols-3 gap-4 items-center">
+                        <label for="outputFile" class="font-medium text-gray-700">输出文件</label>
+                        <div class="md:col-span-2">
+                            <div class="relative">
+                                <input type="text" id="outputFileName" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all outline-none" placeholder="自动生成或选择保存位置" readonly>
+                                <button id="saveAsBtn" class="absolute right-2 top-1/2 -translate-y-1/2 bg-primary hover:bg-primary/90 text-white px-4 py-1.5 rounded-lg transition-all text-sm flex items-center">
+                                    <i class="fa fa-save mr-2"></i>另存为...
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 处理按钮 -->
+                <div class="flex justify-center">
+                    <button id="processBtn" class="bg-primary hover:bg-primary/90 text-white font-medium px-8 py-3 rounded-lg transition-all transform hover:scale-105 flex items-center disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100">
+                        <i class="fa fa-cog mr-2"></i>开始处理
+                    </button>
+                </div>
+                
+                <!-- 进度条 -->
+                <div>
+                    <div class="flex justify-between items-center mb-2">
+                        <label class="font-medium text-gray-700">处理进度</label>
+                        <span id="progressText" class="text-sm text-gray-500">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                        <div id="progressBar" class="bg-primary h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+                
+                <!-- 日志区域 -->
+                <div>
+                    <label class="block font-medium text-gray-700 mb-2">处理日志</label>
+                    <div id="logContainer" class="bg-gray-50 border border-gray-200 rounded-lg p-4 h-48 overflow-y-auto scrollbar-hide">
+                        <div class="text-sm text-gray-500 animate-pulse-slow">
+                            <i class="fa fa-info-circle text-primary mr-2"></i>欢迎使用 Excel 上报次数统计工具，请选择输入文件和输出文件路径
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 结果下载区域 -->
+        <div id="resultSection" class="max-w-4xl mx-auto mt-8 bg-white rounded-xl shadow-card overflow-hidden transition-all duration-300 hover:shadow-hover opacity-0 h-0 overflow-hidden">
+            <div class="bg-success text-white p-6">
+                <h2 class="text-2xl font-bold mb-2">处理完成</h2>
+                <p class="opacity-90">已成功生成统计报表，请点击下方按钮下载结果文件</p>
+            </div>
+            
+            <div class="p-6 flex justify-center">
+                <a id="downloadLink" href="#" class="bg-success hover:bg-success/90 text-white font-medium px-8 py-3 rounded-lg transition-all transform hover:scale-105 flex items-center">
+                    <i class="fa fa-download mr-2"></i>下载结果文件
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-white border-t border-gray-200 py-4 mt-8">
+        <div class="container mx-auto px-4 text-center text-gray-500 text-sm">
+            <p>© 2025 Excel 上报次数统计工具 | 版权所有</p>
+        </div>
+    </footer>
+
+    <!-- 消息提示组件 -->
+    <div id="toast" class="fixed bottom-4 right-4 bg-dark text-white px-6 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-y-20 opacity-0 flex items-center z-50">
+        <i id="toastIcon" class="fa fa-info-circle mr-2"></i>
+        <span id="toastMessage"></span>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM元素
+            const inputFile = document.getElementById('inputFile');
+            const inputFileName = document.getElementById('inputFileName');
+            const outputFileName = document.getElementById('outputFileName');
+            const browseBtn = document.getElementById('browseBtn');
+            const saveAsBtn = document.getElementById('saveAsBtn');
+            const processBtn = document.getElementById('processBtn');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const logContainer = document.getElementById('logContainer');
+            const resultSection = document.getElementById('resultSection');
+            const downloadLink = document.getElementById('downloadLink');
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+            
+            // 全局变量
+            let workbook = null;
+            let outputFilePath = '';
+            
+            // 初始化
+            init();
+            
+            // 初始化函数
+            function init() {
+                // 绑定事件
+                browseBtn.addEventListener('click', () => inputFile.click());
+                saveAsBtn.addEventListener('click', saveAsFile);
+                processBtn.addEventListener('click', processFiles);
+                inputFile.addEventListener('change', handleFileSelection);
+                
+                // 禁用处理按钮
+                processBtn.disabled = true;
+            }
+            
+            // 处理文件选择
+            function handleFileSelection(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                inputFileName.value = file.name;
+                log(`已选择文件: ${file.name}`);
+                
+                // 自动生成输出文件名
+                const fileExtension = file.name.split('.').pop().toLowerCase();
+                const baseName = file.name.slice(0, -(fileExtension.length + 1));
+                outputFilePath = `${baseName}_统计结果.xlsx`;
+                outputFileName.value = outputFilePath;
+                
+                // 启用处理按钮
+                processBtn.disabled = false;
+            }
+            
+            // 另存为文件
+            function saveAsFile() {
+                if (!inputFileName.value) {
+                    showToast('请先选择输入文件', 'error');
+                    return;
+                }
+                
+                // 创建一个临时的a标签用于模拟下载
+                const tempLink = document.createElement('a');
+                tempLink.href = '#';
+                tempLink.download = outputFilePath;
+                tempLink.click();
+                
+                // 手动更新输出文件名
+                const newFileName = prompt('请输入保存的文件名:', outputFilePath);
+                if (newFileName) {
+                    outputFilePath = newFileName;
+                    outputFileName.value = outputFilePath;
+                }
+            }
+            
+            // 处理文件
+            async function processFiles() {
+                // 验证输入
+                if (!inputFile.files.length) {
+                    showToast('请选择输入文件', 'error');
+                    return;
+                }
+                
+                const file = inputFile.files[0];
+                if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+                    showToast('请选择有效的Excel文件', 'error');
+                    return;
+                }
+                
+                // 重置状态
+                clearLogs();
+                updateProgress(0);
+                resultSection.classList.remove('opacity-100', 'h-auto');
+                resultSection.classList.add('opacity-0', 'h-0');
+                
+                // 禁用按钮
+                processBtn.disabled = true;
+                browseBtn.disabled = true;
+                saveAsBtn.disabled = true;
+                
+                try {
+                    log('开始处理文件...');
+                    updateProgress(10);
+                    
+                    // 读取文件
+                    log('正在读取文件...');
+                    updateProgress(20);
+                    
+                    const data = await readExcelFile(file);
+                    updateProgress(30);
+                    
+                    // 检查必要的列
+                    const requiredColumns = ['所属报告名称', '所属单位'];
+                    const missingColumns = requiredColumns.filter(col => !data.columns.includes(col));
+                    if (missingColumns.length > 0) {
+                        throw new Error(`文件缺少必要的列: ${missingColumns.join(', ')}`);
+                    }
+                    
+                    // 报表1: 任务维度统计
+                    log('正在生成任务维度统计报表...');
+                    const report1 = generateReport1(data);
+                    updateProgress(50);
+                    
+                    // 报表2: 学校维度统计
+                    log('正在生成学校维度统计报表...');
+                    const report2 = generateReport2(data);
+                    updateProgress(70);
+                    
+                    // 创建工作簿
+                    log('正在创建Excel工作簿...');
+                    const workbook = createWorkbook(report1, report2);
+                    updateProgress(80);
+                    
+                    // 保存结果
+                    log('正在保存结果...');
+                    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+                    updateProgress(90);
+                    
+                    // 创建下载链接
+                    const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+                    const url = URL.createObjectURL(blob);
+                    downloadLink.href = url;
+                    downloadLink.download = outputFilePath;
+                    
+                    updateProgress(100);
+                    log(`✅ 处理完成!`);
+                    log(`任务维度统计: ${report1.length} 行`);
+                    log(`学校维度统计: ${report2.length} 行`);
+                    
+                    // 显示结果区域
+                    setTimeout(() => {
+                        resultSection.classList.remove('opacity-0', 'h-0');
+                        resultSection.classList.add('opacity-100', 'h-auto');
+                    }, 500);
+                    
+                    showToast('处理完成!', 'success');
+                    
+                } catch (error) {
+                    log(`❌ 处理失败: ${error.message}`);
+                    showToast(`处理失败: ${error.message}`, 'error');
+                } finally {
+                    // 启用按钮
+                    processBtn.disabled = false;
+                    browseBtn.disabled = false;
+                    saveAsBtn.disabled = false;
+                }
+            }
+            
+            // 读取Excel文件
+            function readExcelFile(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    
+                    reader.onload = function(e) {
+                        try {
+                            const data = new Uint8Array(e.target.result);
+                            const workbook = XLSX.read(data, { type: 'array' });
+                            const firstSheetName = workbook.SheetNames[0];
+                            const worksheet = workbook.Sheets[firstSheetName];
+                            const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                            
+                            // 获取列名
+                            const columns = Object.keys(jsonData[0] || {});
+                            
+                            resolve({
+                                data: jsonData,
+                                columns: columns
+                            });
+                        } catch (error) {
+                            reject(new Error('读取Excel文件失败: ' + error.message));
+                        }
+                    };
+                    
+                    reader.onerror = function() {
+                        reject(new Error('文件读取失败'));
+                    };
+                    
+                    reader.readAsArrayBuffer(file);
+                });
+            }
+            
+            // 生成报表1: 任务维度统计
+            function generateReport1(data) {
+                const report = {};
+                
+                data.data.forEach(row => {
+                    const taskName = row['所属报告名称'];
+                    const unitName = row['所属单位'];
+                    
+                    if (!taskName || !unitName) return;
+                    
+                    const key = `${taskName}-${unitName}`;
+                    if (!report[key]) {
+                        report[key] = {
+                            '所属报告名称': taskName,
+                            '所属单位': unitName,
+                            '上报次数': 0
+                        };
+                    }
+                    report[key]['上报次数']++;
+                });
+                
+                return Object.values(report);
+            }
+            
+            // 生成报表2: 学校维度统计
+            function generateReport2(data) {
+                // 收集所有不同的报告名称
+                const reportNames = [...new Set(data.data.map(row => row['所属报告名称']))].filter(Boolean);
+                
+                // 初始化统计结果
+                const report = {};
+                
+                // 统计每个学校的每个报告的上报次数
+                data.data.forEach(row => {
+                    const unitName = row['所属单位'];
+                    const reportName = row['所属报告名称'];
+                    
+                    if (!unitName || !reportName) return;
+                    
+                    if (!report[unitName]) {
+                        report[unitName] = { '所属单位': unitName };
+                        // 初始化所有报告次数为0
+                        reportNames.forEach(name => {
+                            report[unitName][name] = 0;
+                        });
+                    }
+                    
+                    report[unitName][reportName] = (report[unitName][reportName] || 0) + 1;
+                });
+                
+                // 转换为数组并计算总次数
+                const reportArray = Object.values(report);
+                reportArray.forEach(row => {
+                    let total = 0;
+                    reportNames.forEach(name => {
+                        total += row[name] || 0;
+                    });
+                    row['总次数'] = total;
+                });
+                
+                return reportArray;
+            }
+            
+            // 创建工作簿
+            function createWorkbook(report1, report2) {
+                const workbook = XLSX.utils.book_new();
+                
+                // 创建报表1工作表
+                const report1WS = XLSX.utils.json_to_sheet(report1);
+                XLSX.utils.book_append_sheet(workbook, report1WS, '任务维度统计');
+                
+                // 创建报表2工作表
+                const report2WS = XLSX.utils.json_to_sheet(report2);
+                XLSX.utils.book_append_sheet(workbook, report2WS, '学校维度统计');
+                
+                return workbook;
+            }
+            
+            // 更新进度
+            function updateProgress(percentage) {
+                progressBar.style.width = `${percentage}%`;
+                progressText.textContent = `${percentage}%`;
+            }
+            
+            // 添加日志
+            function log(message) {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = document.createElement('div');
+                logEntry.className = 'text-sm mb-1';
+                
+                if (message.startsWith('✅')) {
+                    logEntry.innerHTML = `<i class="fa fa-check-circle text-success mr-2"></i>${message}`;
+                } else if (message.startsWith('❌')) {
+                    logEntry.innerHTML = `<i class="fa fa-times-circle text-error mr-2"></i>${message}`;
+                } else {
+                    logEntry.innerHTML = `<i class="fa fa-info-circle text-primary mr-2"></i>${message}`;
+                }
+                
+                logContainer.appendChild(logEntry);
+                logContainer.scrollTop = logContainer.scrollHeight;
+            }
+            
+            // 清除日志
+            function clearLogs() {
+                logContainer.innerHTML = '';
+            }
+            
+            // 显示提示消息
+            function showToast(message, type = 'info') {
+                // 设置图标和颜色
+                switch (type) {
+                    case 'success':
+                        toastIcon.className = 'fa fa-check-circle mr-2';
+                        toast.classList.remove('bg-dark', 'bg-error', 'bg-warning');
+                        toast.classList.add('bg-success');
+                        break;
+                    case 'error':
+                        toastIcon.className = 'fa fa-times-circle mr-2';
+                        toast.classList.remove('bg-dark', 'bg-success', 'bg-warning');
+                        toast.classList.add('bg-error');
+                        break;
+                    case 'warning':
+                        toastIcon.className = 'fa fa-exclamation-triangle mr-2';
+                        toast.classList.remove('bg-dark', 'bg-success', 'bg-error');
+                        toast.classList.add('bg-warning');
+                        break;
+                    default:
+                        toastIcon.className = 'fa fa-info-circle mr-2';
+                        toast.classList.remove('bg-success', 'bg-error', 'bg-warning');
+                        toast.classList.add('bg-dark');
+                }
+                
+                // 设置消息内容
+                toastMessage.textContent = message;
+                
+                // 显示提示
+                toast.classList.remove('translate-y-20', 'opacity-0');
+                toast.classList.add('translate-y-0', 'opacity-100');
+                
+                // 3秒后隐藏提示
+                setTimeout(() => {
+                    toast.classList.remove('translate-y-0', 'opacity-100');
+                    toast.classList.add('translate-y-20', 'opacity-0');
+                }, 3000);
+            }
+        });
+    </script>
+</body>
+</html>
+    
