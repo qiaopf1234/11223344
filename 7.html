@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>身份证批量更新SQL生成器(极简版)</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{padding:20px;font-family:微软雅黑;max-width:1000px;margin:0 auto;}
+        h3{text-align:center;margin-bottom:20px;color:#333;}
+        .item{margin:15px 0;}
+        textarea,input{width:100%;padding:10px;border:1px solid #ccc;border-radius:4px;font-size:14px;outline:none;}
+        textarea{height:280px;resize:none;}
+        input{height:40px;margin-top:5px;}
+        button{width:100%;padding:12px;margin:10px 0;background:#009688;color:#fff;border:none;border-radius:4px;font-size:16px;cursor:pointer;}
+        button:hover{background:#00796b;}
+        .tips{color:#666;font-size:12px;margin-top:5px;}
+    </style>
+</head>
+<body>
+    <h3>身份证批量更新 byny 字段 SQL生成器</h3>
+    <div class="item">
+        <label>1. 粘贴身份证号 (一行一个，不用处理格式)</label>
+        <textarea id="sfzhText" placeholder="例如：&#10;150122200503171112&#10;152801200306293610&#10;152103200410173920"></textarea>
+    </div>
+    <div class="item">
+        <label>2. 输入要修改的 byny 目标值</label>
+        <input type="text" id="bynyVal" placeholder="例如：202407 或 202507" value="202507">
+        <p class="tips">提示：直接填数字即可，如202407、202507，不用加引号</p>
+    </div>
+    <button onclick="createSql()">✅ 一键生成SQL语句</button>
+    <div class="item">
+        <label>3. 生成的SQL语句 (直接复制使用)</label>
+        <textarea id="sqlResult" readonly placeholder="生成的SQL语句会显示在这里..."></textarea>
+        <button onclick="copyText()" style="background:#ff9800;">📋 复制SQL语句</button>
+    </div>
+
+<script>
+// 固定表名和字段，完全匹配你的需求，不用改
+const TABLE = "certificate_meta_message";
+const COL1 = "sfzh";
+const COL2 = "byny";
+
+// 生成SQL核心方法
+function createSql(){
+    let sfzhText = document.getElementById("sfzhText").value.trim();
+    let bynyVal = document.getElementById("bynyVal").value.trim();
+    if(!sfzhText){alert("请粘贴身份证号！");return;}
+    if(!bynyVal){alert("请填写byny目标值！");return;}
+
+    // 处理身份证号：一行一个、去空行、去空格、自动加单引号
+    let sfzhArr = sfzhText.split(/[\n\r]/).filter(val=>val.trim()!="");
+    let sfzhStr = sfzhArr.map(val=>`'${val.trim()}'`).join(",\n");
+    // 生成你要的【原版格式】SQL语句
+    let sql = `UPDATE ${TABLE} 
+SET ${COL2} = '${bynyVal}' 
+WHERE ${COL1} IN (
+${sfzhStr}
+);`;
+    document.getElementById("sqlResult").value = sql;
+    alert("生成成功！");
+}
+
+// 复制SQL
+function copyText(){
+    let text = document.getElementById("sqlResult");
+    text.select();
+    document.execCommand("copy");
+    alert("复制成功！");
+}
+</script>
+</body>
+</html>
