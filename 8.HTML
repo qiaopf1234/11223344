@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL快速生成工具（适配MySQL/Oracle/人大金仓/达梦/神通/高斯）</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .title {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #333;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+        select, input, textarea {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        .field-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .field-group input {
+            width: 48%;
+        }
+        .btn {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .sql-result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            font-family: "Consolas", monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .tips {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #666;
+            line-height: 1.8;
+        }
+        .schema-input {
+            margin-top: 8px;
+            display: none;
+        }
+        .schema-input input {
+            width: 100%;
+            padding: 6px 8px;
+            font-size: 13px;
+            border: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="title">SQL快速生成工具（MySQL/Oracle/人大金仓/达梦/神通/高斯）</div>
+
+        <!-- 数据库类型选择（核心新增） -->
+        <div class="form-group">
+            <label for="dbType">目标数据库类型</label>
+            <select id="dbType">
+                <option value="mysql">MySQL</option>
+                <option value="oracle">Oracle</option>
+                <option value="kingbase" selected>人大金仓（Kingbase）</option>
+                <option value="dm">达梦（DM）</option>
+                <option value="oscar">神通（OSCAR）</option>
+                <option value="gauss">高斯（GaussDB）</option>
+            </select>
+        </div>
+
+        <!-- 模式/数据库名输入（不同数据库自动显示/隐藏） -->
+        <div class="form-group schema-input" id="schemaArea">
+            <label id="schemaLabel">模式/数据库名</label>
+            <input type="text" id="schemaName" placeholder="请输入模式/数据库名（留空则使用默认）">
+        </div>
+
+        <!-- 操作类型选择 -->
+        <div class="form-group">
+            <label for="sqlType">SQL操作类型</label>
+            <select id="sqlType">
+                <option value="select">查询（SELECT）</option>
+                <option value="insert">新增（INSERT）</option>
+                <option value="update">修改（UPDATE）</option>
+                <option value="delete">删除（DELETE）</option>
+            </select>
+        </div>
+
+        <!-- 表名输入 -->
+        <div class="form-group">
+            <label for="tableName">表名（例：COM_RECEIVE/emp）</label>
+            <input type="text" id="tableName" placeholder="请输入表名，如：COM_RECEIVE 或 emp">
+        </div>
+
+        <!-- 字段/值区域（根据操作类型动态显示） -->
+        <div class="form-group" id="fieldValueArea">
+            <label id="fieldValueLabel">查询字段（多个字段用逗号分隔，*代表所有）</label>
+            <textarea id="fieldValue" placeholder="例：ARCHIVE_USER,ID 或 *"></textarea>
+        </div>
+
+        <!-- 条件输入 -->
+        <div class="form-group" id="conditionArea">
+            <label for="condition">条件（WHERE子句，无需写WHERE，例：ARCHIVE_USER = 200）</label>
+            <input type="text" id="condition" placeholder="无条件则留空，例：ARCHIVE_USER = 200 或 ID > 100 AND NAME = '测试'">
+        </div>
+
+        <!-- 按钮区域 -->
+        <div>
+            <button class="btn" onclick="generateSQL()">生成SQL</button>
+            <button class="btn" onclick="clearAll()">清空内容</button>
+            <button class="btn" onclick="copySQL()">复制SQL</button> <!-- 新增复制功能 -->
+        </div>
+
+        <!-- SQL结果展示 -->
+        <div class="sql-result" id="sqlResult">
+            生成的SQL将显示在这里...
+        </div>
+
+        <!-- 提示信息（适配不同数据库） -->
+        <div class="tips">
+            🔔 各数据库语法提示：<br>
+            1. 通用规则：<br>
+            - 新增（INSERT）：字段1,字段2|值1,值2（竖线分隔），例：ARCHIVE_USER,NAME|100,'测试'；<br>
+            - 修改（UPDATE）：字段1=值1,字段2=值2，例：ARCHIVE_USER=NULL,NAME='测试'；<br>
+            - 删除（DELETE）：无需填写字段，仅需条件；<br>
+            2. 专属规则：<br>
+            - MySQL：标识符用反引号`，模式为数据库名，空值用NULL；<br>
+            - Oracle：标识符用双引号，模式为用户/表空间，字符串拼接用||，空值用NULL；<br>
+            - 人大金仓/达梦/高斯/神通：标识符用双引号，模式为PUBLIC（默认），兼容PostgreSQL语法；<br>
+            3. 模式/数据库名留空时：MySQL用当前库，Oracle用当前用户，人大金仓默认PUBLIC。
+        </div>
+    </div>
+
+    <script>
+        // 数据库语法规则配置（核心新增：不同数据库的语法差异）
+        const dbConfig = {
+            mysql: {
+                quote: '`', // 标识符引号：反引号
+                schemaLabel: '数据库名（MySQL）',
+                schemaDefault: '',
+                needSchema: true
+            },
+            oracle: {
+                quote: '"', // 标识符引号：双引号
+                schemaLabel: '模式/用户（Oracle，例：SCOTT）',
+                schemaDefault: '',
+                needSchema: true
+            },
+            kingbase: {
+                quote: '"', // 标识符引号：双引号
+                schemaLabel: '模式（人大金仓，默认：PUBLIC）',
+                schemaDefault: 'PUBLIC',
+                needSchema: true
+            },
+            dm: {
+                quote: '"', // 标识符引号：双引号
+                schemaLabel: '模式（达梦，默认：SYSDBA）',
+                schemaDefault: 'SYSDBA',
+                needSchema: true
+            },
+            oscar: {
+                quote: '"', // 标识符引号：双引号
+                schemaLabel: '模式（神通，默认：PUBLIC）',
+                schemaDefault: 'PUBLIC',
+                needSchema: true
+            },
+            gauss: {
+                quote: '"', // 标识符引号：双引号
+                schemaLabel: '模式（高斯，默认：PUBLIC）',
+                schemaDefault: 'PUBLIC',
+                needSchema: true
+            }
+        };
+
+        // 切换数据库类型：显示/隐藏模式输入框，更新提示
+        document.getElementById('dbType').addEventListener('change', function() {
+            const dbType = this.value;
+            const schemaArea = document.getElementById('schemaArea');
+            const schemaLabel = document.getElementById('schemaLabel');
+            
+            // 显示模式输入框（所有数据库都支持，仅调整提示）
+            schemaArea.style.display = 'block';
+            schemaLabel.innerText = dbConfig[dbType].schemaLabel;
+            document.getElementById('schemaName').placeholder = `留空使用默认（${dbConfig[dbType].schemaDefault}）`;
+            
+            // 同步更新操作类型的提示（原有逻辑保留）
+            updateFieldValueLabel(document.getElementById('sqlType').value);
+        });
+
+        // 切换操作类型：更新字段/值输入框提示（原有逻辑优化）
+        document.getElementById('sqlType').addEventListener('change', function() {
+            updateFieldValueLabel(this.value);
+        });
+
+        // 初始化：显示默认数据库（人大金仓）的模式输入框
+        window.onload = function() {
+            const defaultDb = document.getElementById('dbType').value;
+            document.getElementById('schemaArea').style.display = 'block';
+            document.getElementById('schemaLabel').innerText = dbConfig[defaultDb].schemaLabel;
+            document.getElementById('schemaName').placeholder = `留空使用默认（${dbConfig[defaultDb].schemaDefault}）`;
+            updateFieldValueLabel('select');
+        };
+
+        // 更新字段/值标签的通用函数
+        function updateFieldValueLabel(sqlType) {
+            const label = document.getElementById('fieldValueLabel');
+            const fieldValue = document.getElementById('fieldValue');
+            
+            switch(sqlType) {
+                case 'select':
+                    label.innerText = '查询字段（多个字段用逗号分隔，*代表所有）';
+                    fieldValue.placeholder = '例：ARCHIVE_USER,ID 或 *';
+                    document.getElementById('conditionArea').style.display = 'block';
+                    break;
+                case 'insert':
+                    label.innerText = '字段和值（竖线分隔，例：字段1,字段2|值1,值2）';
+                    fieldValue.placeholder = '例：ARCHIVE_USER,NAME|100,\'测试\'';
+                    document.getElementById('conditionArea').style.display = 'none';
+                    break;
+                case 'update':
+                    label.innerText = '修改的字段和值（例：字段1=值1,字段2=值2）';
+                    fieldValue.placeholder = '例：ARCHIVE_USER=NULL,NAME=\'测试\'';
+                    document.getElementById('conditionArea').style.display = 'block';
+                    break;
+                case 'delete':
+                    label.innerText = '删除操作无需填写字段（留空即可）';
+                    fieldValue.placeholder = '留空';
+                    document.getElementById('conditionArea').style.display = 'block';
+                    break;
+            }
+        }
+
+        // 给标识符加引号（适配不同数据库）
+        function addQuote(str, dbType) {
+            if (!str || str === '*') return str;
+            const quote = dbConfig[dbType].quote;
+            // 处理多个字段的情况
+            return str.split(',').map(item => {
+                item = item.trim();
+                // 跳过已经加了引号的情况，避免重复
+                if (item.startsWith(quote) && item.endsWith(quote)) return item;
+                return `${quote}${item}${quote}`;
+            }).join(',');
+        }
+
+        // 处理表名（拼接模式/数据库名）
+        function getFullTableName(tableName, schemaName, dbType) {
+            const quote = dbConfig[dbType].quote;
+            // 表名加引号
+            const quotedTable = `${quote}${tableName}${quote}`;
+            // 模式名处理：留空则用默认，否则加引号
+            let schema = schemaName.trim() || dbConfig[dbType].schemaDefault;
+            if (!schema) return quotedTable;
+            const quotedSchema = `${quote}${schema}${quote}`;
+            return `${quotedSchema}.${quotedTable}`;
+        }
+
+        // 处理条件中的字段引号
+        function handleConditionQuote(condition, dbType) {
+            if (!condition) return '';
+            const quote = dbConfig[dbType].quote;
+            // 匹配条件中的字段名（简单适配：字母数字下划线 + 运算符）
+            return condition.replace(/([a-zA-Z0-9_]+)(\s*=|<|>|>=|<=|!=|LIKE|IN)/g, `${quote}$1${quote}$2`);
+        }
+
+        // 生成SQL核心函数（适配多数据库）
+        function generateSQL() {
+            // 获取输入值
+            const dbType = document.getElementById('dbType').value;
+            const sqlType = document.getElementById('sqlType').value;
+            let tableName = document.getElementById('tableName').value.trim();
+            const fieldValue = document.getElementById('fieldValue').value.trim();
+            const condition = document.getElementById('condition').value.trim();
+            const schemaName = document.getElementById('schemaName').value.trim();
+
+            // 基础校验
+            if (!tableName) {
+                alert('请输入表名！');
+                return;
+            }
+
+            // 处理表名（拼接模式+加引号）
+            const fullTableName = getFullTableName(tableName, schemaName, dbType);
+
+            let sql = '';
+            switch(sqlType) {
+                // 查询（SELECT）
+                case 'select':
+                    let selectFields = fieldValue || '*';
+                    // 字段加引号
+                    selectFields = addQuote(selectFields, dbType);
+                    sql = `SELECT ${selectFields} FROM ${fullTableName}`;
+                    // 处理条件
+                    if (condition) {
+                        const whereCondition = handleConditionQuote(condition, dbType);
+                        sql += ` WHERE ${whereCondition}`;
+                    }
+                    break;
+
+                // 新增（INSERT）
+                case 'insert':
+                    if (!fieldValue || !fieldValue.includes('|')) {
+                        alert('新增操作需按「字段1,字段2|值1,值2」格式输入！');
+                        return;
+                    }
+                    const [fields, values] = fieldValue.split('|').map(item => item.trim());
+                    if (!fields || !values) {
+                        alert('字段或值不能为空！');
+                        return;
+                    }
+                    // 字段加引号
+                    const insertFields = addQuote(fields, dbType);
+                    sql = `INSERT INTO ${fullTableName} (${insertFields}) VALUES (${values})`;
+                    break;
+
+                // 修改（UPDATE）
+                case 'update':
+                    if (!fieldValue) {
+                        alert('修改操作需填写字段和值！');
+                        return;
+                    }
+                    // 拆分修改项，给字段加引号
+                    const updateItems = fieldValue.split(',').map(item => {
+                        const [f, v] = item.split('=').map(i => i.trim());
+                        const quotedField = addQuote(f, dbType);
+                        return `${quotedField}=${v}`;
+                    });
+                    sql = `UPDATE ${fullTableName} SET ${updateItems.join(',')}`;
+                    // 处理条件
+                    if (condition) {
+                        const whereCondition = handleConditionQuote(condition, dbType);
+                        sql += ` WHERE ${whereCondition}`;
+                    }
+                    break;
+
+                // 删除（DELETE）
+                case 'delete':
+                    sql = `DELETE FROM ${fullTableName}`;
+                    // 处理条件
+                    if (condition) {
+                        const whereCondition = handleConditionQuote(condition, dbType);
+                        sql += ` WHERE ${whereCondition}`;
+                    }
+                    break;
+            }
+
+            // 显示生成的SQL（加结束分号，适配不同数据库）
+            const finalSQL = sql + (dbType === 'oracle' ? ';' : ';'); // Oracle也支持分号
+            document.getElementById('sqlResult').innerText = finalSQL;
+        }
+
+        // 清空所有输入
+        function clearAll() {
+            document.getElementById('tableName').value = '';
+            document.getElementById('fieldValue').value = '';
+            document.getElementById('condition').value = '';
+            document.getElementById('schemaName').value = '';
+            document.getElementById('sqlResult').innerText = '生成的SQL将显示在这里...';
+        }
+
+        // 新增：复制SQL到剪贴板
+        function copySQL() {
+            const sqlText = document.getElementById('sqlResult').innerText;
+            if (sqlText === '生成的SQL将显示在这里...') {
+                alert('暂无可复制的SQL！');
+                return;
+            }
+            navigator.clipboard.writeText(sqlText).then(() => {
+                alert('SQL已复制到剪贴板！');
+            }).catch(() => {
+                // 降级方案：手动选中复制
+                const textArea = document.createElement('textarea');
+                textArea.value = sqlText;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                alert('SQL已复制到剪贴板！');
+            });
+        }
+    </script>
+</body>
+</html>
