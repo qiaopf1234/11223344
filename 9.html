@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学校账号批量生成器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 550px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            padding: 35px;
+            transition: all 0.3s ease;
+        }
+
+        .container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.25);
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 24px;
+            font-weight: 600;
+            position: relative;
+        }
+
+        h2::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 2px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .form-group:hover {
+            transform: translateX(5px);
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            background: #f8f9fa;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+            margin-top: 20px;
+            padding: 15px;
+            border: 2px solid #e1e5e9;
+            border-radius: 10px;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: none;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            background: white;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 15px;
+            color: #667eea;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+    </style>
+</head>
+<body>
+<div class="container fade-in">
+    <h2>学校账号批量生成器</h2>
+
+    <div class="form-group">
+        <label>🏫 学校名称：</label>
+        <input id="name" placeholder="例如：乌海市第六中学" value="乌海市第六中学">
+    </div>
+
+    <div class="form-group">
+        <label>🔤 拼音类型：</label>
+        <select id="type">
+            <option value="first">首字母 (whsdlzx)</option>
+            <option value="full">全拼 (wuhaishidiliuzhongxue)</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>🔡 大小写：</label>
+        <select id="case">
+            <option value="lower">小写</option>
+            <option value="upper">大写</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>🏷️ 前缀：</label>
+        <input id="prefix" placeholder="例如：byz" value="byz">
+    </div>
+
+    <div class="form-group">
+        <label>🔗 连接符：</label>
+        <select id="join">
+            <option value="_">下划线 _</option>
+            <option value="-">横杠 -</option>
+            <option value="">无</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>🔢 生成数量：</label>
+        <input id="num" type="number" value="6" min="1" max="99">
+    </div>
+
+    <button onclick="go()">✨ 生成账号</button>
+
+    <textarea id="result" placeholder="生成的账号将显示在这里..."></textarea>
+</div>
+
+<script>
+// 汉字首字母字典（覆盖常见学校用字）
+const firstLetterMap = {
+    '乌':'w','海':'h','市':'s','第':'d','六':'l','中':'z','学':'x',
+    '赤':'c','峰':'f','二':'e','国':'g','际':'j','实':'s','验':'y',
+    '小':'x','初':'c','蒙':'m','古':'g','新':'x','区':'q','一':'y',
+    '二':'e','三':'s','四':'s','五':'w','六':'l','七':'q','八':'b',
+    '九':'j','十':'s','年':'n','级':'j','高':'g','心':'x','旗':'q',
+    '县':'x','直':'z','属':'s','教':'j','育':'y','局':'j','第':'d',
+    '完':'w','全':'q','制':'z','职':'z','业':'y','技':'j','术':'s'
+};
+
+// 获取首字母
+function getFirstLetters(str) {
+    let res = '';
+    for(let c of str) {
+        res += firstLetterMap[c] || '';
+    }
+    return res;
+}
+
+// 生成账号
+function go() {
+    const name = document.getElementById('name').value.trim();
+    const type = document.getElementById('type').value;
+    const caseType = document.getElementById('case').value;
+    const prefix = document.getElementById('prefix').value.trim();
+    const join = document.getElementById('join').value;
+    const num = parseInt(document.getElementById('num').value) || 1;
+    const resultArea = document.getElementById('result');
+
+    if (!name) {
+        alert('请输入学校名称');
+        return;
+    }
+
+    // 生成首字母
+    let code = getFirstLetters(name);
+
+    // 大小写转换
+    if (caseType === 'upper') {
+        code = code.toUpperCase();
+    } else {
+        code = code.toLowerCase();
+    }
+
+    // 拼接主体
+    let main = prefix ? prefix + join + code : code;
+
+    // 批量生成
+    let list = [];
+    for (let i = 1; i <= num; i++) {
+        list.push(main + join + i);
+    }
+
+    // 显示结果，带淡入动画
+    resultArea.value = list.join('\n');
+    resultArea.style.opacity = '0';
+    setTimeout(() => {
+        resultArea.style.opacity = '1';
+    }, 100);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学校填报状态查询工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 850px;
+            background: rgba(255,255,255,0.96);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            padding: 40px;
+            backdrop-filter: blur(10px);
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity:0; transform: translateY(20px); }
+            to { opacity:1; transform: translateY(0); }
+        }
+
+        h1 {
+            text-align: center;
+            color: #222;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+
+        .tips {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .form-box {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 500;
+            color: #333;
+            font-size: 15px;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 15px;
+            transition: all 0.3s;
+            background: #f9fafb;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+            background: #fff;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 14px;
+            margin-bottom: 25px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:nth-child(1) {
+            background: linear-gradient(90deg, #4facfe, #00c6ff);
+        }
+
+        button:nth-child(2) {
+            background: linear-gradient(90deg, #fa709a, #fee140);
+            color: #222;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        textarea {
+            width: 100%;
+            height: 320px;
+            padding: 20px;
+            border-radius: 14px;
+            border: 2px solid #e1e5e9;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: none;
+            background: #fafbfc;
+            transition: all 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            background: #fff;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+    <h1>🏫 学校填报状态查询工具</h1>
+    <p class="tips">支持：表1~9 | 状态查询 / 是否填报查询 | 可切换年份</p>
+
+    <div class="form-box">
+        <label>请选择查询表（自动对应最新表名）</label>
+        <select id="tableSelect">
+            <option value="1">表1 - tbl_equ_two_ptjslbsb</option>
+            <option value="2">表2 - tbl_equ_two_ptjsjrcs</option>
+            <option value="3">表3 - tbl_equ_two_jsjjssb</option>
+            <option value="4">表4 - tbl_equ_two_ptjssszd</option>
+            <option value="5">表5 - tbl_equ_two_library_staff</option>
+            <option value="6">表6 - tbl_equ_two_electrifyed_status</option>
+            <option value="7">表7 - tbl_equ_two_library_build</option>
+            <option value="8">表8 - tbl_equ_two_laboratory_staff</option>
+            <option value="9">表9 - tbl_equ_two_laboratory_activity</option>
+        </select>
+    </div>
+
+    <div class="form-box">
+        <label>请选择年度版本（默认2024，可直接修改）</label>
+        <input type="text" id="yearVersion" value="2024" placeholder="请输入年份">
+    </div>
+
+    <div class="btn-group">
+        <button onclick="generateStatusSql()">📊 生成【填表状态查询SQL】</button>
+        <button onclick="generateIsFillSql()">🔍 生成【是否填报查询SQL】</button>
+    </div>
+
+    <textarea id="result" placeholder="生成的SQL语句将显示在这里..."></textarea>
+</div>
+
+<script>
+// 最新正确表名映射
+const tableMap = {
+    1: "tbl_equ_two_ptjslbsb",
+    2: "tbl_equ_two_ptjsjrcs",
+    3: "tbl_equ_two_jsjjssb",
+    4: "tbl_equ_two_ptjssszd",
+    5: "tbl_equ_two_library_staff",
+    6: "tbl_equ_two_electrifyed_status",
+    7: "tbl_equ_two_library_build",
+    8: "tbl_equ_two_laboratory_staff",
+    9: "tbl_equ_two_laboratory_activity"
+};
+
+// 获取年份
+function getYear() {
+    return document.getElementById('yearVersion').value || '2024';
+}
+
+// 状态查询 SQL 模板
+function getStatusSql(table) {
+    const year = getYear();
+    return `
+-- 状态 0：待编辑
+SELECT e.state, r.name, d.name AS 学校, pd.name AS 旗县, ppd.name AS 盟市
+FROM sys_dept d
+JOIN sys_user u ON u.dept_id = d.id
+JOIN sys_user_role ur ON ur.user_id = u.id
+JOIN sys_role r ON r.id = ur.role_id AND r.code = 'xue_xiao'
+JOIN sys_dept pd ON pd.id = d.parent_id
+JOIN sys_dept ppd ON ppd.id = pd.parent_id
+LEFT JOIN ${table} e ON e.create_by = u.id AND e.version = '${year}'
+WHERE e.state = '0';
+
+-- 状态 1：旗县待审核
+SELECT e.state, r.name, d.name AS 学校, pd.name AS 旗县, ppd.name AS 盟市
+FROM sys_dept d
+JOIN sys_user u ON u.dept_id = d.id
+JOIN sys_user_role ur ON ur.user_id = u.id
+JOIN sys_role r ON r.id = ur.role_id AND r.code = 'xue_xiao'
+JOIN sys_dept pd ON pd.id = d.parent_id
+JOIN sys_dept ppd ON ppd.id = pd.parent_id
+LEFT JOIN ${table} e ON e.create_by = u.id AND e.version = '${year}'
+WHERE e.state = '1';
+
+-- 状态 2：盟市待审核
+SELECT e.state, r.name, d.name AS 学校, pd.name AS 旗县, ppd.name AS 盟市
+FROM sys_dept d
+JOIN sys_user u ON u.dept_id = d.id
+JOIN sys_user_role ur ON ur.user_id = u.id
+JOIN sys_role r ON r.id = ur.role_id AND r.code = 'xue_xiao'
+JOIN sys_dept pd ON pd.id = d.parent_id
+JOIN sys_dept ppd ON ppd.id = pd.parent_id
+LEFT JOIN ${table} e ON e.create_by = u.id AND e.version = '${year}'
+WHERE e.state = '2';
+
+-- 状态 3：盟市已审核
+SELECT e.state, r.name, d.name AS 学校, pd.name AS 旗县, ppd.name AS 盟市
+FROM sys_dept d
+JOIN sys_user u ON u.dept_id = d.id
+JOIN sys_user_role ur ON ur.user_id = u.id
+JOIN sys_role r ON r.id = ur.role_id AND r.code = 'xue_xiao'
+JOIN sys_dept pd ON pd.id = d.parent_id
+JOIN sys_dept ppd ON ppd.id = pd.parent_id
+LEFT JOIN ${table} e ON e.create_by = u.id AND e.version = '${year}'
+WHERE e.state = '3';
+`;
+}
+
+// 是否填报查询
+function getIsFillSql(table) {
+    const year = getYear();
+    return `
+-- 查询【未填报】学校
+SELECT
+    d.name AS 学校名称,
+    pd.name AS 旗县,
+    ppd.name AS 盟市
+FROM sys_dept d
+JOIN sys_user u ON u.dept_id = d.id
+JOIN sys_user_role ur ON ur.user_id = u.id
+JOIN sys_role r ON r.id = ur.role_id AND r.code = 'xue_xiao'
+JOIN sys_dept pd ON pd.id = d.parent_id
+JOIN sys_dept ppd ON ppd.id = pd.parent_id
+LEFT JOIN ${table} e ON e.create_by = u.id AND e.version = '${year}'
+WHERE e.create_by IS NULL;
+`;
+}
+
+// 生成状态查询
+function generateStatusSql() {
+    const key = document.getElementById('tableSelect').value;
+    const table = tableMap[key];
+    document.getElementById('result').value = getStatusSql(table).trim();
+}
+
+// 生成是否填报
+function generateIsFillSql() {
+    const key = document.getElementById('tableSelect').value;
+    const table = tableMap[key];
+    document.getElementById('result').value = getIsFillSql(table).trim();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>教育装备 - 学校填报状态查询工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: rgba(255,255,255,0.97);
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            padding: 40px;
+            backdrop-filter: blur(10px);
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity:0; transform: translateY(20px); }
+            to { opacity:1; transform: translateY(0); }
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 8px;
+            font-size: 24px;
+        }
+
+        .desc {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .box {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #34495e;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e1e5e9;
+            border-radius: 12px;
+            font-size: 15px;
+            transition: all 0.3s;
+            background: #f9fafb;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            background: #fff;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 14px;
+            margin: 25px 0;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:nth-child(1) {
+            background: linear-gradient(90deg, #f1c40f, #f39c12);
+            color: #000;
+        }
+
+        button:nth-child(2) {
+            background: linear-gradient(90deg, #3498db, #2980b9);
+        }
+
+        button:nth-child(3) {
+            background: #2ecc71;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        textarea#result {
+            height: 380px;
+            resize: none;
+            line-height: 1.6;
+        }
+
+        .tip {
+            font-size: 12px;
+            color: #95a5a6;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+    <h1>🏫 教育装备 - 学校填报状态查询工具</h1>
+    <p class="desc">功能：查询学校各表填报状态（纯查询，不修改任何数据）</p>
+
+    <div class="box">
+        <label>📅 年度版本（可直接修改）</label>
+        <input type="text" id="year" value="2026" placeholder="请输入年份">
+    </div>
+
+    <div class="box">
+        <label>🏫 单学校名称</label>
+        <input type="text" id="singleSchool" placeholder="请输入学校全称，例如：准格尔旗大路第一小学">
+        <div class="tip">生成单学校查询SQL</div>
+    </div>
+
+    <div class="box">
+        <label>🏫🏫 多学校名称（一行一个）</label>
+        <textarea id="multiSchool" placeholder="请输入多个学校名称，一行一个"></textarea>
+        <div class="tip">生成多学校查询SQL</div>
+    </div>
+
+    <div class="btn-group">
+        <button onclick="genSingleQuery()">🏫 生成【单学校查询】</button>
+        <button onclick="genMultiQuery()">🏫🏫 生成【多学校查询】</button>
+        <button onclick="copyResult()">📋 一键复制</button>
+    </div>
+
+    <div class="box">
+        <label>📄 查询SQL结果（只读，安全）</label>
+        <textarea id="result" placeholder="生成的SQL语句将显示在这里..."></textarea>
+    </div>
+</div>
+
+<script>
+// 9张表名（你提供的正确顺序）
+const tables = [
+    "tbl_equ_two_ptjslbsb",
+    "tbl_equ_two_ptjsjrcs",
+    "tbl_equ_two_jsjjssb",
+    "tbl_equ_two_ptjssszd",
+    "tbl_equ_two_library_staff",
+    "tbl_equ_two_electrifyed_status",
+    "tbl_equ_two_library_build",
+    "tbl_equ_two_laboratory_staff",
+    "tbl_equ_two_laboratory_activity"
+];
+
+function getYear() {
+    return document.getElementById('year').value || '2026';
+}
+
+// 单学校查询 SQL
+function genSingleQuery() {
+    const school = document.getElementById('singleSchool').value.trim();
+    if (!school) { alert('请输入学校名称！'); return; }
+    const year = getYear();
+    const escSchool = school.replace(/'/g, "''");
+    let sql = '';
+
+    tables.forEach((t, i) => {
+        sql += `-- 表${i+1} 查询 ${school} 填报状态
+SELECT e.state, d.name AS 学校名称
+FROM ${t} e
+JOIN sys_user u ON u.id = e.create_by
+JOIN sys_dept d ON u.dept_id = d.id
+WHERE d.name = '${escSchool}' AND e.version = '${year}';
+
+`;
+    });
+
+    document.getElementById('result').value = sql.trim();
+}
+
+// 多学校查询 SQL
+function genMultiQuery() {
+    const text = document.getElementById('multiSchool').value.trim();
+    if (!text) { alert('请输入学校名称！'); return; }
+    const schools = text.split('\n').map(s=>s.trim()).filter(s=>s);
+    const year = getYear();
+    const inStr = schools.map(s => `'${s.replace(/'/g, "''")}'`).join(',');
+    let sql = '';
+
+    tables.forEach((t, i) => {
+        sql += `-- 表${i+1} 批量查询学校状态
+SELECT e.state, d.name AS 学校名称
+FROM ${t} e
+JOIN sys_user u ON u.id = e.create_by
+JOIN sys_dept d ON u.dept_id = d.id
+WHERE d.name IN (${inStr}) AND e.version = '${year}';
+
+`;
+    });
+
+    document.getElementById('result').value = sql.trim();
+}
+
+// 复制
+function copyResult() {
+    const res = document.getElementById('result');
+    if (!res.value) { alert('无内容'); return; }
+    res.select();
+    document.execCommand('copy');
+    alert('复制成功！');
+}
+</script>
+</body>
+</html>
