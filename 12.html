@@ -73,7 +73,7 @@
             font-weight: bold;
         }
 
-        input[type="text"], textarea {
+        input[type="text"], textarea, select {
             width: 100%;
             padding: 12px;
             border: 1px solid #ddd;
@@ -82,7 +82,7 @@
             outline: none;
         }
 
-        input[type="text"]:focus, textarea:focus {
+        input[type="text"]:focus, textarea:focus, select:focus {
             border-color: #3498db;
         }
 
@@ -120,11 +120,21 @@
             font-size: 13px;
             margin-top: 5px;
         }
+        .year-box{
+            max-width: 200px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1 class="title">教育装备 SQL 生成工具</h1>
+
+        <!-- 全局年份选择 -->
+        <div class="form-group">
+            <label>选择/填写年度</label>
+            <input type="text" id="yearVal" class="year-box" value="2026" placeholder="如：2025、2026、2027">
+            <div class="tip">自行输入对应业务年度，无需修改代码</div>
+        </div>
 
         <div class="tab-group">
             <button class="tab active" data-tab="single">单学校生成 SQL</button>
@@ -165,7 +175,7 @@
     </div>
 
     <script>
-        // 表名配置（表1~表9 对应你提供的新表名）
+        // 表名配置
         const TABLES = [
             "tbl_equ_two_ptjslbsb",
             "tbl_equ_two_ptjsjrcs",
@@ -188,8 +198,21 @@
             });
         });
 
+        // 获取年度
+        function getYear(){
+            let y = document.getElementById('yearVal').value.trim();
+            if(!y){
+                alert("请填写年度！");
+                return null;
+            }
+            return y;
+        }
+
         // 单学校 SQL
         function generateSingleSql() {
+            let year = getYear();
+            if(!year) return;
+
             let school = document.getElementById('singleSchool').value.trim();
             if (!school) {
                 alert("请输入学校名称");
@@ -203,13 +226,16 @@
                 sql += `JOIN sys_user u ON u.id = e.create_by\n`;
                 sql += `JOIN sys_dept d ON u.dept_id = d.id\n`;
                 sql += `SET e.state = 0\n`;
-                sql += `WHERE d.name = '${school}' AND e.state = 3 AND e.version = '2026';\n\n`;
+                sql += `WHERE d.name = '${school}' AND e.state = 3 AND e.version = '${year}';\n\n`;
             });
             document.getElementById('singleResult').value = sql;
         }
 
         // 多学校 SQL
         function generateMultiSql() {
+            let year = getYear();
+            if(!year) return;
+
             let content = document.getElementById('multiSchool').value.trim();
             if (!content) {
                 alert("请输入学校名称");
@@ -222,10 +248,10 @@
             TABLES.forEach((table, index) => {
                 sql += `-- 表${index+1}\n`;
                 sql += `UPDATE ${table} e\n`;
+                sql += `WHERE d.name IN (${schoolStr}) AND e.state = 3 AND e.version = '${year}';\n\n`;
                 sql += `JOIN sys_user u ON u.id = e.create_by\n`;
                 sql += `JOIN sys_dept d ON u.dept_id = d.id\n`;
                 sql += `SET e.state = 0\n`;
-                sql += `WHERE d.name IN (${schoolStr}) AND e.state = 3 AND e.version = '2026';\n\n`;
             });
             document.getElementById('multiResult').value = sql;
         }
@@ -252,6 +278,7 @@
         function clearMultiSql() {
             document.getElementById('multiSchool').value = "";
             document.getElementById('multiResult').value = "";
+            document.getElementById('yearVal').value = "2026";
         }
     </script>
 </body>
