@@ -158,7 +158,7 @@
         </div>
 
         <!-- 多学校 -->
-        <div id="multi" class="tab-content">
+        <div id="multi" class="tab-content active">
             <div class="form-group">
                 <label>学校名称（一行一个）</label>
                 <textarea id="multiSchool" placeholder="请输入多个学校名称，一行一个"></textarea>
@@ -231,7 +231,7 @@
             document.getElementById('singleResult').value = sql;
         }
 
-        // 多学校 SQL
+        // 多学校 SQL ✅ 已修复
         function generateMultiSql() {
             let year = getYear();
             if(!year) return;
@@ -248,10 +248,10 @@
             TABLES.forEach((table, index) => {
                 sql += `-- 表${index+1}\n`;
                 sql += `UPDATE ${table} e\n`;
-                sql += `WHERE d.name IN (${schoolStr}) AND e.state = 3 AND e.version = '${year}';\n\n`;
                 sql += `JOIN sys_user u ON u.id = e.create_by\n`;
                 sql += `JOIN sys_dept d ON u.dept_id = d.id\n`;
                 sql += `SET e.state = 0\n`;
+                sql += `WHERE d.name IN (${schoolStr}) AND e.state = 3 AND e.version = '${year}';\n\n`;
             });
             document.getElementById('multiResult').value = sql;
         }
