@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>教育装备 SQL 生成工具</title>
+    <title>教育装备 SQL 生成工具-升级版</title>
     <style>
         * {
             margin: 0;
@@ -11,12 +11,10 @@
             box-sizing: border-box;
             font-family: "Microsoft YaHei", sans-serif;
         }
-
         body {
             background-color: #f5f7fa;
             padding: 20px;
         }
-
         .container {
             max-width: 1000px;
             margin: 0 auto;
@@ -25,20 +23,17 @@
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
             padding: 30px;
         }
-
         .title {
             text-align: center;
             color: #2c3e50;
             margin-bottom: 30px;
             font-size: 24px;
         }
-
         .tab-group {
             display: flex;
             margin-bottom: 20px;
             border-bottom: 1px solid #eee;
         }
-
         .tab {
             padding: 12px 30px;
             cursor: pointer;
@@ -47,32 +42,26 @@
             font-size: 16px;
             transition: all 0.3s;
         }
-
         .tab.active {
             background: #3498db;
             color: white;
             border-radius: 5px 5px 0 0;
         }
-
         .tab-content {
             display: none;
         }
-
         .tab-content.active {
             display: block;
         }
-
         .form-group {
             margin-bottom: 20px;
         }
-
         label {
             display: block;
             margin-bottom: 8px;
             color: #34495e;
             font-weight: bold;
         }
-
         input[type="text"], textarea, select {
             width: 100%;
             padding: 12px;
@@ -81,16 +70,20 @@
             font-size: 14px;
             outline: none;
         }
-
+        .inline-row{
+            display: flex;
+            gap:15px;
+        }
+        .inline-row .form-item{
+            flex:1;
+        }
         input[type="text"]:focus, textarea:focus, select:focus {
             border-color: #3498db;
         }
-
         textarea {
             height: 300px;
             resize: vertical;
         }
-
         .btn {
             background: #3498db;
             color: white;
@@ -102,38 +95,53 @@
             margin-right: 10px;
             transition: background 0.3s;
         }
-
         .btn:hover {
             background: #2980b9;
         }
-
         .btn-warning {
             background: #f39c12;
         }
-
         .btn-warning:hover {
             background: #e67e22;
         }
-
         .tip {
             color: #7f8c8d;
             font-size: 13px;
             margin-top: 5px;
         }
-        .year-box{
-            max-width: 200px;
-        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1 class="title">教育装备 SQL 生成工具</h1>
+        <h1 class="title">教育装备 SQL 生成工具【状态可配置】</h1>
 
-        <!-- 全局年份选择 -->
-        <div class="form-group">
-            <label>选择/填写年度</label>
-            <input type="text" id="yearVal" class="year-box" value="2026" placeholder="如：2025、2026、2027">
-            <div class="tip">自行输入对应业务年度，无需修改代码</div>
+        <!-- 顶部配置：年度+原状态+目标状态 -->
+        <div class="inline-row">
+            <div class="form-item">
+                <label>业务年度</label>
+                <input type="text" id="yearVal" value="2026" placeholder="2025/2026/2027">
+            </div>
+            <div class="form-item">
+                <label>原状态(筛选)</label>
+                <select id="oldState">
+                    <option value="0">0 - 待编辑</option>
+                    <option value="1">1 - 旗县待审核</option>
+                    <option value="2">2 - 盟市待审核</option>
+                    <option value="3" selected>3 - 盟市已审核</option>
+                </select>
+            </div>
+            <div class="form-item">
+                <label>目标状态(修改为)</label>
+                <select id="newState">
+                    <option value="0" selected>0 - 待编辑</option>
+                    <option value="1">1 - 旗县待审核</option>
+                    <option value="2">2 - 盟市待审核</option>
+                    <option value="3">3 - 盟市已审核</option>
+                </select>
+            </div>
+        </div>
+        <div class="tip" style="margin-bottom:20px;">
+            业务说明：将【原状态】数据，批量修改为【目标状态】
         </div>
 
         <div class="tab-group">
@@ -146,7 +154,6 @@
             <div class="form-group">
                 <label>学校名称</label>
                 <input type="text" id="singleSchool" placeholder="请输入学校名称">
-                <div class="tip">状态：0：待编辑，1：旗县待审核2：盟市待审核3：盟市已审核</div>
             </div>
             <button class="btn btn-warning" onclick="generateSingleSql()">生成 SQL</button>
             <button class="btn" onclick="copySingleSql()">复制到剪贴板</button>
@@ -158,11 +165,10 @@
         </div>
 
         <!-- 多学校 -->
-        <div id="multi" class="tab-content active">
+        <div id="multi" class="tab-content">
             <div class="form-group">
                 <label>学校名称（一行一个）</label>
                 <textarea id="multiSchool" placeholder="请输入多个学校名称，一行一个"></textarea>
-                <div class="tip">状态：0：待编辑，1：旗县待审核2：盟市待审核3：盟市已审核</div>
             </div>
             <button class="btn" onclick="generateMultiSql()">生成 SQL</button>
             <button class="btn" onclick="copyMultiSql()">复制到剪贴板</button>
@@ -175,7 +181,7 @@
     </div>
 
     <script>
-        // 表名配置
+        // 全部业务表
         const TABLES = [
             "tbl_equ_two_ptjslbsb",
             "tbl_equ_two_ptjsjrcs",
@@ -198,21 +204,22 @@
             });
         });
 
-        // 获取年度
-        function getYear(){
-            let y = document.getElementById('yearVal').value.trim();
-            if(!y){
-                alert("请填写年度！");
+        // 获取公共参数
+        function getBaseParam(){
+            let year = document.getElementById('yearVal').value.trim();
+            let oldS = document.getElementById('oldState').value;
+            let newS = document.getElementById('newState').value;
+            if(!year){
+                alert("请填写业务年度！");
                 return null;
             }
-            return y;
+            return {year, oldS, newS};
         }
 
-        // 单学校 SQL
+        // 单学校
         function generateSingleSql() {
-            let year = getYear();
-            if(!year) return;
-
+            let p = getBaseParam();
+            if(!p) return;
             let school = document.getElementById('singleSchool').value.trim();
             if (!school) {
                 alert("请输入学校名称");
@@ -225,17 +232,16 @@
                 sql += `UPDATE ${table} e\n`;
                 sql += `JOIN sys_user u ON u.id = e.create_by\n`;
                 sql += `JOIN sys_dept d ON u.dept_id = d.id\n`;
-                sql += `SET e.state = 0\n`;
-                sql += `WHERE d.name = '${school}' AND e.state = 3 AND e.version = '${year}';\n\n`;
+                sql += `SET e.state = ${p.newS}\n`;
+                sql += `WHERE d.name = '${school}' AND e.state = ${p.oldS} AND e.version = '${p.year}';\n\n`;
             });
             document.getElementById('singleResult').value = sql;
         }
 
-        // 多学校 SQL ✅ 已修复
+        // 多学校
         function generateMultiSql() {
-            let year = getYear();
-            if(!year) return;
-
+            let p = getBaseParam();
+            if(!p) return;
             let content = document.getElementById('multiSchool').value.trim();
             if (!content) {
                 alert("请输入学校名称");
@@ -250,21 +256,22 @@
                 sql += `UPDATE ${table} e\n`;
                 sql += `JOIN sys_user u ON u.id = e.create_by\n`;
                 sql += `JOIN sys_dept d ON u.dept_id = d.id\n`;
-                sql += `SET e.state = 0\n`;
-                sql += `WHERE d.name IN (${schoolStr}) AND e.state = 3 AND e.version = '${year}';\n\n`;
+                sql += `SET e.state = ${p.newS}\n`;
+                sql += `WHERE d.name IN (${schoolStr}) AND e.state = ${p.oldS} AND e.version = '${p.year}';\n\n`;
             });
             document.getElementById('multiResult').value = sql;
         }
 
         // 复制
         function copySingleSql() {
-            document.getElementById('singleResult').select();
+            let area = document.getElementById('singleResult');
+            area.select();
             document.execCommand('copy');
             alert("已复制到剪贴板");
         }
-
         function copyMultiSql() {
-            document.getElementById('multiResult').select();
+            let area = document.getElementById('multiResult');
+            area.select();
             document.execCommand('copy');
             alert("已复制到剪贴板");
         }
@@ -274,11 +281,9 @@
             document.getElementById('singleSchool').value = "";
             document.getElementById('singleResult').value = "";
         }
-
         function clearMultiSql() {
             document.getElementById('multiSchool').value = "";
             document.getElementById('multiResult').value = "";
-            document.getElementById('yearVal').value = "2026";
         }
     </script>
 </body>
