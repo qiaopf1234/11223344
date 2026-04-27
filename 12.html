@@ -225,7 +225,7 @@
                 sql += `JOIN sys_user u ON u.id = e.create_by\n`;
                 sql += `JOIN sys_dept d ON u.dept_id = d.id\n`;
                 sql += `SET e.state = 0\n`;
-                sql += `WHERE d.name IN (${schoolStr}) AND e.state = 3 AND e.version = '2024';\n\n`;
+                sql += `WHERE d.name IN (${schoolStr}) AND e.state = 3 AND e.version = '2026';\n\n`;
             });
             document.getElementById('multiResult').value = sql;
         }
