@@ -1,218 +1,118 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>学校账号生成工具</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: "Microsoft YaHei", sans-serif;
-        }
-        body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-        .card {
-            background: #fff;
-            border-radius: 12px;
-            padding: 30px;
-            width: 420px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-        }
-        .form-item {
-            margin-bottom: 20px;
-        }
-        .form-item label {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-bottom: 8px;
-            font-size: 15px;
-            color: #333;
-        }
-        .form-item input,
-        .form-item select {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            font-size: 15px;
-            background: #fff;
-        }
-        .btn-generate {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-        .btn-generate:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
-        }
-        .result-box {
-            margin-top: 20px;
-            min-height: 150px;
-            border: 1px solid #eee;
-            border-radius: 8px;
-            padding: 15px;
-            background: #f9f9f9;
-            font-family: monospace;
-            font-size: 14px;
-            line-height: 1.8;
-            white-space: pre-wrap;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>学校账号生成工具</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{padding:20px;background:#f4f5f7;font-family:"Microsoft Yahei",sans-serif;}
+.box{max-width:900px;margin:0 auto;background:#fff;padding:20px;border-radius:10px;box-shadow:0 0 8px #eee;}
+h2{text-align:center;margin-bottom:20px;color:#333;}
+.row{margin:12px 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+label{display:inline-block;width:90px;font-weight:bold;color:#555;}
+input, textarea{padding:8px 10px;border:1px solid #ccc;border-radius:4px;font-size:14px;}
+input[type="text"]{width:280px;}
+input[type="number"]{width:100px;}
+iframe{width:100%;height:420px;border:1px solid #ddd;border-radius:6px;margin:10px 0;}
+.btn{padding:9px 20px;background:#2d8cf0;color:#fff;border:none;border-radius:4px;cursor:pointer;margin-right:10px;}
+.btn:hover{background:#1b76d8;}
+textarea#pinyinInput, textarea#resultBox{width:100%;min-height:80px;resize:vertical;}
+.tip{font-size:13px;color:#666;margin-top:5px;}
+</style>
 </head>
 <body>
-    <div class="card">
-        <div class="form-item">
-            <label>🏫 学校名称:</label>
-            <input type="text" id="schoolName" value="呼和浩特市回民区贝尔路小学西校区">
-        </div>
+<div class="box">
+    <h2>学校账号生成工具</h2>
 
-        <div class="form-item">
-            <label>🔤 拼音类型:</label>
-            <select id="pinyinType">
-                <option value="abbr" selected>拼音首字母缩写</option>
-                <option value="full">全拼</option>
-            </select>
-        </div>
-
-        <div class="form-item">
-            <label>🔡 大小写:</label>
-            <select id="caseType">
-                <option value="lower" selected>小写</option>
-                <option value="upper">大写</option>
-            </select>
-        </div>
-
-        <div class="form-item">
-            <label>🏷️ 前缀:</label>
-            <input type="text" id="prefix" value="byz">
-        </div>
-
-        <div class="form-item">
-            <label>🔗 连接符:</label>
-            <select id="connector">
-                <option value="_" selected>下划线 _</option>
-                <option value="-">中划线 -</option>
-                <option value="">无</option>
-            </select>
-        </div>
-
-        <div class="form-item">
-            <label>🔢 生成数量:</label>
-            <input type="number" id="count" value="6" min="1" max="100">
-        </div>
-
-        <button class="btn-generate" onclick="generateAccounts()">✨ 生成账号</button>
-
-        <div class="result-box" id="resultBox"></div>
+    <div class="row">
+        <label>固定前缀：</label>
+        <input type="text" id="prefix" value="byz_">
     </div>
 
-    <script>
-        // 内蒙古地区学校常用汉字拼音首字母映射表
-        const pinyinMap = {
-            "金":"j", "宝":"b", "屯":"t", "镇":"z",
-            "九":"j", "年":"n", "一":"y", "贯":"g", "制":"z",
-            "学":"x", "校":"x",
-            "呼":"h", "和":"h", "浩":"h", "特":"t",
-            "市":"s", "回":"h", "民":"m", "区":"q",
-            "贝":"b", "尔":"e", "路":"l", "小":"x",
-            "西":"x", "校":"x", "区":"q",
-            "乌":"w", "海":"h", "第":"d", "六":"l", "中":"z",
-            "高":"g", "初":"c", "旗":"q", "县":"x",
-            "省":"s", "自":"z", "治":"z", "教":"j", "育":"y",
-            "实":"s", "验":"y", "二":"e", "三":"s", "四":"s",
-            "五":"w", "七":"q", "八":"b", "十":"s",
-            "蒙":"m", "包":"b", "头":"t", "鄂":"e", "尔":"e",
-            "多":"d", "斯":"s", "通":"t", "辽":"l",
-            "赤":"c", "峰":"f", "兴":"x", "安":"a",
-            "巴":"b", "彦":"y", "淖":"n", "尔":"e",
-            "乌":"w", "兰":"l", "察":"c", "布":"b",
-            "锡":"x", "林":"l", "郭":"g", "勒":"l",
-            "阿":"a", "拉":"l", "善":"s", "乌":"w",
-            "海":"h", "拉":"l", "齐":"q", "尔":"e",
-            "扎":"z", "兰":"l", "屯":"t", "科":"k",
-            "尔":"e", "沁":"q", "奈":"n", "曼":"m",
-            "开":"k", "鲁":"l", "库":"k", "伦":"l",
-            "霍":"h", "林":"l", "郭":"g", "勒":"l",
-            "凉":"l", "城":"c", "丰":"f", "镇":"z",
-            "卓":"z", "资":"z", "喀":"k", "喇":"l",
-            "沁":"q", "翁":"w", "牛":"n", "特":"t",
-            "敖":"a", "汉":"h", "旗":"q", "阿":"a",
-            "荣":"r", "旗":"q", "新":"x", "巴尔":"b",
-            "左":"z", "右":"y", "中":"z", "旗":"q",
-            "前":"q", "后":"h", "旗":"q", "上":"s", "下":"x"
-        };
+    <div class="row">
+        <label>固定后缀：</label>
+        <input type="text" id="suffix" value="_">
+        <label style="width:auto;margin-left:10px;">生成数量：</label>
+        <input type="number" id="count" value="1" min="1" max="999">
+    </div>
 
-        // 自动生成完整拼音首字母缩写
-        function getSchoolAbbr(name) {
-            let abbr = '';
-            for (let char of name) {
-                // 过滤掉空格
-                if (char.trim() === '') continue;
-                // 有映射的字就取首字母，没有的字直接跳过
-                if (pinyinMap[char]) {
-                    abbr += pinyinMap[char];
-                }
-            }
-            return abbr;
-        }
+    <div class="row">
+        <label>拼音结果：</label>
+        <textarea id="pinyinInput" placeholder="请在这里粘贴从hzzpy.net复制出来的拼音（如fk）"></textarea>
+    </div>
 
-        function generateAccounts() {
-            const schoolName = document.getElementById('schoolName').value.trim();
-            const pinyinType = document.getElementById('pinyinType').value;
-            const caseType = document.getElementById('caseType').value;
-            const prefix = document.getElementById('prefix').value.trim();
-            const connector = document.getElementById('connector').value;
-            const count = parseInt(document.getElementById('count').value);
+    <!-- 内嵌原网站拼音工具 -->
+    <iframe src="https://www.hzzpy.net/" frameborder="0"></iframe>
 
-            if (!schoolName) {
-                alert('请填写学校名称！');
-                return;
-            }
-            if (isNaN(count) || count < 1) {
-                alert('请输入有效的生成数量！');
-                return;
-            }
+    <div class="row">
+        <button class="btn" onclick="generate()">生成账号名称</button>
+        <button class="btn" onclick="copyResult()">复制结果</button>
+        <button class="btn" onclick="clearAll()">清空</button>
+    </div>
 
-            // 自动生成完整的学校缩写
-            let schoolCode = getSchoolAbbr(schoolName);
-            if (!schoolCode) {
-                alert('未能识别学校名称，请检查输入！');
-                return;
-            }
+    <div class="row">
+        <label>生成结果：</label>
+        <textarea id="resultBox" readonly placeholder="生成的账号会显示在这里..."></textarea>
+    </div>
 
-            if (caseType === 'lower') {
-                schoolCode = schoolCode.toLowerCase();
-            } else {
-                schoolCode = schoolCode.toUpperCase();
-            }
+    <div class="tip">
+        使用说明：<br>
+        1. 在上方内嵌网站输入汉字，转换成拼音并复制；<br>
+        2. 把拼音粘贴到“拼音结果”输入框中；<br>
+        3. 可修改前缀、后缀和生成数量；<br>
+        4. 点击「生成账号名称」即可批量生成；<br>
+        5. 点击「复制结果」一键复制所有账号。
+    </div>
+</div>
 
-            const accounts = [];
-            for (let i = 1; i <= count; i++) {
-                const parts = [];
-                if (prefix) parts.push(prefix);
-                parts.push(schoolCode);
-                parts.push(i);
-                accounts.push(parts.join(connector));
-            }
+<script>
+function generate(){
+    const prefix = document.getElementById('prefix').value.trim();
+    const suffix = document.getElementById('suffix').value.trim();
+    const pinyin = document.getElementById('pinyinInput').value.trim();
+    const count = parseInt(document.getElementById('count').value) || 1;
 
-            document.getElementById('resultBox').innerText = accounts.join('\n');
-        }
-    </script>
+    if(!pinyin){
+        alert("请先粘贴从hzzpy.net复制的拼音！");
+        return;
+    }
+
+    let results = [];
+    for(let i=1;i<=count;i++){
+        results.push(prefix + pinyin + suffix + i);
+    }
+
+    document.getElementById('resultBox').value = results.join('\n');
+}
+
+function copyResult(){
+    const text = document.getElementById('resultBox').value;
+    if(!text){
+        alert("暂无内容可复制");
+        return;
+    }
+    navigator.clipboard.writeText(text).then(()=>{
+        alert("已复制到剪贴板");
+    }).catch(()=>{
+        // 兼容旧浏览器
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        alert("已复制到剪贴板");
+    });
+}
+
+function clearAll(){
+    document.getElementById('prefix').value = 'byz_';
+    document.getElementById('suffix').value = '_';
+    document.getElementById('count').value = '1';
+    document.getElementById('pinyinInput').value = '';
+    document.getElementById('resultBox').value = '';
+}
+</script>
 </body>
 </html>
