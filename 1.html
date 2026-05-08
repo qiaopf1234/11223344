@@ -961,12 +961,7 @@
                 return '';
             }
             
-            // 处理日期格式
-            if (typeof value === 'number' && /^\d{8}$/.test(value.toString())) {
-                const dateStr = value.toString();
-                return `${dateStr.substring(0, 4)}-${dateStr.substring(4, 6)}-${dateStr.substring(6, 8)}`;
-            }
-            
+           
             // 处理字符串转义
             if (typeof value === 'string') {
                 return value
@@ -983,5 +978,4 @@
         }
     </script>
 </body>
-
 </html>
