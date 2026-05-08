@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>批量生成更新SQL（全自动免逗号）</title>
+    <style>
+        *{box-sizing:border-box;font-family:system-ui, sans-serif;}
+        body{max-width:1000px;margin:20px auto;padding:0 20px;background:#f5f5f5;}
+        .card{background:white;padding:20px;border-radius:10px;margin-bottom:20px;box-shadow:0 2px 6px #0001;}
+        h2{color:#2c3e50;margin-top:0;}
+        textarea{width:100%;height:220px;padding:10px;font-size:14px;border:1px solid #ddd;border-radius:6px;resize:vertical;}
+        button{padding:10px 20px;background:#0d6efd;color:white;border:none;border-radius:6px;font-size:15px;cursor:pointer;margin-top:10px;}
+        button:hover{background:#0b5ed7;}
+        .tip{color:#666;font-size:13px;margin:5px 0;}
+        .sql-output{background:#f8f9fa;padding:12px;border-radius:6px;font-family:Consolas,monospace;white-space:pre-wrap;max-height:400px;overflow:auto;}
+        .badge{background:#e3f2fd;color:#0d6efd;padding:3px 6px;border-radius:4px;font-size:12px;}
+        .field-select {
+            padding: 8px 12px;
+            font-size: 14px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+            margin: 8px 0;
+            min-width: 220px;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h2>批量生成 UPDATE SQL ✅ 全自动免逗号</h2>
+    <p class="tip"><span class="badge">超级方便</span> 直接从 Excel 复制内容粘贴进来！</p>
+    <p class="tip">选择要修改的字段：</p>
+    <select class="field-select" id="fieldSelect">
+        <option value="bjmc">bjmc - 班级名称</option>
+        <option value="hkszd">hkszd - 户口所在地</option>
+        <option value="mz">mz - 民族</option>
+        <option value="xm">xm - 姓名</option>
+        <option value="xxmc">xxmc - 学校名称</option>
+    </select>
+
+    <p class="tip" id="tipText">格式：身份证 + 内容（空格/制表符/逗号都支持）</p>
+    <textarea id="dataInput" placeholder="直接粘贴Excel两列数据"></textarea>
+    <button onclick="generateSql()">一键生成 SQL</button>
+</div>
+
+<div class="card">
+    <h2>生成结果（直接复制执行）</h2>
+    <div id="sqlResult" class="sql-output">等待生成...</div>
+</div>
+
+<script>
+document.getElementById('fieldSelect').addEventListener('change', function() {
+    const tipText = document.getElementById('tipText');
+    if (this.value === 'xxmc') {
+        tipText.innerText = '学校格式：旧学校名 | 新学校名（直接粘贴两列即可）';
+    } else {
+        tipText.innerText = '格式：身份证 + 内容（空格/制表符/逗号都支持）';
+    }
+});
+
+function generateSql() {
+    const input = document.getElementById('dataInput').value.trim();
+    const resultEl = document.getElementById('sqlResult');
+    const currField = document.getElementById('fieldSelect').value;
+
+    if (!input) {
+        resultEl.innerText = '请先粘贴数据';
+        return;
+    }
+
+    const lines = input.split('\n').filter(line => line.trim() !== '');
+    let sql = '';
+
+    lines.forEach(line => {
+        const trimLine = line.trim();
+        if (!trimLine) return;
+
+        const parts = trimLine.split(/[\s,]+/).filter(p => p);
+        if (parts.length < 2) return;
+
+        const key = parts[0].trim();
+        const val = parts.slice(1).join(' ').trim().replace(/'/g, "''");
+
+        if (currField === 'xxmc') {
+            sql += `UPDATE kdsj_zxxs_by SET xxmc = '${val}' WHERE xxmc = '${key}';\n`;
+        } else {
+            sql += `UPDATE kdsj_zxxs_by SET ${currField} = '${val}' WHERE sfzjh = '${key}';\n`;
+        }
+    });
+
+    resultEl.innerText = sql || '未识别到有效数据';
+}
+</script>
+</body>
+</html>
