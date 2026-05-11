@@ -2,69 +2,237 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>批量生成更新SQL（全自动免逗号）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>批量生成更新SQL｜全自动免逗号</title>
     <style>
-        *{box-sizing:border-box;font-family:system-ui, sans-serif;}
-        body{max-width:1000px;margin:20px auto;padding:0 20px;background:#f5f5f5;}
-        .card{background:white;padding:20px;border-radius:10px;margin-bottom:20px;box-shadow:0 2px 6px #0001;}
-        h2{color:#2c3e50;margin-top:0;}
-        textarea{width:100%;height:220px;padding:10px;font-size:14px;border:1px solid #ddd;border-radius:6px;resize:vertical;}
-        button{padding:10px 20px;background:#0d6efd;color:white;border:none;border-radius:6px;font-size:15px;cursor:pointer;margin-top:10px;}
-        button:hover{background:#0b5ed7;}
-        .tip{color:#666;font-size:13px;margin:5px 0;}
-        .sql-output{background:#f8f9fa;padding:12px;border-radius:6px;font-family:Consolas,monospace;white-space:pre-wrap;max-height:400px;overflow:auto;}
-        .badge{background:#e3f2fd;color:#0d6efd;padding:3px 6px;border-radius:4px;font-size:12px;}
-        .field-select {
-            padding: 8px 12px;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4eaf5 100%);
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 1080px;
+            margin: 0 auto;
+        }
+
+        .main-title {
+            text-align: center;
+            font-size: 28px;
+            color: #233464;
+            margin-bottom: 35px;
+            font-weight: 600;
+            letter-spacing: 2px;
+        }
+
+        .card {
+            background: #ffffff;
+            border-radius: 18px;
+            padding: 30px 35px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 30px rgba(30, 60, 120, 0.08);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: 0 12px 40px rgba(30, 60, 120, 0.12);
+            transform: translateY(-3px);
+        }
+
+        .card h2 {
+            font-size: 20px;
+            color: #233464;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tip {
             font-size: 14px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
+            color: #64748b;
+            margin: 12px 0;
+            line-height: 1.7;
+        }
+
+        .badge {
+            display: inline-block;
+            background: linear-gradient(90deg, #4f86f7, #3671e9);
+            color: #fff;
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            margin-right: 8px;
+        }
+
+        .field-select {
+            width: 100%;
+            max-width: 360px;
+            padding: 12px 16px;
+            font-size: 15px;
+            border: 1px solid #d8e2ef;
+            border-radius: 12px;
+            background: #f8fafc;
+            outline: none;
+            transition: all 0.3s;
+            margin: 10px 0 15px;
+        }
+
+        .field-select:focus {
+            border-color: #4f86f7;
+            box-shadow: 0 0 0 4px rgba(79, 134, 247, 0.15);
+            background: #fff;
+        }
+
+        textarea {
+            width: 100%;
+            height: 240px;
+            padding: 16px;
+            font-size: 15px;
+            border: 1px solid #d8e2ef;
+            border-radius: 14px;
+            background: #f8fafc;
+            resize: vertical;
+            outline: none;
+            transition: all 0.3s;
             margin: 8px 0;
-            min-width: 220px;
+        }
+
+        textarea:focus {
+            border-color: #4f86f7;
+            box-shadow: 0 0 0 4px rgba(79, 134, 247, 0.15);
+            background: #fff;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        button {
+            padding: 12px 28px;
+            font-size: 15px;
+            font-weight: 500;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-generate {
+            background: linear-gradient(90deg, #4f86f7, #3671e9);
+            color: #fff;
+        }
+
+        .btn-generate:hover {
+            background: linear-gradient(90deg, #3671e9, #255ed8);
+            transform: translateY(-2px);
+        }
+
+        .btn-copy {
+            background: linear-gradient(90deg, #22c55e, #16a34a);
+            color: #fff;
+        }
+
+        .btn-copy:hover {
+            background: linear-gradient(90deg, #16a34a, #15803d);
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            background: #cbd5e1 !important;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .sql-output {
+            background: #0f172a;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 14px;
+            font-family: Consolas, "Courier New", monospace;
+            white-space: pre-wrap;
+            max-height: 450px;
+            overflow: auto;
+            margin-top: 12px;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        .copy-tip {
+            color: #16a34a;
+            font-size: 14px;
+            margin-top: 10px;
+            display: none;
+            font-weight: 500;
         }
     </style>
 </head>
 <body>
-<div class="card">
-    <h2>批量生成 UPDATE SQL ✅ 全自动免逗号</h2>
-    <p class="tip"><span class="badge">超级方便</span> 直接从 Excel 复制内容粘贴进来！</p>
-    <p class="tip">选择要修改的字段：</p>
-    <select class="field-select" id="fieldSelect">
-        <option value="bjmc">bjmc - 班级名称</option>
-        <option value="hkszd">hkszd - 户口所在地</option>
-        <option value="mz">mz - 民族</option>
-        <option value="xm">xm - 姓名</option>
-        <option value="xxmc">xxmc - 学校名称</option>
-        <option value="csrq">csrq - 出生日期</option>
-    </select>
+<div class="container">
+    <h1 class="main-title">批量生成 UPDATE SQL 工具</h1>
 
-    <p class="tip" id="tipText">格式：身份证 + 内容（空格/制表符/逗号都支持）</p>
-    <textarea id="dataInput" placeholder="直接粘贴Excel两列数据"></textarea>
-    <button onclick="generateSql()">一键生成 SQL</button>
-</div>
+    <div class="card">
+        <h2>📝 数据录入与字段选择</h2>
+        <p class="tip"><span class="badge">Excel快捷粘贴</span> 直接复制Excel两列数据粘贴即可，自动兼容空格、制表符、逗号分隔</p>
 
-<div class="card">
-    <h2>生成结果（直接复制执行）</h2>
-    <div id="sqlResult" class="sql-output">等待生成...</div>
+        <p class="tip">请选择需要批量修改的数据库字段：</p>
+        <select class="field-select" id="fieldSelect">
+            <option value="bjmc">bjmc - 班级名称</option>
+            <option value="hkszd">hkszd - 户口所在地</option>
+            <option value="mz">mz - 民族</option>
+            <option value="xm">xm - 姓名</option>
+            <option value="xxmc">xxmc - 学校名称</option>
+            <option value="csrq">csrq - 出生日期</option>
+            <option value="rxny">rxny - 入学年月</option>
+            <option value="byny">byny - 毕业年月</option>
+        </select>
+
+        <p class="tip" id="tipText">格式：身份证 + 内容（空格/制表符/逗号都支持）</p>
+        <textarea id="dataInput" placeholder="请在此粘贴 Excel 两列数据，一行一条记录..."></textarea>
+
+        <div class="btn-group">
+            <button class="btn-generate" onclick="generateSql()">🔄 一键生成 SQL</button>
+            <button class="btn-copy" onclick="copySql()" id="copyBtn" disabled>📋 一键复制结果</button>
+        </div>
+        <div class="copy-tip" id="copyTip">✅ 复制成功，可直接到数据库执行</div>
+    </div>
+
+    <div class="card">
+        <h2>📤 生成 SQL 结果</h2>
+        <div id="sqlResult" class="sql-output">等待生成数据...</div>
+    </div>
 </div>
 
 <script>
 document.getElementById('fieldSelect').addEventListener('change', function() {
     const tipText = document.getElementById('tipText');
-    if (this.value === 'xxmc') {
-        tipText.innerText = '学校格式：旧学校名 | 新学校名（直接粘贴两列即可）';
-    } else {
-        tipText.innerText = '格式：身份证 + 内容（空格/制表符/逗号都支持）';
-    }
+    tipText.innerText = this.value === 'xxmc'
+        ? '学校格式：旧学校名 | 新学校名（直接粘贴两列即可）'
+        : '格式：身份证 + 内容（空格/制表符/逗号都支持）';
 });
 
 function generateSql() {
     const input = document.getElementById('dataInput').value.trim();
     const resultEl = document.getElementById('sqlResult');
+    const copyBtn = document.getElementById('copyBtn');
     const currField = document.getElementById('fieldSelect').value;
 
     if (!input) {
-        resultEl.innerText = '请先粘贴数据';
+        resultEl.innerText = '❌ 请先粘贴Excel数据';
+        copyBtn.disabled = true;
         return;
     }
 
@@ -88,7 +256,20 @@ function generateSql() {
         }
     });
 
-    resultEl.innerText = sql || '未识别到有效数据';
+    resultEl.innerText = sql || '⚠️ 未识别到有效数据，请检查格式';
+    copyBtn.disabled = !sql;
+}
+
+function copySql() {
+    const sqlText = document.getElementById('sqlResult').innerText;
+    const copyTip = document.getElementById('copyTip');
+
+    navigator.clipboard.writeText(sqlText).then(() => {
+        copyTip.style.display = 'block';
+        setTimeout(() => copyTip.style.display = 'none', 2000);
+    }).catch(() => {
+        alert('复制失败，请手动选中复制');
+    });
 }
 </script>
 </body>
