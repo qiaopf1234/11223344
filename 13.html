@@ -124,7 +124,7 @@
             font-weight: 500;
             border: none;
             border-radius: 12px;
-            cursor: pointer;
+           条件: pointer;
             transition: all 0.3s ease;
             display: inline-flex;
             align-items: center;
@@ -198,6 +198,8 @@
             <option value="csrq">csrq - 出生日期</option>
             <option value="rxny">rxny - 入学年月</option>
             <option value="byny">byny - 毕业年月</option>
+            <!-- 新增：修改身份证号选项 -->
+            <option value="sfzjh">sfzjh - 身份证号（修改身份证）</option>
         </select>
 
         <p class="tip" id="tipText">格式：身份证 + 内容（空格/制表符/逗号都支持）</p>
@@ -219,9 +221,16 @@
 <script>
 document.getElementById('fieldSelect').addEventListener('change', function() {
     const tipText = document.getElementById('tipText');
-    tipText.innerText = this.value === 'xxmc'
-        ? '学校格式：旧学校名 | 新学校名（直接粘贴两列即可）'
-        : '格式：身份证 + 内容（空格/制表符/逗号都支持）';
+    const val = this.value;
+
+    // 提示文字适配：修改身份证专用提示
+    if (val === 'sfzjh') {
+        tipText.innerText = '格式：旧身份证号 + 新身份证号（直接粘贴两列即可）';
+    } else if (val === 'xxmc') {
+        tipText.innerText = '学校格式：旧学校名 | 新学校名（直接粘贴两列即可）';
+    } else {
+        tipText.innerText = '格式：身份证 + 内容（空格/制表符/逗号都支持）';
+    }
 });
 
 function generateSql() {
@@ -246,12 +255,17 @@ function generateSql() {
         const parts = trimLine.split(/[\s,]+/).filter(p => p);
         if (parts.length < 2) return;
 
-        const key = parts[0].trim();
+        const key = parts[0].trim().replace(/'/g, "''");
         const val = parts.slice(1).join(' ').trim().replace(/'/g, "''");
 
+        // 生成SQL逻辑：新增 sfzjh 处理
         if (currField === 'xxmc') {
             sql += `UPDATE kdsj_zxxs_by SET xxmc = '${val}' WHERE xxmc = '${key}';\n`;
+        } else if (currField === 'sfzjh') {
+            // 按旧身份证更新新身份证
+            sql += `UPDATE kdsj_zxxs_by SET sfzjh = '${val}' WHERE sfzjh = '${key}';\n`;
         } else {
+            // 常规：按身份证更新其他字段
             sql += `UPDATE kdsj_zxxs_by SET ${currField} = '${val}' WHERE sfzjh = '${key}';\n`;
         }
     });
@@ -273,4 +287,4 @@ function copySql() {
 }
 </script>
 </body>
-</html>
+</html> 
