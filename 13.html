@@ -348,6 +348,33 @@
 <script>
 document.getElementById('fieldSelect').addEventListener('change', updateTip);
 document.getElementById('versionSelect').addEventListener('change', updateTip);
+document.getElementById('versionSelect').addEventListener('change', updateFieldOptions);
+
+// 页面加载时初始化字段选项
+window.onload = function() {
+    updateFieldOptions();
+    updateTip();
+};
+
+// 根据版本动态显示/隐藏户口所在地选项
+function updateFieldOptions() {
+    const version = document.getElementById('versionSelect').value;
+    const fieldSelect = document.getElementById('fieldSelect');
+    
+    // 先移除现有的户口所在地选项（如果存在）
+    const existingHkszd = document.querySelector('#fieldSelect option[value="hkszd"]');
+    if (existingHkszd) {
+        existingHkszd.remove();
+    }
+    
+    // B版本添加户口所在地选项
+    if (version === 'B') {
+        const option = document.createElement('option');
+        option.value = 'hkszd';
+        option.textContent = '户口所在地(hkszd)';
+        fieldSelect.appendChild(option);
+    }
+}
 
 function updateTip() {
     const val = document.getElementById('fieldSelect').value;
