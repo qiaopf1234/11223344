@@ -208,7 +208,7 @@
         .btn-primary {
             background: linear-gradient(135deg, var(--primary), var(--primary-light));
             color: #FFFFFF;
-            box-shadow: var(--shadow-sm);
+            fieldSelectbox-shadow: var(--shadow-sm);
         }
 
         .btn-primary:hover {
@@ -356,23 +356,27 @@ window.onload = function() {
     updateTip();
 };
 
-// 根据版本动态显示/隐藏户口所在地选项
+// 根据版本动态显示/隐藏户口所在地、性别选项
 function updateFieldOptions() {
     const version = document.getElementById('versionSelect').value;
     const fieldSelect = document.getElementById('fieldSelect');
     
-    // 先移除现有的户口所在地选项（如果存在）
-    const existingHkszd = document.querySelector('#fieldSelect option[value="hkszd"]');
-    if (existingHkszd) {
-        existingHkszd.remove();
-    }
+    // 清空动态添加的选项
+    document.querySelectorAll('#fieldSelect option.dynamic').forEach(opt => opt.remove());
     
-    // B版本添加户口所在地选项
+    // B版本添加 户口所在地、性别
     if (version === 'B') {
-        const option = document.createElement('option');
-        option.value = 'hkszd';
-        option.textContent = '户口所在地';
-        fieldSelect.appendChild(option);
+        const option1 = document.createElement('option');
+        option1.value = 'xb';
+        option1.textContent = '性别';
+        option1.className = 'dynamic';
+        fieldSelect.appendChild(option1);
+
+        const option2 = document.createElement('option');
+        option2.value = 'hkszd';
+        option2.textContent = '户口所在地';
+        option2.className = 'dynamic';
+        fieldSelect.appendChild(option2);
     }
 }
 
@@ -419,12 +423,18 @@ function generateSql() {
         const key = parts[0].trim().replace(/'/g, "''");
         const val = parts.slice(1).join(' ').trim().replace(/'/g, "''");
 
+        // 字段映射：B版本班级是 bjmc
+        let realField = currField;
+        if (version === 'B' && realField === 'bj') {
+            realField = 'bjmc';
+        }
+
         if (currField === 'xxmc') {
             sql += `UPDATE ${config.table} SET xxmc = '${val}' WHERE xxmc = '${key}';\n`;
         } else if (currField === 'sfzjh') {
             sql += `UPDATE ${config.table} SET ${config.idField} = '${val}' WHERE ${config.idField} = '${key}';\n`;
         } else {
-            sql += `UPDATE ${config.table} SET ${currField} = '${val}' WHERE ${config.idField} = '${key}';\n`;
+            sql += `UPDATE ${config.table} SET ${realField} = '${val}' WHERE ${config.idField} = '${key}';\n`;
         }
     });
 
