@@ -3,310 +3,350 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>批量生成更新SQL｜商务专业版</title>
+    <title>赛博紫蓝 · 重工控制台</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: "Microsoft YaHei UI", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: "Segoe UI", "Roboto Mono", monospace;
         }
 
+        /* 🎨 完全对齐 Discord 赛博紫蓝风格 */
         :root {
-            --primary: #2A3B54;
-            --primary-light: #3D506E;
-            --primary-dark: #1E2B3F;
-            --accent: #4A6A9E;
-            --success: #3D6B4E;
-            --success-light: #4A7D5E;
-            --neutral-50: #F8F9FB;
-            --neutral-100: #F1F3F7;
-            --neutral-200: #E2E6EF;
-            --neutral-300: #D0D5E0;
-            --neutral-600: #6B7280;
-            --neutral-800: #374151;
-            --neutral-900: #111827;
-            --radius: 16px;
-            --radius-lg: 20px;
-            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.06);
-            --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.08);
-            --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
-            --transition: all 0.32s cubic-bezier(0.25, 0.8, 0.25, 1);
+            --bg-main: #1e1f35;       /* 主背景：深紫蓝 */
+            --bg-panel: #2b2d42;     /* 面板背景：紫灰 */
+            --bg-sidebar: #3d3f5c;   /* 侧边栏紫灰 */
+            --primary: #7b68ee;      /* 主色：紫蓝 */
+            --secondary: #00d4ff;    /* 次色：霓虹青 */
+            --accent: #ff6ec7;       /* 点缀：粉紫霓虹 */
+            --text: #e0e0ff;         /* 主文字：浅紫白 */
+            --text-light: #a0a0cc;   /* 次要文字 */
+            --border: rgba(123, 104, 238, 0.3);
+            --glow: 0 0 15px rgba(123, 104, 238, 0.25);
+            --radius: 6px;
+            --transition: all 0.25s ease;
         }
 
         body {
+            background: var(--bg-main);
+            color: var(--text);
             min-height: 100vh;
-            background: linear-gradient(135deg, #F7F8FA 0%, #EAEFF5 100%);
-            padding: 60px 20px;
-            color: var(--neutral-800);
-            line-height: 1.6;
+            padding: 40px 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* 背景网格 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image:
+                linear-gradient(rgba(123,104,238,0.06) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(123,104,238,0.06) 1px, transparent 1px);
+            background-size: 50px 50px;
+            opacity: 0.3;
+            z-index: -2;
+        }
+
+        /* 扫描线 */
+        .scan-line {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(transparent 90%, rgba(0,212,255,0.05) 100%);
+            background-size: 100% 8px;
+            animation: scan 6s linear infinite;
+            pointer-events: none;
+            z-index: 0;
+        }
+        @keyframes scan {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(100%); }
+        }
+
+        /* 鼠标光效 */
+        .mouse-light {
+            position: fixed;
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, rgba(123,104,238,0.08) 0%, transparent 65%);
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: -1;
+            transition: transform 0.08s ease;
         }
 
         .container {
             max-width: 1100px;
             margin: 0 auto;
+            position: relative;
+            z-index: 2;
         }
 
+        /* 标题 */
         .main-title {
             text-align: center;
-            font-size: 32px;
-            font-weight: 600;
+            font-size: 36px;
+            font-weight: 700;
             color: var(--primary);
-            margin-bottom: 48px;
-            letter-spacing: 1px;
+            text-shadow: 0 0 15px rgba(123,104,238,0.4);
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            margin-bottom: 50px;
             position: relative;
         }
-
         .main-title::after {
             content: '';
-            width: 60px;
-            height: 3px;
-            background: linear-gradient(90deg, var(--accent), var(--primary));
+            width: 90px; height: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
             position: absolute;
-            bottom: -12px;
-            left: 50%;
+            bottom: -12px; left: 50%;
             transform: translateX(-50%);
-            border-radius: 3px;
+            box-shadow: 0 0 10px rgba(123,104,238,0.3);
         }
 
-        .card {
-            background: #FFFFFF;
-            border-radius: var(--radius-lg);
-            padding: 40px 44px;
-            margin-bottom: 32px;
-            box-shadow: var(--shadow-md);
+        /* 面板 */
+        .cyber-panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 36px 40px;
+            margin-bottom: 30px;
+            box-shadow: var(--glow);
+            position: relative;
+            overflow: hidden;
             transition: var(--transition);
-            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+        .cyber-panel::before {
+            content: '';
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--primary), transparent);
+        }
+        .cyber-panel:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 22px rgba(123,104,238,0.25);
+            border-color: rgba(123,104,238,0.5);
         }
 
-        .card:hover {
-            box-shadow: var(--shadow-lg);
-            transform: translateY(-4px);
-        }
-
-        .card-header {
-            display: flex;
+        /* HUD 标签 */
+        .hud-badge {
+            display: inline-flex;
             align-items: center;
-            gap: 12px;
-            margin-bottom: 28px;
-        }
-
-        .card-header h2 {
-            font-size: 22px;
-            font-weight: 600;
-            color: var(--primary-dark);
+            justify-content: center;
+            background: rgba(123,104,238,0.1);
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            font-size: 12px;
+            padding: 4px 10px;
+            border-radius: 4px;
+            margin-right: 8px;
             letter-spacing: 0.5px;
         }
 
-        .card-icon {
-            width: 36px;
-            height: 36px;
-            border-radius: 12px;
-            background: linear-gradient(135deg, var(--primary-light), var(--accent));
+        .panel-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 26px;
+        }
+        .panel-header h2 {
+            font-size: 20px;
+            color: var(--secondary);
+            text-shadow: 0 0 8px rgba(0,212,255,0.35);
+            letter-spacing: 1px;
+        }
+        .panel-icon {
+            width: 36px; height: 36px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: var(--radius);
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
+            color: #fff;
             font-size: 18px;
+            box-shadow: 0 0 10px rgba(123,104,238,0.4);
         }
 
         .tip {
-            font-size: 15px;
-            color: var(--neutral-600);
+            font-size: 14px;
+            color: var(--text-light);
             margin: 14px 0;
-            line-height: 1.7;
-        }
-
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--neutral-100);
-            color: var(--primary);
-            font-size: 13px;
-            font-weight: 500;
-            padding: 5px 12px;
-            border-radius: 10px;
-            margin-right: 10px;
-            border: 1px solid var(--neutral-200);
-        }
-
-        .form-group {
-            margin: 24px 0;
-        }
-
-        .form-label {
-            font-size: 15px;
-            font-weight: 500;
-            color: var(--neutral-800);
-            margin-bottom: 10px;
-            display: block;
-        }
-
-        .select-control {
-            width: 100%;
-            max-width: 380px;
-            padding: 14px 18px;
-            font-size: 15px;
-            border: 1px solid var(--neutral-200);
-            border-radius: var(--radius);
-            background: var(--neutral-50);
-            outline: none;
-            transition: var(--transition);
-            color: var(--neutral-800);
-        }
-
-        .select-control:focus {
-            border-color: var(--accent);
-            background: #FFFFFF;
-            box-shadow: 0 0 0 4px rgba(74, 106, 158, 0.12);
-        }
-
-        textarea {
-            width: 100%;
-            height: 260px;
-            padding: 20px;
-            font-size: 15px;
-            border: 1px solid var(--neutral-200);
-            border-radius: var(--radius);
-            background: var(--neutral-50);
-            resize: vertical;
-            outline: none;
-            transition: var(--transition);
-            color: var(--neutral-900);
             line-height: 1.6;
         }
 
-        textarea:focus {
-            border-color: var(--accent);
-            background: #FFFFFF;
-            box-shadow: 0 0 0 4px rgba(74, 106, 158, 0.12);
+        /* 表单控件 */
+        .form-group { margin: 26px 0; }
+        .form-label {
+            font-size: 14px;
+            color: var(--secondary);
+            margin-bottom: 10px;
+            display: block;
+            letter-spacing: 0.5px;
         }
 
-        .btn-group {
-            display: flex;
-            gap: 18px;
-            flex-wrap: wrap;
-            margin-top: 28px;
-        }
-
-        button {
-            padding: 14px 32px;
-            font-size: 15px;
-            font-weight: 500;
-            border: none;
+        .cyber-select {
+            width: 100%; max-width: 380px;
+            padding: 12px 16px;
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            color: var(--text);
+            outline: none;
+            font-size: 14px;
             border-radius: var(--radius);
-            cursor: pointer;
             transition: var(--transition);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            letter-spacing: 0.3px;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237b68ee' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 14px;
+        }
+        .cyber-select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(123,104,238,0.15);
         }
 
-        .btn-primary {
-            background: linear-gradient(135deg, var(--primary), var(--primary-light));
-            color: #FFFFFF;
-            fieldSelectbox-shadow: var(--shadow-sm);
+        .cyber-textarea {
+            width: 100%; height: 260px;
+            padding: 18px;
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            color: var(--text);
+            font-family: monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            border-radius: var(--radius);
+            resize: vertical;
+            outline: none;
+            transition: var(--transition);
         }
-
-        .btn-primary:hover {
-            background: linear-gradient(135deg, var(--primary-light), var(--accent));
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
+        .cyber-textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(123,104,238,0.15);
         }
+        .cyber-textarea::placeholder { color: rgba(224,224,255,0.3); }
 
-        .btn-success {
-            background: linear-gradient(135deg, var(--success), var(--success-light));
-            color: #FFFFFF;
-            box-shadow: var(--shadow-sm);
+        /* 按钮 */
+        .btn-group {
+            display: flex; gap: 18px; flex-wrap: wrap;
+            margin-top: 26px;
         }
-
-        .btn-success:hover {
-            background: linear-gradient(135deg, var(--success-light), #548A66);
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
+        .cyber-btn {
+            padding: 12px 28px;
+            background: transparent;
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: var(--transition);
+            border-radius: var(--radius);
         }
-
-        button:disabled {
-            background: var(--neutral-200) !important;
-            color: var(--neutral-300) !important;
+        .cyber-btn::before {
+            content: '';
+            position: absolute; top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(123,104,238,0.12), transparent);
+            transition: left 0.6s ease;
+        }
+        .cyber-btn:hover::before { left: 100%; }
+        .cyber-btn:hover {
+            background: rgba(123,104,238,0.08);
+            color: var(--secondary);
+            box-shadow: var(--glow);
+            text-shadow: 0 0 6px rgba(0,212,255,0.35);
+        }
+        .btn-purple {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .btn-purple:hover {
+            background: rgba(255,110,199,0.08);
+            box-shadow: 0 0 14px rgba(255,110,199,0.25);
+        }
+        .cyber-btn:disabled {
+            background: #25273d !important;
+            color: #5a5a80 !important;
             cursor: not-allowed;
             transform: none !important;
             box-shadow: none !important;
         }
 
-        .sql-output {
-            background: #1A2238;
-            color: #E5E7EB;
-            padding: 28px;
+        /* 结果终端 */
+        .sql-console {
+            background: var(--bg-main);
+            color: var(--secondary);
+            padding: 24px;
             border-radius: var(--radius);
-            font-family: "JetBrains Mono", Consolas, "Courier New", monospace;
+            font-family: monospace;
             white-space: pre-wrap;
             max-height: 500px;
             overflow: auto;
             margin-top: 20px;
             line-height: 1.7;
-            font-size: 14px;
-            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 13px;
+            border: 1px solid var(--border);
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
         }
 
         .copy-tip {
-            color: var(--success);
-            font-size: 15px;
+            color: var(--secondary);
+            font-size: 14px;
             font-weight: 500;
-            margin-top: 16px;
+            margin-top: 14px;
             display: none;
             align-items: center;
             gap: 6px;
-            animation: fadeIn 0.4s ease forwards;
+            text-shadow: 0 0 6px rgba(0,212,255,0.35);
+            animation: fadeIn 0.3s ease forwards;
         }
-
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(6px); }
+            from { opacity: 0; transform: translateY(4px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+        /* 粒子 */
+        .particle {
+            position: fixed;
+            width: 2px; height: 2px;
+            background: var(--secondary);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: -1;
+            opacity: 0.4;
         }
 
-        ::-webkit-scrollbar-track {
-            background: var(--neutral-100);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--neutral-300);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--neutral-600);
-        }
+        /* 滚动条 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-main); }
+        ::-webkit-scrollbar-thumb { background: var(--primary); }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1 class="main-title">SQL 批量更新生成工具</h1>
+    <div class="mouse-light" id="mouseLight"></div>
+    <div class="scan-line"></div>
 
-        <div class="card">
-            <div class="card-header">
-                <div class="card-icon">📝</div>
+    <div class="container">
+        <h1 class="main-title">SQL 重工控制台</h1>
+
+        <div class="cyber-panel">
+            <div class="panel-header">
+                <div class="panel-icon">📝</div>
                 <h2>数据配置与录入</h2>
             </div>
 
             <p class="tip">
-                <span class="badge">Excel 快捷粘贴</span>
-                直接复制 Excel 两列数据粘贴即可，自动兼容空格、制表符、逗号分隔格式
+                <span class="hud-badge">EXCEL 快捷粘贴</span>
+                自动兼容空格、制表符、逗号分隔格式
             </p>
 
             <div class="form-group">
                 <label class="form-label">选择使用版本</label>
-                <select class="select-control" id="versionSelect">
+                <select class="cyber-select" id="versionSelect">
                     <option value="A">A版本 - certificate_meta_message</option>
                     <option value="B">B版本 - kdsj_zxxs_by</option>
                 </select>
@@ -314,7 +354,7 @@
 
             <div class="form-group">
                 <label class="form-label">选择需要更新的字段</label>
-                <select class="select-control" id="fieldSelect">
+                <select class="cyber-select" id="fieldSelect">
                     <option value="bj">班级名称</option>
                     <option value="mz">民族</option>
                     <option value="xm">姓名</option>
@@ -326,45 +366,61 @@
                 </select>
             </div>
 
-            <p class="tip" id="tipText">格式：身份证 + 内容（空格/制表符/逗号都支持）</p>
-            <textarea id="dataInput" placeholder="请在此粘贴 Excel 两列数据，一行一条记录..."></textarea>
+            <p class="tip" id="tipText">格式：身份证 + 内容</p>
+            <textarea id="dataInput" class="cyber-textarea" placeholder="粘贴 Excel 两列数据..."></textarea>
 
             <div class="btn-group">
-                <button class="btn-primary" onclick="generateSql()">🔄 一键生成 SQL</button>
-                <button class="btn-success" onclick="copySql()" id="copyBtn" disabled>📋 一键复制结果</button>
+                <button class="cyber-btn" onclick="generateSql()">🔄 生成 SQL</button>
+                <button class="cyber-btn btn-purple" onclick="copySql()" id="copyBtn" disabled>📋 复制结果</button>
             </div>
-            <div class="copy-tip" id="copyTip">✅ 复制成功，可直接在数据库执行</div>
+            <div class="copy-tip" id="copyTip">✅ 复制成功</div>
         </div>
 
-        <div class="card">
-            <div class="card-header">
-                <div class="card-icon">📤</div>
+        <div class="cyber-panel">
+            <div class="panel-header">
+                <div class="panel-icon">📤</div>
                 <h2>SQL 生成结果</h2>
             </div>
-            <div id="sqlResult" class="sql-output">等待生成数据...</div>
+            <div id="sqlResult" class="sql-console">等待生成数据...</div>
         </div>
     </div>
 
 <script>
+// 鼠标光影追随
+const light = document.getElementById('mouseLight');
+document.addEventListener('mousemove', e => {
+    light.style.left = e.clientX + 'px';
+    light.style.top = e.clientY + 'px';
+});
+
+// 初始化粒子
+function createParticles() {
+    for(let i=0; i<40; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.style.left = Math.random() * 100 + '%';
+        p.style.top = Math.random() * 100 + '%';
+        p.style.opacity = Math.random() * 0.4 + 0.2;
+        document.body.appendChild(p);
+    }
+}
+
+// 原有功能逻辑 100% 保留
 document.getElementById('fieldSelect').addEventListener('change', updateTip);
 document.getElementById('versionSelect').addEventListener('change', updateTip);
 document.getElementById('versionSelect').addEventListener('change', updateFieldOptions);
 
-// 页面加载时初始化字段选项
 window.onload = function() {
     updateFieldOptions();
     updateTip();
+    createParticles();
 };
 
-// 根据版本动态显示/隐藏户口所在地、性别选项
 function updateFieldOptions() {
     const version = document.getElementById('versionSelect').value;
     const fieldSelect = document.getElementById('fieldSelect');
-    
-    // 清空动态添加的选项
     document.querySelectorAll('#fieldSelect option.dynamic').forEach(opt => opt.remove());
     
-    // B版本添加 户口所在地、性别
     if (version === 'B') {
         const option1 = document.createElement('option');
         option1.value = 'xb';
@@ -385,11 +441,11 @@ function updateTip() {
     const tipText = document.getElementById('tipText');
     
     if (val === 'sfzjh') {
-        tipText.innerText = '格式：旧身份证号 + 新身份证号（直接粘贴两列即可）';
+        tipText.innerText = '格式：旧身份证号 + 新身份证号';
     } else if (val === 'xxmc') {
-        tipText.innerText = '学校格式：旧学校名 | 新学校名（直接粘贴两列即可）';
+        tipText.innerText = '格式：旧学校名 | 新学校名';
     } else {
-        tipText.innerText = '格式：身份证 + 内容（空格/制表符/逗号都支持）';
+        tipText.innerText = '格式：身份证 + 内容';
     }
 }
 
@@ -401,7 +457,7 @@ function generateSql() {
     const currField = document.getElementById('fieldSelect').value;
 
     if (!input) {
-        resultEl.innerText = '❌ 请先粘贴 Excel 数据';
+        resultEl.innerText = '❌ 请先粘贴数据';
         copyBtn.disabled = true;
         return;
     }
@@ -416,18 +472,14 @@ function generateSql() {
     lines.forEach(line => {
         const trimLine = line.trim();
         if (!trimLine) return;
-
         const parts = trimLine.split(/[\s,]+/).filter(p => p);
         if (parts.length < 2) return;
 
         const key = parts[0].trim().replace(/'/g, "''");
         const val = parts.slice(1).join(' ').trim().replace(/'/g, "''");
 
-        // 字段映射：B版本班级是 bjmc
         let realField = currField;
-        if (version === 'B' && realField === 'bj') {
-            realField = 'bjmc';
-        }
+        if (version === 'B' && realField === 'bj') realField = 'bjmc';
 
         if (currField === 'xxmc') {
             sql += `UPDATE ${config.table} SET xxmc = '${val}' WHERE xxmc = '${key}';\n`;
@@ -438,7 +490,7 @@ function generateSql() {
         }
     });
 
-    resultEl.innerText = sql || '⚠️ 未识别到有效数据，请检查格式';
+    resultEl.innerText = sql || '⚠️ 未识别到有效数据';
     copyBtn.disabled = !sql;
 }
 
@@ -449,9 +501,7 @@ function copySql() {
     navigator.clipboard.writeText(sqlText).then(() => {
         copyTip.style.display = 'flex';
         setTimeout(() => copyTip.style.display = 'none', 2500);
-    }).catch(() => {
-        alert('复制失败，请手动选中复制');
-    });
+    }).catch(() => alert('复制失败'));
 }
 </script>
 </body>
