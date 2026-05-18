@@ -220,8 +220,14 @@
                             <i class="fa fa-code mr-2"></i> 生成SQL语句
                         </button>
                         
-                        <button id="clearResult" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-3 px-4 rounded-lg shadow-soft flex items-center justify-center button-press">
-                            <i class="fa fa-trash mr-2"></i> 清空结果
+                        <!-- 一键复制SQL -->
+                        <button id="copySQL" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg shadow-soft flex items-center justify-center button-press">
+                            <i class="fa fa-copy mr-2"></i> 一键复制SQL
+                        </button>
+
+                        <!-- 合并：一键清空所有 -->
+                        <button id="clearAll" class="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-3 px-4 rounded-lg shadow-soft flex items-center justify-center button-press">
+                            <i class="fa fa-trash mr-2"></i> 清空所有数据&结果
                         </button>
                         
                         <button id="saveSQL" class="w-full bg-gray-700 hover:bg-gray-800 text-white font-medium py-3 px-4 rounded-lg shadow-soft flex items-center justify-center button-press">
@@ -306,12 +312,10 @@
         // 全局变量
         let excelData = null;
         let sqlResult = '';
-        let currentMode = 'insert'; // 默认：插入模式（insert/update）
-        let currentTableType = 'zzxs'; // 默认中职表（zzxs-中职学生，zxxs-中小学学生）
+        let currentMode = 'insert';
+        let currentTableType = 'zzxs';
         
-        // 新增：将getModeText函数移到全局作用域
         function getModeText() {
-            // 根据当前模式返回中文描述
             const modeMap = {
                 'insert': '中职插入',
                 'update': '中职更新',
@@ -327,7 +331,6 @@
         const downloadTemplateBtn = document.getElementById('downloadTemplate');
         const excelFileInput = document.getElementById('excelFile');
         const generateSQLBtn = document.getElementById('generateSQL');
-        const clearResultBtn = document.getElementById('clearResult');
         const saveSQLBtn = document.getElementById('saveSQL');
         const statusEl = document.getElementById('status');
         const sqlResultEl = document.getElementById('sqlResult');
@@ -343,50 +346,50 @@
         const middleInsertTab = document.getElementById('middleInsertTab');
         const middleUpdateTab = document.getElementById('middleUpdateTab');
         
+        // 新增按钮
+        const copySQLBtn = document.getElementById('copySQL');
+        const clearAllBtn = document.getElementById('clearAll');
+        
         // 初始化
         document.addEventListener('DOMContentLoaded', () => {
             updateStatus('请下载模板并填写数据');
             updateLineCount();
             
-            // 标签切换事件
             insertTab.addEventListener('click', () => switchMode('insert'));
             updateTab.addEventListener('click', () => switchMode('update'));
             
-            // 事件监听
             downloadTemplateBtn.addEventListener('click', downloadTemplate);
             excelFileInput.addEventListener('change', handleFileUpload);
             generateSQLBtn.addEventListener('click', generateSQL);
-            clearResultBtn.addEventListener('click', clearResult);
             saveSQLBtn.addEventListener('click', saveSQL);
             middleInsertTab.addEventListener('click', () => switchMode('middleInsert'));
-            middleUpdateTab.addEventListener('click', () => switchMode('middleUpdate'));  
+            middleUpdateTab.addEventListener('click', () => switchMode('middleUpdate'));
+
+            // 绑定新增按钮事件
+            copySQLBtn.addEventListener('click', copySQLToClipboard);
+            clearAllBtn.addEventListener('click', clearAllDataAndResult);
             
-            // 自动调整文本区域高度
             sqlResultEl.addEventListener('input', adjustTextareaHeight);
-            
-            // 确保提示框在最上层
             document.body.appendChild(toast);
         });
         
-        // 切换模式（插入/更新）
+        // 切换模式
         function switchMode(mode) {
-            // 重置所有标签样式
             [insertTab, updateTab, middleInsertTab, middleUpdateTab].forEach(tab => {
                 tab.classList.remove('tab-active');
                 tab.classList.add('text-gray-500');
             });
 
-            // 更新当前模式和标签样式
             currentMode = mode;
             let modeText = '';
-            let tableType = ''; // 用于区分中职/高初中的数据库表
+            let tableType = '';
     
             switch(mode) {
                 case 'insert':
                     insertTab.classList.add('tab-active');
                     insertTab.classList.remove('text-gray-500');
                     modeText = '中职插入';
-                    tableType = 'zzxs'; // 中职表标识
+                    tableType = 'zzxs';
                     break;
                 case 'update':
                     updateTab.classList.add('tab-active');
@@ -398,7 +401,7 @@
                     middleInsertTab.classList.add('tab-active');
                     middleInsertTab.classList.remove('text-gray-500');
                     modeText = '高/初中插入';
-                    tableType = 'zxxs'; // 高初中表标识
+                    tableType = 'zxxs';
                     break;
                 case 'middleUpdate':
                     middleUpdateTab.classList.add('tab-active');
@@ -408,10 +411,7 @@
                     break;
             }
 
-            // 存储当前模式对应的表类型（用于后续生成SQL）
             currentTableType = tableType;
-            
-            // 重置状态并提示
             resetToolState();
             updateStatus(`已切换至【${modeText}】模式，请下载对应模板`);
             showToast(`已切换至【${modeText}】模式`);
@@ -426,23 +426,48 @@
             dataPreviewBody.innerHTML = '';
             dataCountEl.textContent = '0 条记录';
             updateLineCount();
-            excelFileInput.value = ''; // 清空文件选择
+            excelFileInput.value = '';
+        }
+
+        // ==============================================
+        // 合并：一键清空所有（数据 + SQL + 预览）
+        // ==============================================
+        function clearAllDataAndResult() {
+            excelData = null;
+            sqlResult = '';
+            excelFileInput.value = '';
+            sqlResultEl.value = '';
+            dataPreviewHeader.innerHTML = '';
+            dataPreviewBody.innerHTML = '';
+            dataCountEl.textContent = '0 条记录';
+            updateLineCount();
+            updateStatus('已清空所有数据与SQL结果，可重新上传Excel');
+            showToast('✅ 已一键清空所有内容');
+        }
+
+        // ==============================================
+        // 一键复制SQL到剪贴板
+        // ==============================================
+        function copySQLToClipboard() {
+            if (!sqlResultEl.value.trim()) {
+                showToast('暂无SQL可复制', false);
+                return;
+            }
+            navigator.clipboard.writeText(sqlResultEl.value).then(() => {
+                showToast('✅ SQL已复制到剪贴板');
+            }).catch(err => {
+                showToast('复制失败', false);
+            });
         }
         
-        // 更新状态信息
+        // 更新状态
         function updateStatus(message) {
             statusEl.innerHTML = `<p class="text-gray-600">${message}</p>`;
         }
         
-        // 显示提示框
         function showToast(message, isSuccess = true) {
-            // 确保提示框在最上层
             document.body.appendChild(toast);
-            
-            // 设置提示框内容
             toastMessage.textContent = message;
-            
-            // 设置图标和背景颜色
             if (isSuccess) {
                 toastIcon.className = 'fa fa-check-circle mr-3 text-xl';
                 toast.classList.remove('toast-error');
@@ -452,45 +477,34 @@
                 toast.classList.remove('toast-success');
                 toast.classList.add('toast-error');
             }
-            
-            // 显示提示框
             toast.classList.remove('translate-y-20', 'opacity-0');
             toast.classList.add('translate-y-0', 'opacity-1');
-            
-            // 防止多次点击导致提示框不消失
             clearTimeout(toast.timeoutId);
             toast.timeoutId = setTimeout(() => {
-                // 隐藏提示框
                 toast.classList.remove('translate-y-0', 'opacity-1');
                 toast.classList.add('translate-y-20', 'opacity-0');
             }, 3000);
         }
         
-        // 显示加载中
         function showLoading(message = '处理中...') {
             loadingMessage.textContent = message;
             loadingModal.classList.remove('hidden');
-            document.body.classList.add('modal-open'); // 防止页面滚动
+            document.body.classList.add('modal-open');
         }
         
-        // 隐藏加载中
         function hideLoading() {
             loadingModal.classList.add('hidden');
             document.body.classList.remove('modal-open');
         }
         
-        // 更新行数统计
         function updateLineCount() {
             const lines = sqlResultEl.value.split('\n').length;
             lineCountEl.textContent = lines;
         }
         
-        // 自动调整文本区域高度（优化版）
         function adjustTextareaHeight() {
-            // 限制最大高度，超过则显示滚动条
             const maxHeight = 600;
             const currentHeight = this.scrollHeight;
-            
             if (currentHeight > maxHeight) {
                 this.style.height = `${maxHeight}px`;
             } else {
@@ -498,125 +512,33 @@
             }
         }
         
-        // 下载模板（根据当前模式切换模板）
+        // 下载模板
         function downloadTemplate() {
             showLoading(`正在生成${getModeText()}模板...`);
-    
             setTimeout(() => {
                 try {
                     let templateData, fileName, sheetName = "学生信息";
-            
-                    // 根据当前模式生成对应模板
                     if (currentMode === 'insert' || currentMode === 'update') {
-                        // 中职模板（保持原有逻辑不变）
                         if (currentMode === 'insert') {
-                            templateData = [
-                                {
-                                    '姓名': '张三',
-                                    '性别': '女',
-                                    '出生日期': '20001030',
-                                    '专业名称': '铁道运输管理',
-                                    '专业代码': '500112',
-                                    '学制': '三年制',
-                                    '学校名称': '科尔沁左翼后旗民族职业技术学校',
-                                    '校长姓名': 'NULL',
-                                    '证书号': '1505202303252495',
-                                    '学校所在盟市': '通辽市',
-                                    '学校所在盟市代码': '150500000000',
-                                    '入学年月': '201909',
-                                    '毕业年月': '202307',
-                                    '学校标识码': '3615000002',
-                                    '班级名称': '19铁道运输管理1班',
-                                    'hash_cedo': 'NULL',
-                                    '身份证件号': '152323200010301221'
-                                }
-                            ];
+                            templateData = [{'姓名':'张三','性别':'女','出生日期':'20001030','专业名称':'铁道运输管理','专业代码':'500112','学制':'三年制','学校名称':'科尔沁左翼后旗民族职业技术学校','校长姓名':'NULL','证书号':'1505202303252495','学校所在盟市':'通辽市','学校所在盟市代码':'150500000000','入学年月':'201909','毕业年月':'202307','学校标识码':'3615000002','班级名称':'19铁道运输管理1班','hash_cedo':'NULL','身份证件号':'152323200010301221'}];
                             fileName = "中职插入模板.xlsx";
                         } else {
-                            templateData = [
-                                {
-                                    'xm': '张三',
-                                    'xb': '女',
-                                    'csrq': '20090912',
-                                    'zymc': '绘画',
-                                    'zybm': '750107',
-                                    'xz': '三年制',
-                                    'xxmc': '通辽经济技术开发区欧亚应用科技中等职业学校',
-                                    'xzxm': 'NULL',
-                                    'zsh': '1505202501386551',
-                                    'xxszsmc': '通辽市',
-                                    'xxszsdm': '150500000000',
-                                    'rxny': '202209',
-                                    'byny': '202507',
-                                    'xxbsm': '3615000343',
-                                    'bjmc': '2022级秋季一班',
-                                    'sfzjh': '152322200609121829',
-                                    'original_sfzjh': '152322200609121829'
-                                }
-                            ];
+                            templateData = [{'xm':'张三','xb':'女','csrq':'20090912','zymc':'绘画','zybm':'750107','xz':'三年制','xxmc':'通辽经济技术开发区欧亚应用科技中等职业学校','xzxm':'NULL','zsh':'1505202501386551','xxszsmc':'通辽市','xxszsdm':'150500000000','rxny':'202209','byny':'202507','xxbsm':'3615000343','bjmc':'2022级秋季一班','sfzjh':'152322200609121829','original_sfzjh':'152322200609121829'}];
                             fileName = "中职更新模板.xlsx";
                         }
                     } else if (currentMode === 'middleInsert' || currentMode === 'middleUpdate') {
-                        // 高/初中模板（根据你提供的字段调整）
                         if (currentMode === 'middleInsert') {
-                            templateData = [
-                                {
-                                    '学生姓名': '张三',
-                                    '性别码': '1',
-                                    '性别': '男',
-                                    '身份证件号': '150826200608155411',
-                                    '民族码': '1',
-                                    '民族': '汉族',
-                                    '出生日期': '20060815',
-                                    '户口所在地码': 'NULL',
-                                    '户口所在地': '内蒙古自治区巴彦淖尔市乌拉特前旗',
-                                    '入学年月': '202209',
-                                    '毕业年月': '202506',
-                                    '学校名称': '巴彦淖尔市衡越实验中学',
-                                    '班级名称': '高中2022级9班',
-                                    '制证日期': 'NULL',
-                                    '毕业证书号': 'NULL',
-                                    '学段状态码': '3',
-                                    '预留字段2': 'NULL',
-                                    '预留字段3': 'NULL',
-                                    '预留字段4': 'NULL',
-                                    '预留字段5': 'NULL',
-                                    'hash_code': 'NULL'
-                                }
-                            ];
+                            templateData = [{'学生姓名':'张三','性别码':'1','性别':'男','身份证件号':'150826200608155411','民族码':'1','民族':'汉族','出生日期':'20060815','户口所在地码':'NULL','户口所在地':'内蒙古自治区巴彦淖尔市乌拉特前旗','入学年月':'202209','毕业年月':'202506','学校名称':'巴彦淖尔市衡越实验中学','班级名称':'高中2022级9班','制证日期':'NULL','毕业证书号':'NULL','学段状态码':'3','预留字段2':'NULL','预留字段3':'NULL','预留字段4':'NULL','预留字段5':'NULL','hash_code':'NULL'}];
                             fileName = "高初中插入模板.xlsx";
                         } else {
-                            templateData = [
-                                {
-                                    'xm': '张三',
-                                    'xbm': '01',
-                                    'xb': '男',
-                                    'sfzjh': '123456789012345678',
-                                    'mzm': '01',
-                                    'mz': '汉',
-                                    'csrq': '20010315',
-                                    'hkszdm': '710000000000',
-                                    'hkszd': '台湾省',
-                                    'rxny': '201209',
-                                    'byny': '202406',
-                                    'xxmc': '呼和浩特第二中学',
-                                    'bjmc': '高中2021级',
-                                    'ylzd1': '3',
-                                    'original_sfzjh': '123456789012345678'
-                                }
-                            ];
+                            templateData = [{'xm':'张三','xbm':'01','xb':'男','sfzjh':'123456789012345678','mzm':'01','mz':'汉','csrq':'20010315','hkszdm':'710000000000','hkszd':'台湾省','rxny':'201209','byny':'202406','xxmc':'呼和浩特第二中学','bjmc':'高中2021级','ylzd1':'3','original_sfzjh':'123456789012345678'}];
                             fileName = "高初中更新模板.xlsx";
                         }
                     }
-            
-                    // 创建工作簿
                     const ws = XLSX.utils.json_to_sheet(templateData);
                     const wb = XLSX.utils.book_new();
                     XLSX.utils.book_append_sheet(wb, ws, sheetName);
-            
-                    // 下载
                     XLSX.writeFile(wb, fileName);
-            
                     updateStatus(`模板已下载，请填写数据后导入`);
                     showToast(`🎉 ${getModeText()}模板下载成功！请按示例填写数据`);
                 } catch (error) {
@@ -624,7 +546,6 @@
                     showToast('模板下载失败，请重试', false);
                     console.error('下载模板出错:', error);
                 }
-        
                 hideLoading();
             }, 800);
         }
@@ -641,12 +562,8 @@
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
-                    
-                    // 获取第一个工作表
                     const firstSheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheetName];
-                    
-                    // 转换为JSON
                     excelData = XLSX.utils.sheet_to_json(worksheet);
                     
                     if (excelData.length === 0) {
@@ -656,18 +573,14 @@
                     updateStatus(`已导入 ${excelData.length} 条数据`);
                     dataCountEl.textContent = `${excelData.length} 条记录`;
                     showToast(`🎉 成功导入 ${excelData.length} 条数据！可以生成SQL了`);
-                    
-                    // 预览数据
                     previewData(excelData);
                 } catch (error) {
                     updateStatus('文件解析失败');
                     showToast('文件解析失败，请检查文件格式', false);
                     console.error('解析Excel出错:', error);
                 }
-                
                 hideLoading();
             };
-            
             reader.readAsArrayBuffer(file);
         }
         
@@ -678,16 +591,12 @@
                 dataPreviewBody.innerHTML = '';
                 return;
             }
-            
-            // 生成表头
             const headers = Object.keys(data[0]);
             let headerHtml = '';
             headers.forEach(header => {
                 headerHtml += `<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">${header}</th>`;
             });
             dataPreviewHeader.innerHTML = headerHtml;
-            
-            // 生成数据行
             let bodyHtml = '';
             data.forEach((row, index) => {
                 let rowHtml = `<tr class="${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">`;
@@ -697,11 +606,10 @@
                 rowHtml += '</tr>';
                 bodyHtml += rowHtml;
             });
-            
             dataPreviewBody.innerHTML = bodyHtml;
         }
         
-        // 生成SQL（根据当前模式切换逻辑）
+        // 生成SQL
         function generateSQL() {
             if (!excelData || excelData.length === 0) {
                 showToast('请先导入Excel文件', false);
@@ -717,41 +625,24 @@
                     let generatedCount = 0;
                     let skippedCount = 0;
             
-                    // 根据模式生成对应SQL
                     if (currentMode === 'insert' || currentMode === 'middleInsert') {
-                        // 插入语句逻辑
                         excelData.forEach((row, index) => {
-                            // 跳过空行
                             const isEmptyRow = Object.values(row).every(value => 
-                                value === undefined || 
-                                value === null || 
-                                (typeof value === 'string' && value.trim() === '')
+                                value === undefined || value === null || (typeof value === 'string' && value.trim() === '')
                             );
+                            if (isEmptyRow) { skippedCount++; return; }
                     
-                            if (isEmptyRow) {
-                                skippedCount++;
-                                return;
-                            }
-                    
-                            // 检查必填字段
                             const requiredFields = currentTableType === 'zzxs' 
                                 ? ['姓名', '身份证件号', '证书号'] 
                                 : ['学生姓名', '身份证件号', '入学年月', '学校名称'];
                     
                             const hasRequiredFields = requiredFields.some(field => 
-                                row[field] !== undefined && 
-                                row[field] !== null && 
+                                row[field] !== undefined && row[field] !== null && 
                                 (typeof row[field] !== 'string' || row[field].trim() !== '')
                             );
+                            if (!hasRequiredFields) { skippedCount++; return; }
                     
-                            if (!hasRequiredFields) {
-                                skippedCount++;
-                                return;
-                            }
-                    
-                            // 构建插入语句
                             if (currentTableType === 'zzxs') {
-                                // 中职插入语句
                                 sql += `INSERT INTO \`${tableName}\` VALUES (`;
                                 sql += `'${escapeSqlValue(row.姓名 || '')}', `;
                                 sql += `'${escapeSqlValue(row.性别 || '')}', `;
@@ -772,7 +663,6 @@
                                 sql += `${isNullOrEmpty(row.身份证件号) ? 'NULL' : `'${escapeSqlValue(row.身份证件号 || '')}'`}`;
                                 sql += `);\n`;
                             } else {
-                                // 高/初中插入语句
                                 sql += `INSERT INTO \`${tableName}\` VALUES (`;
                                 sql += `'${escapeSqlValue(row.学生姓名 || '')}', `;
                                 sql += `'${escapeSqlValue(row.性别码 || '')}', `;
@@ -797,103 +687,59 @@
                                 sql += `${isNullOrEmpty(row.hash_code) ? 'NULL' : `'${escapeSqlValue(row.hash_code)}'`}`;
                                 sql += `);\n`;
                             }
-                    
                             generatedCount++;
                         });
                     } else {
-                        // 更新语句逻辑
                         excelData.forEach((row, index) => {
-                            // 跳过空行
                             const isEmptyRow = Object.values(row).every(value => 
-                                value === undefined || 
-                                value === null || 
-                                (typeof value === 'string' && value.trim() === '')
+                                value === undefined || value === null || (typeof value === 'string' && value.trim() === '')
                             );
+                            if (isEmptyRow) { skippedCount++; return; }
                     
-                            if (isEmptyRow) {
-                                skippedCount++;
-                                return;
-                            }
-                    
-                            // 检查必填字段
-                            const requiredFields = currentTableType === 'zzxs' 
-                                ? ['sfzjh', 'original_sfzjh'] 
-                                : ['sfzjh', 'original_sfzjh'];
-                    
+                            const requiredFields = ['sfzjh', 'original_sfzjh'];
                             const hasRequiredFields = requiredFields.some(field => 
-                                row[field] !== undefined && 
-                                row[field] !== null && 
+                                row[field] !== undefined && row[field] !== null && 
                                 (typeof row[field] !== 'string' || row[field].trim() !== '')
                             );
+                            if (!hasRequiredFields) { skippedCount++; return; }
                     
-                            if (!hasRequiredFields) {
-                                skippedCount++;
-                                return;
-                            }
-                    
-                            // 构建更新语句
                             if (currentTableType === 'zzxs') {
-                                // 中职更新语句
                                 const setClauses = [];
                                 const columns = ['xm', 'xb', 'csrq', 'zymc', 'zybm', 'xz', 'xxmc', 'xzxm', 'zsh', 'xxszsmc', 'xxszsdm', 'rxny', 'byny', 'xxbsm', 'bjmc', 'sfzjh'];
-                        
                                 columns.forEach(col => {
                                     if (row[col] !== undefined && row[col] !== null) {
                                         let value = row[col];
-                                
-                                        if (isNullOrEmpty(value)) {
-                                            setClauses.push(`${col}=NULL`);
-                                            return;
-                                        }
-                                
+                                        if (isNullOrEmpty(value)) { setClauses.push(`${col}=NULL`); return; }
                                         value = escapeSqlValue(value.toString().trim());
                                         setClauses.push(`${col}='${value}'`);
                                     }
                                 });
-                        
                                 const whereClause = `sfzjh='${escapeSqlValue(row.original_sfzjh || row.sfzjh)}'`;
-                        
                                 if (setClauses.length > 0) {
                                     sql += `UPDATE ${tableName} SET ${setClauses.join(', ')} WHERE ${whereClause};\n`;
                                     generatedCount++;
-                                } else {
-                                    skippedCount++;
-                                }
+                                } else { skippedCount++; }
                             } else {
-                                // 高/初中更新语句
                                 const setClauses = [];
                                 const columns = ['xm', 'xbm', 'xb', 'sfzjh', 'mzm', 'mz', 'csrq', 'hkszdm', 'hkszd', 'rxny', 'byny', 'xxmc', 'bjmc', 'ylzd1'];
-                        
                                 columns.forEach(col => {
                                     if (row[col] !== undefined && row[col] !== null) {
                                         let value = row[col];
-                                
-                                        if (isNullOrEmpty(value)) {
-                                            setClauses.push(`${col}=NULL`);
-                                            return;
-                                        }
-                                
+                                        if (isNullOrEmpty(value)) { setClauses.push(`${col}=NULL`); return; }
                                         value = escapeSqlValue(value.toString().trim());
                                         setClauses.push(`${col}='${value}'`);
                                     }
                                 });
-                        
                                 const whereClause = `sfzjh='${escapeSqlValue(row.original_sfzjh || row.sfzjh)}'`;
-                        
                                 if (setClauses.length > 0) {
                                     sql += `UPDATE ${tableName} SET ${setClauses.join(', ')} WHERE ${whereClause};\n`;
                                     generatedCount++;
-                                } else {
-                                    skippedCount++;
-                                }
+                                } else { skippedCount++; }
                             }
                         });
                     }
             
-                    // 更新结果
                     sqlResult = sql;
-                    
-                    // 优化文本区域更新（减少闪烁）
                     sqlResultEl.style.transition = 'height 0.2s ease-out';
                     sqlResultEl.value = '';
                     setTimeout(() => {
@@ -903,7 +749,6 @@
                         sqlResultEl.style.transition = 'none';
                     }, 50);
             
-                    // 更新状态
                     const total = excelData.length;
                     if (generatedCount > 0) {
                         updateStatus(`已生成 ${generatedCount} 条SQL语句，跳过 ${skippedCount} 条记录`);
@@ -917,17 +762,8 @@
                     showToast('SQL生成失败，请重试', false);
                     console.error('生成SQL出错:', error);
                 }
-        
                 hideLoading();
             }, 1000);
-        }
-        
-        // 清空结果
-        function clearResult() {
-            sqlResult = '';
-            sqlResultEl.value = '';
-            updateLineCount();
-            showToast('已清空结果');
         }
         
         // 保存SQL
@@ -947,7 +783,6 @@
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-                
                 showToast('SQL文件已保存');
             } catch (error) {
                 showToast('保存失败，请重试', false);
@@ -955,24 +790,15 @@
             }
         }
         
-        // 辅助函数：转义SQL值
+        // 辅助函数
         function escapeSqlValue(value) {
-            if (value === undefined || value === null) {
-                return '';
-            }
-            
-           
-            // 处理字符串转义
+            if (value === undefined || value === null) return '';
             if (typeof value === 'string') {
-                return value
-                    .replace(/'/g, "''") // 单引号转义
-                    .replace(/\\/g, "\\\\"); // 反斜杠转义
+                return value.replace(/'/g, "''").replace(/\\/g, "\\\\");
             }
-            
             return value.toString();
         }
         
-        // 辅助函数：检查是否为空值
         function isNullOrEmpty(value) {
             return value === undefined || value === null || value === '' || value === 'NULL';
         }
