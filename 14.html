@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>运维周报生成器</title>
+<style>
+* {
+  box-sizing: border-box;
+  font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+}
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  color: #e0e0e0;
+}
+.container {
+  max-width: 900px;
+  margin: 30px auto;
+  padding: 30px;
+  background: rgba(22, 33, 62, 0.7);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 1px rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+h2 {
+  text-align: center;
+  color: #fff;
+  margin-bottom: 30px;
+  font-size: 28px;
+  font-weight: 700;
+  background: linear-gradient(90deg, #72edf2, #5151e5, #ee00ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.item {
+  margin-bottom: 24px;
+}
+label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #a0a0ff;
+  font-size: 14px;
+}
+input, textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  transition: all 0.3s ease;
+}
+select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid rgba(114, 237, 242, 0.5);
+  border-radius: 8px;
+  font-size: 14px;
+  background: #1a1a2e;
+  color: #ffffff;
+  transition: all 0.3s ease;
+}
+select:focus {
+  outline: none;
+  border-color: #72edf2;
+  box-shadow: 0 0 8px rgba(114, 237, 242, 0.5);
+}
+select option {
+  background: #1a1a2e;
+  color: #ffffff;
+}
+input:focus, textarea:focus {
+  outline: none;
+  border-color: #72edf2;
+  box-shadow: 0 0 8px rgba(114, 237, 242, 0.5);
+}
+.date-row {
+  display: flex;
+  gap: 12px;
+}
+.date-row .item {
+  flex: 1;
+}
+.btn-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+.btn-blue {
+  background: linear-gradient(90deg, #5151e5, #72edf2);
+  color: white;
+}
+.btn-blue:hover {
+  box-shadow: 0 0 15px rgba(114, 237, 242, 0.6);
+  transform: translateY(-2px);
+}
+.btn-green {
+  background: linear-gradient(90deg, #00b894, #55efc4);
+  color: white;
+}
+.btn-green:hover {
+  box-shadow: 0 0 15px rgba(0, 184, 148, 0.6);
+  transform: translateY(-2px);
+}
+.btn-gray {
+  background: linear-gradient(90deg, #636e72, #b2bec3);
+  color: white;
+}
+.btn-gray:hover {
+  box-shadow: 0 0 15px rgba(99, 110, 114, 0.6);
+  transform: translateY(-2px);
+}
+.btn-red {
+  background: linear-gradient(90deg, #d63031, #ff7675);
+  color: white;
+}
+.btn-red:hover {
+  box-shadow: 0 0 15px rgba(214, 48, 49, 0.6);
+  transform: translateY(-2px);
+}
+.btn-purple {
+  background: linear-gradient(90deg, #9d50bb, #6e48aa);
+  color: #fff;
+}
+.btn-purple:hover {
+  box-shadow: 0 0 15px rgba(157, 80, 187, 0.6);
+  transform: translateY(-2px);
+}
+textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h2>运维周报生成器</h2>
+
+  <div class="item">
+    <label>选择/自定义周报标题</label>
+    <select id="titleSel">
+      <option value="教育厅机关智能化管理平台、学生体质健康监测数据管理平台、民办机构管理系统运维服务运维周报">教育厅机关智能化管理平台、学生体质健康监测数据管理平台、民办机构管理系统运维服务运维周报</option>
+      <option value="教育厅基础教育大数据系统运维周报">教育厅基础教育大数据系统</option>
+      <option value="内蒙古自治区大青山管理局协同办公系统运维服务项目周报">大青山管理局协同办公系统</option>
+      <option value="自定义">手动自定义输入</option>
+    </select>
+  </div>
+  <div class="item" id="titleInputBox" style="display:none;">
+    <input type="text" id="reportTitle" placeholder="请手动输入周报标题">
+  </div>
+
+  <div class="item">
+    <label>周报模式切换</label>
+    <select id="modeSel">
+      <option value="single">单系统周报（隐藏系统名称列）</option>
+      <option value="multi">多系统周报（自带系统名列，直接Excel复制即可）</option>
+    </select>
+  </div>
+
+  <div class="item" id="sysInputBox" style="display:none;">
+    <label>默认系统名称（备用）</label>
+    <input type="text" id="systemName" value="">
+  </div>
+
+  <div class="date-row">
+    <div class="item">
+      <label>开始日期</label>
+      <input type="date" id="startDate">
+    </div>
+    <div class="item">
+      <label>结束日期</label>
+      <input type="date" id="endDate">
+    </div>
+  </div>
+
+  <div class="item">
+    <label>报告人</label>
+    <input type="text" id="reportUser" value="乔鹏飞">
+  </div>
+
+  <div class="item">
+    <label>协作人</label>
+    <input type="text" id="helper" value="于思雨">
+  </div>
+
+  <div class="item">
+    <label>本周主要工作内容（按行写，自动加序号）</label>
+    <div class="btn-bar">
+      <button class="btn-green" onclick="copyWork()">复制</button>
+      <button class="btn-gray" onclick="cutWork()">剪切</button>
+      <button class="btn-red" onclick="clearWork()">清空</button>
+      <button class="btn-purple" onclick="localSummary()">自动润色总结（无网络版）</button>
+    </div>
+    <textarea id="mainWork" rows="6" placeholder=""></textarea>
+  </div>
+
+  <div class="item">
+    <label>运维事件：多系统直接从Excel带系统名列整行复制粘贴，无需加任何符号</label>
+    <div class="btn-bar">
+      <button class="btn-green" onclick="copyEvent()">复制</button>
+      <button class="btn-gray" onclick="cutEvent()">剪切</button>
+      <button class="btn-red" onclick="clearEvent()">清空</button>
+    </div>
+    <textarea id="eventList" rows="12" placeholder=""></textarea>
+  </div>
+
+  <div class="item" style="text-align:center;">
+    <button class="btn-blue" onclick="generateAndExport()">生成并导出 Word 周报</button>
+  </div>
+</div>
+
+<script>
+document.getElementById('titleSel').addEventListener('change',function(){
+  let box = document.getElementById('titleInputBox');
+  box.style.display = this.value === '自定义' ? 'block' : 'none';
+});
+
+document.getElementById('modeSel').addEventListener('change',function(){
+  let sysBox = document.getElementById('sysInputBox');
+  sysBox.style.display = this.value === 'multi' ? 'none' : 'none';
+});
+
+function fmt(dateStr){
+  if(!dateStr) return '';
+  let d=new Date(dateStr);
+  let y=d.getFullYear();
+  let m=String(d.getMonth()+1).padStart(2,'0');
+  let d2=String(d.getDate()).padStart(2,'0');
+  return `${y}.${m}.${d2}`;
+}
+
+function copyWork(){
+  let t=document.getElementById('mainWork');
+  t.select();document.execCommand('copy');alert('复制成功');
+}
+function cutWork(){
+  let t=document.getElementById('mainWork');
+  t.select();document.execCommand('cut');alert('剪切成功');
+}
+function clearWork(){
+  document.getElementById('mainWork').value='';
+}
+
+function copyEvent(){
+  let t=document.getElementById('eventList');
+  t.select();document.execCommand('copy');alert('复制成功');
+}
+function cutEvent(){
+  let t=document.getElementById('eventList');
+  t.select();document.execCommand('cut');alert('剪切成功');
+}
+function clearEvent(){
+  document.getElementById('eventList').value='';
+}
+
+function splitLine(str){
+  return str.trim().split(/\s+/);
+}
+
+// ====================== 智能文件名 ======================
+function getFileName(titleSel, period) {
+  if (titleSel.includes('教育厅机关智能化管理平台、学生体质健康监测数据管理平台、民办机构管理系统')) {
+    return `教育厅3大系统运维周报（${period}）`;
+  }
+  if (titleSel.includes('教育厅基础教育大数据系统')) {
+    return `教育厅基础教育大数据系统运维周报（${period}）`;
+  }
+  if (titleSel.includes('内蒙古自治区大青山管理局协同办公系统')) {
+    return `大青山管理局协同办公系统运维周报（${period}）`;
+  }
+  return `运维周报（${period}）`;
+}
+
+// ====================== 本地模板化润色（无网络） ======================
+function localSummary() {
+  const eventText = document.getElementById('eventList').value.trim();
+  const mode = document.getElementById('modeSel').value;
+  if (!eventText) {
+    alert('请先粘贴运维事件内容！');
+    return;
+  }
+
+  const lines = eventText.split('\n').filter(x => x.trim());
+  const sysMap = {};
+
+  // 按系统分组
+  lines.forEach(line => {
+    const arr = splitLine(line);
+    const sysName = arr[0] || '未知系统';
+    const eventContent = arr.slice(1).join(' ');
+
+    if (!sysMap[sysName]) {
+      sysMap[sysName] = new Set();
+    }
+    sysMap[sysName].add(eventContent);
+  });
+
+  // 专业话术模板
+  const templates = {
+    '巡检': '常态化开展系统运维巡检，对应用服务、数据库、中间件等核心组件进行多轮排查，重点核查资源占用、连接稳定性及日志报错情况，未发现异常隐患。',
+    '检查': '全面校验系统各业务页面与核心功能入口，检查数据展示效果、业务操作响应速度，平台整体运行基线稳定，各项功能均正常可用。',
+    '安装': '部署安装主机防护程序，强化系统主机安全防护能力，提升整体安全防护等级。',
+    '默认': '完成系统日常运维工作，保障业务平稳有序开展。'
+  };
+
+  let summary = [];
+  let totalIdx = 1;
+
+  // 多系统模式：按系统分类
+  if (mode === 'multi') {
+    for (let sys in sysMap) {
+      summary.push(`一、${sys}`);
+      const events = Array.from(sysMap[sys]);
+      events.forEach((event, idx) => {
+        let text = templates['默认'];
+        if (event.includes('巡检')) text = templates['巡检'];
+        else if (event.includes('检查')) text = templates['检查'];
+        else if (event.includes('安装')) text = templates['安装'];
+        summary.push(`${totalIdx}. ${text}`);
+        totalIdx++;
+      });
+    }
+  } else {
+    // 单系统模式：直接分条
+    const events = new Set();
+    lines.forEach(line => {
+      const arr = splitLine(line);
+      events.add(arr.join(' '));
+    });
+    Array.from(events).forEach((event, idx) => {
+      let text = templates['默认'];
+      if (event.includes('巡检')) text = templates['巡检'];
+      else if (event.includes('检查')) text = templates['检查'];
+      else if (event.includes('安装')) text = templates['安装'];
+      summary.push(`${totalIdx}. ${text}`);
+      totalIdx++;
+    });
+  }
+
+  document.getElementById('mainWork').value = summary.join('\n');
+  alert('✅ 已完成本地润色！无需联网');
+}
+
+// ====================== 导出 ======================
+function generateAndExport(){
+  let titleSel = document.getElementById('titleSel').value;
+  let reportTitle = titleSel === '自定义' ? document.getElementById('reportTitle').value : titleSel;
+  let mode = document.getElementById('modeSel').value;
+
+  let start=document.getElementById('startDate').value;
+  let end=document.getElementById('endDate').value;
+  let period='';
+  if(start&&end){
+    period=fmt(start)+'-'+fmt(end);
+  }
+
+  let reportUser=document.getElementById('reportUser').value;
+  let helper=document.getElementById('helper').value;
+  let mainWorkLines=document.getElementById('mainWork').value.trim().split('\n').filter(x=>x.trim());
+  let eventLines=document.getElementById('eventList').value.trim().split('\n').filter(x=>x.trim());
+
+  let mainWorkHtml=mainWorkLines.map((line,i)=>`${i+1}. ${line}`).join('<br>');
+
+  let eventRows='';
+  eventLines.forEach((line,idx)=>{
+    let arr = splitLine(line);
+    let sysName = '';
+    let eventText='',proposer='',handler='',dealTime='';
+
+    if(mode === 'multi'){
+      sysName = arr[0]||'';
+      eventText = arr[1]||'';
+      proposer  = arr[4]||'';
+      handler   = arr[7]||'';
+      dealTime  = arr[8]||'';
+
+      eventRows+=`<tr>
+        <td style="text-align:center;font-size:12pt;">${idx+1}</td>
+        <td style="text-align:center;font-size:12pt;">${sysName}</td>
+        <td style="text-align:center;font-size:12pt;">${eventText}</td>
+        <td style="text-align:center;font-size:12pt;">${proposer}</td>
+        <td style="text-align:center;font-size:12pt;">${handler}</td>
+        <td style="text-align:center;font-size:12pt;">${dealTime}</td>
+      </tr>`;
+    }else{
+      eventText = arr[0]||'';
+      proposer  = arr[3]||'';
+      handler   = arr[6]||'';
+      dealTime  = arr[7]||'';
+
+      eventRows+=`<tr>
+        <td style="text-align:center;font-size:12pt;">${idx+1}</td>
+        <td style="text-align:center;font-size:12pt;">${eventText}</td>
+        <td style="text-align:center;font-size:12pt;">${proposer}</td>
+        <td style="text-align:center;font-size:12pt;">${handler}</td>
+        <td style="text-align:center;font-size:12pt;">${dealTime}</td>
+      </tr>`;
+    }
+  });
+
+  let headHtml = '';
+  let colSpanVal = mode === 'multi' ? 6 : 5;
+  if(mode === 'multi'){
+    headHtml = `
+    <th style="font-size:12pt;text-align:center;">序号</th>
+    <th style="font-size:12pt;text-align:center;">系统名称</th>
+    <th style="font-size:12pt;text-align:center;">运维事件</th>
+    <th style="font-size:12pt;text-align:center;">提出人</th>
+    <th style="font-size:12pt;text-align:center;">处理人</th>
+    <th style="font-size:12pt;text-align:center;">处理时间</th>`;
+  }else{
+    headHtml = `
+    <th style="font-size:12pt;text-align:center;">序号</th>
+    <th style="font-size:12pt;text-align:center;">运维事件</th>
+    <th style="font-size:12pt;text-align:center;">提出人</th>
+    <th style="font-size:12pt;text-align:center;">处理人</th>
+    <th style="font-size:12pt;text-align:center;">处理时间</th>`;
+  }
+
+  let html=`<html
+xmlns:v="urn:schemas-microsoft-com:vml"
+xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:w="urn:schemas-microsoft-com:office:word"
+xmlns:m="http://schemas.microsoft.com/office/2004/12/omml"
+xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<![if gte mso 9]><xml>
+<w:WordDocument>
+  <w:View>Print</w:View>
+  <w:Zoom>100</w:Zoom>
+</w:WordDocument>
+</xml><![endif]>
+<style>
+body{font-family:宋体;}
+table{width:100%;border-collapse:collapse;}
+td,th{border:1px solid #000;padding:8px;font-family:宋体;}
+.title{font-size:22pt;font-weight:bold;text-align:center;}
+.period{font-size:14pt;font-weight:bold;text-align:center;}
+</style>
+</head>
+<body>
+
+<table>
+  <tr><td colspan="${colSpanVal}" class="title">${reportTitle}</td></tr>
+  <tr><td colspan="${colSpanVal}" class="period">报告周期：${period}</td></tr>
+  <tr>
+    <td colspan="${Math.floor(colSpanVal/2)}" style="text-align:center;font-size:12pt;">报告人：${reportUser}</td>
+    <td colspan="${Math.ceil(colSpanVal/2)}" style="text-align:center;font-size:12pt;">协作人：${helper}</td>
+  </tr>
+  <tr><td colspan="${colSpanVal}" style="font-weight:bold;font-size:12pt;text-align:center;">本周主要工作内容</td></tr>
+  <tr><td colspan="${colSpanVal}" style="padding:15px;line-height:1.8;font-size:12pt;">${mainWorkHtml}</td></tr>
+
+  <tr>${headHtml}</tr>
+  ${eventRows}
+</table>
+<p style="margin-top:20px;font-size:12pt;">甲方确认：______________</p>
+</body>
+</html>`;
+
+  let fileName = getFileName(titleSel, period) + '.doc';
+  let blob=new Blob([html],{type:'application/msword'});
+  let url=URL.createObjectURL(blob);
+  let a=document.createElement('a');
+  a.href=url;
+  a.download=fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
