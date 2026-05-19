@@ -347,8 +347,9 @@
             <div class="form-group">
                 <label class="form-label">选择使用版本</label>
                 <select class="cyber-select" id="versionSelect">
-                    <option value="A">A版本 - 前端</option>
-                    <option value="B">B版本 - 后端</option>
+                    <option value="A">待分配学生表</option>
+                    <option value="B">义务教育和高中表</option>
+                    <option value="C">中职表</option>
                 </select>
             </div>
 
@@ -363,6 +364,7 @@
                     <option value="rxny">入学年月</option>
                     <option value="byny">毕业年月</option>
                     <option value="sfzjh">修改身份证号</option>
+                    <option value="zsxsxxmc">证书上显示的学校名称</option>
                 </select>
             </div>
 
@@ -405,10 +407,9 @@ function createParticles() {
     }
 }
 
-// 原有功能逻辑 100% 保留
-document.getElementById('fieldSelect').addEventListener('change', updateTip);
-document.getElementById('versionSelect').addEventListener('change', updateTip);
+// 版本切换字段
 document.getElementById('versionSelect').addEventListener('change', updateFieldOptions);
+document.getElementById('fieldSelect').addEventListener('change', updateTip);
 
 window.onload = function() {
     updateFieldOptions();
@@ -417,91 +418,95 @@ window.onload = function() {
 };
 
 function updateFieldOptions() {
-    const version = document.getElementById('versionSelect').value;
-    const fieldSelect = document.getElementById('fieldSelect');
-    document.querySelectorAll('#fieldSelect option.dynamic').forEach(opt => opt.remove());
-    
-    if (version === 'B') {
-        const option1 = document.createElement('option');
-        option1.value = 'xb';
-        option1.textContent = '性别';
-        option1.className = 'dynamic';
-        fieldSelect.appendChild(option1);
+    const v = document.getElementById('versionSelect').value;
+    const sel = document.getElementById('fieldSelect');
 
-        const option2 = document.createElement('option');
-        option2.value = 'hkszd';
-        option2.textContent = '户口所在地';
-        option2.className = 'dynamic';
-        fieldSelect.appendChild(option2);
+    // 清空动态字段
+    document.querySelectorAll('#fieldSelect option.dynamic').forEach(o => o.remove());
+    // 隐藏C版本不需要的字段
+    document.querySelectorAll('#fieldSelect option').forEach(opt => {
+        if(opt.value === 'zsxsxxmc') opt.style.display = (v === 'C') ? 'none' : 'block';
+    });
+
+    // B版本字段
+    if (v === 'B') {
+        const o1 = document.createElement('option');
+        o1.value = 'xb'; o1.textContent = '性别'; o1.className = 'dynamic';
+        sel.appendChild(o1);
+        const o2 = document.createElement('option');
+        o2.value = 'hkszd'; o2.textContent = '户口所在地'; o2.className = 'dynamic';
+        sel.appendChild(o2);
+    }
+
+    // C版本字段
+    if (v === 'C') {
+        const list = [
+            {v:'xb', l:'性别'},
+            {v:'zymc', l:'专业名称'},
+            {v:'xz', l:'学制'}
+        ];
+        list.forEach(item => {
+            const o = document.createElement('option');
+            o.value = item.v; o.textContent = item.l; o.className = 'dynamic';
+            sel.appendChild(o);
+        });
     }
 }
 
 function updateTip() {
     const val = document.getElementById('fieldSelect').value;
-    const tipText = document.getElementById('tipText');
-    
-    if (val === 'sfzjh') {
-        tipText.innerText = '格式：旧身份证号 + 新身份证号';
-    } else if (val === 'xxmc') {
-        tipText.innerText = '格式：旧学校名 | 新学校名';
-    } else {
-        tipText.innerText = '格式：身份证 + 内容';
-    }
+    const tip = document.getElementById('tipText');
+    if (val === 'sfzjh') tip.innerText = '格式：旧身份证号 + 新身份证号';
+    else if (val === 'xxmc') tip.innerText = '格式：旧学校名 | 新学校名';
+    else tip.innerText = '格式：身份证 + 内容';
 }
 
 function generateSql() {
     const input = document.getElementById('dataInput').value.trim();
-    const resultEl = document.getElementById('sqlResult');
+    const res = document.getElementById('sqlResult');
     const copyBtn = document.getElementById('copyBtn');
-    const version = document.getElementById('versionSelect').value;
-    const currField = document.getElementById('fieldSelect').value;
+    const v = document.getElementById('versionSelect').value;
+    const f = document.getElementById('fieldSelect').value;
 
-    if (!input) {
-        resultEl.innerText = '❌ 请先粘贴数据';
-        copyBtn.disabled = true;
-        return;
-    }
+    if (!input) { res.innerText = '❌ 请先粘贴数据'; copyBtn.disabled = true; return; }
 
-    const config = version === 'A' 
-        ? { table: 'certificate_meta_message', idField: 'sfzh' }
-        : { table: 'kdsj_zxxs_by', idField: 'sfzjh' };
+    let table, idField;
+    if (v === 'A') { table = 'certificate_meta_message'; idField = 'sfzh'; }
+    else if (v === 'B') { table = 'kdsj_zxxs_by'; idField = 'sfzjh'; }
+    else { table = 'kdsj_zzxs_zhizheng'; idField = 'sfzjh'; }
 
-    const lines = input.split('\n').filter(line => line.trim() !== '');
+    const lines = input.split('\n').filter(l => l.trim());
     let sql = '';
 
     lines.forEach(line => {
-        const trimLine = line.trim();
-        if (!trimLine) return;
-        const parts = trimLine.split(/[\s,]+/).filter(p => p);
+        const parts = line.trim().split(/[\s,]+/).filter(p => p);
         if (parts.length < 2) return;
+        const key = parts[0].replace(/'/g, "''");
+        const val = parts.slice(1).join(' ').replace(/'/g, "''");
 
-        const key = parts[0].trim().replace(/'/g, "''");
-        const val = parts.slice(1).join(' ').trim().replace(/'/g, "''");
+        let field = f;
+        if (v === 'B' && field === 'bj') field = 'bjmc';
 
-        let realField = currField;
-        if (version === 'B' && realField === 'bj') realField = 'bjmc';
-
-        if (currField === 'xxmc') {
-            sql += `UPDATE ${config.table} SET xxmc = '${val}' WHERE xxmc = '${key}';\n`;
-        } else if (currField === 'sfzjh') {
-            sql += `UPDATE ${config.table} SET ${config.idField} = '${val}' WHERE ${config.idField} = '${key}';\n`;
+        if (field === 'xxmc') {
+            sql += `UPDATE ${table} SET xxmc = '${val}' WHERE xxmc = '${key}';\n`;
+        } else if (field === 'sfzjh') {
+            sql += `UPDATE ${table} SET ${idField} = '${val}' WHERE ${idField} = '${key}';\n`;
         } else {
-            sql += `UPDATE ${config.table} SET ${realField} = '${val}' WHERE ${config.idField} = '${key}';\n`;
+            sql += `UPDATE ${table} SET ${field} = '${val}' WHERE ${idField} = '${key}';\n`;
         }
     });
 
-    resultEl.innerText = sql || '⚠️ 未识别到有效数据';
+    res.innerText = sql || '⚠️ 未识别到有效数据';
     copyBtn.disabled = !sql;
 }
 
 function copySql() {
-    const sqlText = document.getElementById('sqlResult').innerText;
-    const copyTip = document.getElementById('copyTip');
-
-    navigator.clipboard.writeText(sqlText).then(() => {
-        copyTip.style.display = 'flex';
-        setTimeout(() => copyTip.style.display = 'none', 2500);
-    }).catch(() => alert('复制失败'));
+    const txt = document.getElementById('sqlResult').innerText;
+    navigator.clipboard.writeText(txt).then(() => {
+        const tip = document.getElementById('copyTip');
+        tip.style.display = 'flex';
+        setTimeout(() => tip.style.display = 'none', 2500);
+    });
 }
 </script>
 </body>
