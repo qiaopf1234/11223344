@@ -6,42 +6,97 @@
     <title>内置工具箱</title>
     <style>
         *{margin:0;padding:0;box-sizing:border-box;}
-        body{width:100vw;height:100vh;display:flex;overflow:hidden;background:#0f172a;}
-        /* 左侧侧边栏 */
-        .left-menu{width:220px;background:#1e293b;padding:20px 0;overflow-y:auto;}
-        .menu-title{color:#7dd3fc;text-align:center;font-size:20px;margin-bottom:30px;letter-spacing:2px;}
+        body{width:100vw;height:100vh;display:flex;overflow:hidden;background:#0c111f;font-family:"Microsoft YaHei",sans-serif;}
+        /* 左侧侧边栏全局美化 */
+        .left-menu{
+            width:240px;
+            background:linear-gradient(180deg,#121a33,#0c111f);
+            padding:25px 0;
+            overflow-y:auto;
+            border-right:1px solid rgba(120,180,255,0.15);
+        }
+        /* 自定义精致滚动条 */
+        .left-menu::-webkit-scrollbar{width:5px;}
+        .left-menu::-webkit-scrollbar-track{background:transparent;}
+        .left-menu::-webkit-scrollbar-thumb{background:rgba(100,170,255,0.4);border-radius:10px;}
+        /* 标题样式 */
+        .menu-title{
+            color:#73b8ff;
+            text-align:center;
+            font-size:22px;
+            margin-bottom:35px;
+            letter-spacing:2px;
+            font-weight:600;
+            text-shadow:0 0 8px rgba(115,184,255,0.3);
+        }
+        /* 菜单主项 丝滑交互 */
         .menu-item{
-            padding:12px 25px;
-            color:#e2e8f0;
+            padding:13px 22px;
+            color:#c9d8f0;
             cursor:pointer;
-            margin:5px 10px;
-            border-radius:6px;
-            transition:0.2s;
+            margin:6px 12px;
+            border-radius:10px;
+            transition:all 0.3s ease;
+            font-size:14px;
+            position:relative;
         }
-        .menu-item:hover,.menu-item.active{
-            background:#334155;
-            color:#38bdf8;
+        .menu-item:hover{
+            background:rgba(70,130,220,0.18);
+            color:#82c1ff;
+            transform:translateX(4px);
+            box-shadow:0 0 12px rgba(70,130,220,0.15);
         }
-        /* 右侧内容区 内嵌页面 */
-        .main-box{flex:1;height:100%;}
-        #iframeBox{
+        .menu-item.active{
+            background:linear-gradient(90deg,#274680,#1e355e);
+            color:#ffffff;
+            font-weight:500;
+            border-left:3px solid #52a5ff;
+        }
+        /* 功能按钮区域 */
+        .func-box{
+            margin:30px 15px 20px;
+            padding-top:20px;
+            border-top:1px solid rgba(120,180,255,0.15);
+        }
+        .func-btn{
             width:100%;
-            height:100%;
+            padding:11px;
+            margin:8px 0;
             border:none;
+            border-radius:8px;
+            background:rgba(60,110,200,0.2);
+            color:#b3d4ff;
+            cursor:pointer;
+            font-size:14px;
+            transition:all 0.3s ease;
         }
+        .func-btn:hover{
+            background:rgba(60,110,200,0.4);
+            color:#fff;
+        }
+        /* 右侧内容区 */
+        .main-box{flex:1;height:100%;}
+        #iframeBox{width:100%;height:100%;border:none;background:#f5f7fa;}
     </style>
 </head>
 <body>
-    <!-- 左侧菜单 -->
+    <!-- 左侧美化菜单 -->
     <div class="left-menu">
-        <h3 class="menu-title">工具列表</h3>
+        <h3 class="menu-title">🧰 工具聚合平台</h3>
+
         <div class="menu-item active" data-href="1.html">证照数据・学生信息批量录入工具</div>
         <div class="menu-item" data-href="13.html">证照数据・学生信息批量更新工具</div>
         <div class="menu-item" data-href="10.html">装备填报・状态查询工具（V1）</div>
-        <div class="menu-item" data-href="11.HTML">装备填报・状态查询工具（V2）</div>
+        <div class="menu-item" data-href="11.html">装备填报・状态查询工具（V2）</div>
         <div class="menu-item" data-href="12.html">装备填报・状态批量更新工具</div>
 		<div class="menu-item" data-href="14.html">运维辅助・周报一键生成工具</div>
 		<div class="menu-item" data-href="15.html">账号管理・批量账号生成工具</div>
+
+        <!-- 新增实用功能按钮 -->
+        <div class="func-box">
+            <button class="func-btn" id="refreshBtn">🔄 刷新当前工具</button>
+            <button class="func-btn" id="openNewBtn">↗️ 新标签全屏打开</button>
+        </div>
     </div>
 
     <!-- 右侧内嵌加载区域 -->
@@ -50,19 +105,29 @@
     </div>
 
 <script>
-    // 菜单切换 原地加载不跳转
     const items = document.querySelectorAll('.menu-item');
     const iframe = document.getElementById('iframeBox');
+    let nowUrl = "1.html";
+
+    // 菜单切换逻辑
     items.forEach(item=>{
         item.addEventListener('click',function(){
-            // 切换选中样式
             items.forEach(i=>i.classList.remove('active'));
             this.classList.add('active');
-            // 内嵌加载对应页面
-            let url = this.getAttribute('data-href');
-            iframe.src = url;
+            nowUrl = this.getAttribute('data-href');
+            iframe.src = nowUrl;
         })
     });
+
+    // 刷新当前页面
+    document.getElementById('refreshBtn').addEventListener('click',()=>{
+        iframe.src = nowUrl;
+    })
+
+    // 新标签页打开
+    document.getElementById('openNewBtn').addEventListener('click',()=>{
+        window.open(nowUrl,"_blank");
+    })
 </script>
 </body>
 </html>
