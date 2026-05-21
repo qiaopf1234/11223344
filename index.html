@@ -3,464 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SoftHub - 专业软件资源平台</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#165DFF',
-                        secondary: '#36D399',
-                        dark: '#1E293B',
-                        light: '#F8FAFC'
-                    },
-                    fontFamily: {
-                        inter: ['Inter', 'sans-serif'],
-                    },
-                }
-            }
+    <title>内置工具箱</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{width:100vw;height:100vh;display:flex;overflow:hidden;background:#0f172a;}
+        /* 左侧侧边栏 */
+        .left-menu{width:220px;background:#1e293b;padding:20px 0;overflow-y:auto;}
+        .menu-title{color:#7dd3fc;text-align:center;font-size:20px;margin-bottom:30px;letter-spacing:2px;}
+        .menu-item{
+            padding:12px 25px;
+            color:#e2e8f0;
+            cursor:pointer;
+            margin:5px 10px;
+            border-radius:6px;
+            transition:0.2s;
         }
-    </script>
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .content-auto {
-                content-visibility: auto;
-            }
-            .text-shadow {
-                text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            }
-            .transition-all-300 {
-                transition: all 300ms ease-in-out;
-            }
-            .card-hover {
-                @apply hover:shadow-xl hover:-translate-y-1 transition-all duration-300;
-            }
+        .menu-item:hover,.menu-item.active{
+            background:#334155;
+            color:#38bdf8;
+        }
+        /* 右侧内容区 内嵌页面 */
+        .main-box{flex:1;height:100%;}
+        #iframeBox{
+            width:100%;
+            height:100%;
+            border:none;
         }
     </style>
 </head>
-<body class="font-inter bg-gray-50 text-gray-800">
-    <!-- 导航栏 -->
-    <header class="sticky top-0 z-50 bg-white shadow-md transition-all duration-300" id="navbar">
-        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center space-x-2">
-                <i class="fa fa-download text-primary text-2xl"></i>
-                <h1 class="text-xl font-bold text-primary">SoftHub</h1>
-            </div>
-            
-            <!-- 桌面导航 -->
-            <nav class="hidden md:flex items-center space-x-8">
-                <a href="#" class="text-gray-700 hover:text-primary font-medium transition-colors">首页</a>
-                <a href="#categories" class="text-gray-700 hover:text-primary font-medium transition-colors">软件分类</a>
-            </nav>
-            
-            <!-- 移动端菜单按钮 -->
-            <button class="md:hidden text-gray-700" id="menuBtn">
-                <i class="fa fa-bars text-xl"></i>
-            </button>
-        </div>
-        
-        <!-- 移动端导航菜单 -->
-        <div class="md:hidden hidden bg-white shadow-lg absolute w-full" id="mobileMenu">
-            <div class="container mx-auto px-4 py-2 flex flex-col space-y-3">
-                <a href="#" class="text-gray-700 hover:text-primary font-medium py-2 border-b border-gray-100">首页</a>
-                <a href="#categories" class="text-gray-700 hover:text-primary font-medium py-2">软件分类</a>
-            </div>
-        </div>
-    </header>
-
-    <!-- 英雄区域 -->
-    <section class="relative bg-gradient-to-r from-primary to-primary/80 text-white py-16 md:py-24 overflow-hidden">
-        <div class="absolute inset-0 opacity-10">
-            <div class="absolute -right-10 -top-10 w-64 h-64 rounded-full bg-white/30 blur-3xl"></div>
-            <div class="absolute left-1/2 top-1/2 w-96 h-96 rounded-full bg-white/20 blur-3xl"></div>
-            <div class="absolute -left-10 -bottom-10 w-64 h-64 rounded-full bg-white/30 blur-3xl"></div>
-        </div>
-        <div class="container mx-auto px-4 relative z-10">
-            <div class="max-w-3xl mx-auto text-center">
-                <h2 class="text-[clamp(2rem,5vw,3.5rem)] font-bold mb-6 leading-tight text-shadow">
-                    发现并下载高质量软件
-                </h2>
-                <p class="text-[clamp(1rem,2vw,1.25rem)] mb-8 text-white/90">
-                    我们精心整理了各类实用软件，全部经过安全检测，确保您的下载安全可靠。
-                </p>
-                <div class="flex flex-col sm:flex-row justify-center gap-4">
-                    <a href="#categories" class="px-8 py-3 bg-white text-primary font-semibold rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5">
-                        浏览软件分类
-                    </a>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- 软件分类 -->
-    <section id="categories" class="py-16 bg-white">
-        <div class="container mx-auto px-4">
-            <div class="text-center mb-12">
-                <h2 class="text-[clamp(1.5rem,3vw,2.5rem)] font-bold text-gray-900 mb-4">软件分类</h2>
-                <p class="text-gray-600 max-w-2xl mx-auto">按照功能和用途浏览我们的软件库，找到最适合您需求的工具</p>
-            </div>
-            
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                <!-- 开发工具 -->
-                <div class="bg-white rounded-xl shadow-md overflow-hidden card-hover">
-                    <div class="h-48 bg-gradient-to-br from-blue-500 to-blue-700 relative">
-                        <i class="fa fa-code text-white text-6xl absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-80"></i>
-                    </div>
-                    <div class="p-6">
-                        <h3 class="text-xl font-bold mb-2 text-gray-900">开发工具</h3>
-                        <p class="text-gray-600 mb-4">集成开发环境、代码编辑器、调试工具等</p>
-                        <a href="#software-list" class="text-primary font-medium flex items-center group" onclick="showSoftwareList('development')">
-                            查看全部 <i class="fa fa-arrow-right ml-2 transform group-hover:translate-x-1 transition-transform"></i>
-                        </a>
-                    </div>
-                </div>
-                
-                <!-- 办公软件 -->
-                <div class="bg-white rounded-xl shadow-md overflow-hidden card-hover">
-                    <div class="h-48 bg-gradient-to-br from-purple-500 to-purple-700 relative">
-                        <i class="fa fa-file-text text-white text-6xl absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-80"></i>
-                    </div>
-                    <div class="p-6">
-                        <h3 class="text-xl font-bold mb-2 text-gray-900">办公软件</h3>
-                        <p class="text-gray-600 mb-4">文档处理、演示文稿、电子表格等</p>
-                        <a href="#software-list" class="text-primary font-medium flex items-center group" onclick="showSoftwareList('office')">
-                            查看全部 <i class="fa fa-arrow-right ml-2 transform group-hover:translate-x-1 transition-transform"></i>
-                        </a>
-                    </div>
-                </div>
-                
-                <!-- 多媒体工具 -->
-                <div class="bg-white rounded-xl shadow-md overflow-hidden card-hover">
-                    <div class="h-48 bg-gradient-to-br from-red-500 to-red-700 relative">
-                        <i class="fa fa-play-circle text-white text-6xl absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-80"></i>
-                    </div>
-                    <div class="p-6">
-                        <h3 class="text-xl font-bold mb-2 text-gray-900">多媒体工具</h3>
-                        <p class="text-gray-600 mb-4">视频编辑、音频处理、图像设计等</p>
-                        <a href="#software-list" class="text-primary font-medium flex items-center group" onclick="showSoftwareList('multimedia')">
-                            查看全部 <i class="fa fa-arrow-right ml-2 transform group-hover:translate-x-1 transition-transform"></i>
-                        </a>
-                    </div>
-                </div>
-                
-                <!-- 安全工具 -->
-                <div class="bg-white rounded-xl shadow-md overflow-hidden card-hover">
-                    <div class="h-48 bg-gradient-to-br from-green-500 to-green-700 relative">
-                        <i class="fa fa-shield text-white text-6xl absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-80"></i>
-                    </div>
-                    <div class="p-6">
-                        <h3 class="text-xl font-bold mb-2 text-gray-900">安全工具</h3>
-                        <p class="text-gray-600 mb-4">杀毒软件、加密工具、防火墙等</p>
-                        <a href="#software-list" class="text-primary font-medium flex items-center group" onclick="showSoftwareList('security')">
-                            查看全部 <i class="fa fa-arrow-right ml-2 transform group-hover:translate-x-1 transition-transform"></i>
-                        </a>
-                    </div>
-                </div>
-                
-                <!-- 网络工具 -->
-                <div class="bg-white rounded-xl shadow-md overflow-hidden card-hover">
-                    <div class="h-48 bg-gradient-to-br from-yellow-500 to-yellow-700 relative">
-                        <i class="fa fa-wifi text-white text-6xl absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-80"></i>
-                    </div>
-                    <div class="p-6">
-                        <h3 class="text-xl font-bold mb-2 text-gray-900">网络工具</h3>
-                        <p class="text-gray-600 mb-4">浏览器、下载工具、VPN等</p>
-                        <a href="#software-list" class="text-primary font-medium flex items-center group" onclick="showSoftwareList('network')">
-                            查看全部 <i class="fa fa-arrow-right ml-2 transform group-hover:translate-x-1 transition-transform"></i>
-                        </a>
-                    </div>
-                </div>
-                
-                <!-- 系统工具 -->
-                <div class="bg-white rounded-xl shadow-md overflow-hidden card-hover">
-                    <div class="h-48 bg-gradient-to-br from-indigo-500 to-indigo-700 relative">
-                        <i class="fa fa-cog text-white text-6xl absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-80"></i>
-                    </div>
-                    <div class="p-6">
-                        <h3 class="text-xl font-bold mb-2 text-gray-900">系统工具</h3>
-                        <p class="text-gray-600 mb-4">优化工具、驱动管理、备份恢复等</p>
-                        <a href="#software-list" class="text-primary font-medium flex items-center group" onclick="showSoftwareList('system')">
-                            查看全部 <i class="fa fa-arrow-right ml-2 transform group-hover:translate-x-1/2 transition-transform"></i>
-                        </a>
-                    </div>
-                </div>
-                
-                <!-- 游戏娱乐 -->
-                <div class="bg-white rounded-xl shadow-md overflow-hidden card-hover">
-                    <div class="h-48 bg-gradient-to-br from-pink-500 to-pink-700 relative">
-                        <i class="fa fa-gamepad text-white text-6xl absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-80"></i>
-                    </div>
-                    <div class="p-6">
-                        <h3 class="text-xl font-bold mb-2 text-gray-900">游戏娱乐</h3>
-                        <p class="text-gray-600 mb-4">休闲游戏、模拟器、视频播放器等</p>
-                        <a href="#software-list" class="text-primary font-medium flex items-center group" onclick="showSoftwareList('game')">
-                            查看全部 <i class="fa fa-arrow-right ml-2 transform group-hover:translate-x-1/2 transition-transform"></i>
-                        </a>
-                    </div>
-                </div>
-                
-                <!-- 教育学习 -->
-                <div class="bg-white rounded-xl shadow-md overflow-hidden card-hover">
-                    <div class="h-48 bg-gradient-to-br from-teal-500 to-teal-700 relative">
-                        <i class="fa fa-book text-white text-6xl absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-80"></i>
-                    </div>
-                    <div class="p-6">
-                        <h3 class="text-xl font-bold mb-2 text-gray-900">教育学习</h3>
-                        <p class="text-gray-600 mb-4">语言学习、编程教程、知识库等</p>
-                        <a href="#software-list" class="text-primary font-medium flex items-center group" onclick="showSoftwareList('education')">
-                            查看全部 <i class="fa fa-arrow-right ml-2 transform group-hover:translate-x-1/2 transition-transform"></i>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- 软件列表区域 -->
-    <section id="software-list" class="py-16 bg-gray-50">
-        <div class="container mx-auto px-4">
-            <div id="software-container">
-                <!-- 软件列表将通过JavaScript动态生成 -->
-            </div>
-        </div>
-    </section>
-
-    <!-- 下载密码模态框 -->
-    <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden" id="passwordModal">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 transform transition-all scale-95 opacity-0" id="modalContent">
-            <div class="p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-bold text-gray-900">输入下载密码</h3>
-                    <button onclick="closePasswordModal()" class="text-gray-400 hover:text-gray-600">
-                        <i class="fa fa-times text-xl"></i>
-                    </button>
-                </div>
-                <p class="text-gray-600 mb-4">此软件需要密码才能下载，请输入正确的密码。</p>
-                <form id="downloadForm">
-                    <div class="mb-2">
-                        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">密码</label>
-                        <input type="password" id="password" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50" placeholder="请输入密码">
-                    </div>
-                    <div class="flex justify-end space-x-3">
-                        <button type="button" onclick="closePasswordModal()" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors">取消</button>
-                        <button type="submit" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors">确认</button>
-                    </div>
-                </form>
-            </div>
-        </div>
+<body>
+    <!-- 左侧菜单 -->
+    <div class="left-menu">
+        <h3 class="menu-title">工具列表</h3>
+        <!-- 修改data-href为你的工具文件名 -->
+        <div class="menu-item active" data-href="1.html">SQL生成工具</div>
+        <div class="menu-item" data-href="tool2.html">工具二</div>
+        <div class="menu-item" data-href="tool3.html">工具三</div>
+        <div class="menu-item" data-href="tool4.html">工具四</div>
+        <div class="menu-item" data-href="tool5.html">工具五</div>
     </div>
 
-    <script>
-        // 移动端菜单切换
-        document.getElementById('menuBtn').addEventListener('click', function() {
-            const mobileMenu = document.getElementById('mobileMenu');
-            mobileMenu.classList.toggle('hidden');
-        });
+    <!-- 右侧内嵌加载区域 -->
+    <div class="main-box">
+        <iframe id="iframeBox" src="sql.html"></iframe>
+    </div>
 
-        // 导航栏滚动效果
-        window.addEventListener('scroll', function() {
-            const navbar = document.getElementById('navbar');
-            if (window.scrollY > 10) {
-                navbar.classList.add('py-2');
-                navbar.classList.add('shadow-lg');
-            } else {
-                navbar.classList.remove('py-2');
-                navbar.classList.remove('shadow-lg');
-            }
-        });
-
-        // 密码模态框
-        function openPasswordModal(url) {
-            const modal = document.getElementById('passwordModal');
-            const modalContent = document.getElementById('modalContent');
-            
-            // 存储下载链接
-            document.getElementById('downloadForm').onsubmit = function(e) {
-                e.preventDefault();
-                const password = document.getElementById('password').value;
-                
-                // 实际应用中需替换为后端验证逻辑
-                if (password === 'fuck111') { // 请更换为实际密码
-                    window.open(url, '_blank'); // 打开新标签页下载
-                    closePasswordModal();
-                } else {
-                    alert('密码错误，请重试！');
-                }
-            };
-            
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                modalContent.classList.remove('scale-95', 'opacity-0');
-                modalContent.classList.add('scale-100', 'opacity-100');
-            }, 10);
-        }
-
-        function closePasswordModal() {
-            const modal = document.getElementById('passwordModal');
-            const modalContent = document.getElementById('modalContent');
-            
-            modalContent.classList.remove('scale-100', 'opacity-100');
-            modalContent.classList.add('scale-95', 'opacity-0');
-            
-            setTimeout(() => {
-                modal.classList.add('hidden');
-                document.getElementById('downloadForm').reset();
-            }, 300);
-        }
-
-        // 点击模态框外部关闭
-        document.getElementById('passwordModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closePasswordModal();
-            }
-        });
-
-        // 平滑滚动
-        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-            anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const targetId = this.getAttribute('href');
-                if (targetId === '#') return;
-                
-                const targetElement = document.querySelector(targetId);
-                if (targetElement) {
-                    window.scrollTo({
-                        top: targetElement.offsetTop - 80,
-                        behavior: 'smooth'
-                    });
-                    document.getElementById('mobileMenu').classList.add('hidden');
-                }
-            });
-        });
-
-        // 新增：显示软件列表
-        function showSoftwareList(category) {
-            const container = document.getElementById('software-container');
-            
-            // 根据分类加载不同的软件列表
-            let softwareList = [];
-            
-            switch(category) {
-                case 'development':
-                    softwareList = [
-                        { name: 'Visual Studio Code', description: '强大的开源代码编辑器', image: 'https://picsum.photos/300/200?random=1', downloadUrl: 'https://github.com/microsoft/vscode' },
-                        { name: 'PyCharm', description: '专业的Python集成开发环境', image: 'https://picsum.photos/300/200?random=2', downloadUrl: 'https://github.com/JetBrains/intellij-community' },
-                        { name: 'Git Bash', description: '分布式版本控制系统', image: 'https://picsum.photos/300/200?random=3', downloadUrl: 'https://gitforwindows.org/' }
-                    ];
-                    break;
-                    
-                case 'office':
-                    softwareList = [
-                        { name: 'LibreOffice', description: '功能齐全的办公套件', image: 'https://picsum.photos/300/200?random=4', downloadUrl: 'https://github.com/LibreOffice/core' },
-                        { name: 'WPS Office', description: '兼容多种格式的办公软件', image: 'https://picsum.photos/300/200?random=5', downloadUrl: 'https://www.wps.com/' },
-                        { name: 'OnlyOffice', description: '在线协作办公平台', image: 'https://picsum.photos/300/200?random=6', downloadUrl: 'https://github.com/ONLYOFFICE' }
-                    ];
-                    break;
-                    
-                case 'multimedia':
-                    softwareList = [
-                        { name: 'VLC Media Player', description: '免费开源的多媒体播放器', image: 'https://picsum.photos/300/200?random=7', downloadUrl: 'https://github.com/videolan/vlc' },
-                        { name: 'GIMP', description: '专业的图像编辑软件', image: 'https://picsum.photos/300/200?random=8', downloadUrl: 'https://github.com/GNOME/gimp' },
-                        { name: 'Audacity', description: '音频录制和编辑工具', image: 'https://picsum.photos/300/200?random=9', downloadUrl: 'https://github.com/audacity/audacity' }
-                    ];
-                    break;
-                    
-                case 'security':
-                    softwareList = [
-                        { name: 'ClamAV', description: '开源杀毒软件', image: 'https://picsum.photos/300/200?random=10', downloadUrl: 'https://github.com/Cisco-Talos/clamav-devel' },
-                        { name: 'KeePass', description: '密码管理工具', image: 'https://picsum.photos/300/200?random=11', downloadUrl: 'https://github.com/dlech/KeePass2.x' },
-                        { name: 'Malwarebytes', description: '恶意软件检测工具', image: 'https://picsum.photos/300/200?random=12', downloadUrl: 'https://www.malwarebytes.com/' }
-                    ];
-                    break;
-                    
-                case 'network':
-                    softwareList = [
-                        { name: 'Chrome', description: '流行的网络浏览器', image: 'https://picsum.photos/300/200?random=13', downloadUrl: 'https://www.google.com/chrome/' },
-                        { name: 'Firefox', description: '开源网络浏览器', image: 'https://picsum.photos/300/200?random=14', downloadUrl: 'https://github.com/mozilla-mobile/fenix' },
-                        { name: 'uTorrent', description: '轻量级BT下载工具', image: 'https://picsum.photos/300/200?random=15', downloadUrl: 'https://www.utorrent.com/' }
-                    ];
-                    break;
-                    
-                case 'system':
-                    softwareList = [
-                        { name: 'CCleaner', description: '系统清理和优化工具', image: 'https://picsum.photos/300/200?random=16', downloadUrl: 'https://www.ccleaner.com/' },
-                        { name: 'WinRAR', description: '文件压缩和解压缩工具', image: 'https://picsum.photos/300/200?random=17', downloadUrl: 'https://www.win-rar.com/' },
-                        { name: 'ventoy', description: 'USB启动盘创建工具', image: 'https://picsum.photos/300/200?random=18', downloadUrl: 'https://github.com/qiaopf1234/11223344/releases/tag/%E8%BD%AF%E4%BB%B6' }
-                    ];
-                    break;
-                    
-                case 'game':
-                    softwareList = [
-                        { name: 'Steam', description: '全球知名游戏平台', image: 'https://picsum.photos/300/200?random=19', downloadUrl: 'https://store.steampowered.com/' },
-                        { name: 'Epic Games', description: '热门游戏分发平台', image: 'https://picsum.photos/300/200?random=20', downloadUrl: 'https://www.epicgames.com/' },
-                        { name: 'Minecraft', description: '沙盒建造游戏', image: 'https://picsum.photos/300/200?random=21', downloadUrl: 'https://www.minecraft.net/' }
-                    ];
-                    break;
-                    
-                case 'education':
-                    softwareList = [
-                        { name: 'Anki', description: '记忆卡片学习工具', image: 'https://picsum.photos/300/200?random=22', downloadUrl: 'https://github.com/ankitects/anki' },
-                        { name: 'Khan Academy', description: '在线学习平台', image: 'https://picsum.photos/300/200?random=23', downloadUrl: 'https://www.khanacademy.org/' },
-                        { name: 'Coursera', description: '在线课程平台', image: 'https://picsum.photos/300/200?random=24', downloadUrl: 'https://www.coursera.org/' }
-                    ];
-                    break;
-            }
-            
-            // 生成软件列表HTML
-            let html = `
-                <div class="mb-8">
-                    <h2 class="text-2xl font-bold mb-4">${getCategoryName(category)}</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            `;
-            
-            softwareList.forEach(software => {
-                html += `
-                    <div class="bg-white rounded-xl shadow-md overflow-hidden card-hover">
-                        <div class="h-48 bg-gray-100">
-                            <img src="${software.image}" alt="${software.name}" class="w-full h-full object-cover">
-                        </div>
-                        <div class="p-6">
-                            <h3 class="text-lg font-bold mb-2">${software.name}</h3>
-                            <p class="text-gray-600 mb-4">${software.description}</p>
-                            <button class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors" 
-                                    onclick="openPasswordModal('${software.downloadUrl}')">
-                                下载 <i class="fa fa-download ml-1"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            html += `
-                    </div>
-                </div>
-            `;
-            
-            // 更新容器内容
-            container.innerHTML = html;
-            
-            // 平滑滚动到软件列表区域
-            setTimeout(() => {
-                document.getElementById('software-list').scrollIntoView({ behavior: 'smooth' });
-            }, 100);
-        }
-        
-        // 获取分类名称
-        function getCategoryName(category) {
-            const names = {
-                'development': '开发工具',
-                'office': '办公软件',
-                'multimedia': '多媒体工具',
-                'security': '安全工具',
-                'network': '网络工具',
-                'system': '系统工具',
-                'game': '游戏娱乐',
-                'education': '教育学习'
-            };
-            return names[category] || '软件列表';
-        }
-    </script>
+<script>
+    // 菜单切换 原地加载不跳转
+    const items = document.querySelectorAll('.menu-item');
+    const iframe = document.getElementById('iframeBox');
+    items.forEach(item=>{
+        item.addEventListener('click',function(){
+            // 切换选中样式
+            items.forEach(i=>i.classList.remove('active'));
+            this.classList.add('active');
+            // 内嵌加载对应页面
+            let url = this.getAttribute('data-href');
+            iframe.src = url;
+        })
+    })
+</script>
 </body>
 </html>
