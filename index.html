@@ -35,7 +35,6 @@
     <!-- 左侧菜单 -->
     <div class="left-menu">
         <h3 class="menu-title">工具列表</h3>
-        <!-- 修改data-href为你的工具文件名 -->
         <div class="menu-item active" data-href="1.html">证照数据・学生信息批量录入工具</div>
         <div class="menu-item" data-href="13.html">证照数据・学生信息批量更新工具</div>
         <div class="menu-item" data-href="10.html">装备填报・状态查询工具（V1）</div>
@@ -47,7 +46,7 @@
 
     <!-- 右侧内嵌加载区域 -->
     <div class="main-box">
-        <iframe id="iframeBox" src="sql.html"></iframe>
+        <iframe id="iframeBox" src="1.html"></iframe>
     </div>
 
 <script>
@@ -63,7 +62,7 @@
             let url = this.getAttribute('data-href');
             iframe.src = url;
         })
-    })
+    });
 </script>
 </body>
 </html>
