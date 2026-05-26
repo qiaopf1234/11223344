@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL语句保存工具 | 修复版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#00D4FF',
+                        secondary: '#00FFA3',
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .glass {
+                background: rgba(255, 255, 255, 0.15);
+                backdrop-filter: blur(12px);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+            }
+            .dark .glass {
+                background: rgba(30, 41, 59, 0.6);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            .card-hover {
+                transition: all 0.3s ease;
+            }
+            .card-hover:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 8px 32px rgba(0, 212, 255, 0.2);
+            }
+            .btn-primary {
+                background: linear-gradient(135deg, #00D4FF, #00FFA3);
+            }
+            .sql-keyword { color: #0066CC; font-weight: 600; }
+            .dark .sql-keyword { color: #5CC8FF; }
+            .sql-function { color: #008000; font-weight: 600; }
+            .dark .sql-function { color: #9ECDCA; }
+            .sql-string { color: #A31515; }
+            .dark .sql-string { color: #CE9178; }
+            .sql-comment { color: #008000; font-style: italic; }
+            .dark .sql-comment { color: #6A9955; }
+        }
+    </style>
+    <style>
+        #particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+        body {
+            background: linear-gradient(135deg, #E0F7FF 0%, #E6FFFA 100%);
+            min-height: 100vh;
+            transition: all 0.3s ease;
+        }
+        .dark body {
+            background: #0f172a;
+        }
+        .sql-content-collapsed {
+            overflow: hidden;
+            position: relative;
+        }
+        .sql-content-collapsed::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: linear-gradient(to top, rgba(255,255,255,0.9), transparent);
+        }
+        .dark .sql-content-collapsed::after {
+            background: linear-gradient(to top, rgba(30,41,59,0.9), transparent);
+        }
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            z-index: 9999;
+            animation: fadeIn 0.3s, fadeOut 0.3s 1.5s;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        .resize-handle {
+            cursor: row-resize;
+            height: 6px;
+            background: rgba(0,212,255,0.2);
+            border-radius: 3px;
+            margin: 4px 0;
+        }
+        #passwordMask {
+            background: rgba(0,0,0,0.7);
+        }
+    </style>
+</head>
+<body class="text-gray-800 dark:text-gray-200 p-4 md:p-8">
+<canvas id="particles"></canvas>
+
+<!-- 密码弹窗 -->
+<div id="passwordMask" class="fixed inset-0 z-50 flex items-center justify-center">
+    <div class="glass w-full max-w-sm p-8 rounded-2xl">
+        <h2 class="text-2xl font-bold text-center mb-2 flex items-center justify-center gap-2 text-primary">
+            <i class="fa fa-lock"></i> 工具密码验证
+        </h2>
+        <p class="text-center text-gray-300 text-sm mb-6">首次使用请设置密码，后续输入密码登录</p>
+        <input id="pwdInput" type="password" placeholder="请输入密码" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg p-3 mb-4 text-white">
+        <button id="loginBtn" class="btn-primary w-full text-white p-3 rounded-lg font-medium">解锁进入</button>
+    </div>
+</div>
+
+<!-- 主内容区 默认隐藏 -->
+<div class="max-w-6xl mx-auto relative z-10 hidden" id="mainContent">
+    <div class="flex justify-between items-center mb-4">
+        <div></div>
+        <div class="flex gap-3">
+            <button onclick="setCollapseHeight()" class="px-3 py-1 rounded bg-white/50 dark:bg-gray-700/50 text-sm">
+                <i class="fa fa-arrows-v mr-1"></i> 折叠高度
+            </button>
+            <button onclick="toggleSort()" class="px-3 py-1 rounded bg-white/50 dark:bg-gray-700/50 text-sm">
+                <i class="fa fa-sort mr-1"></i> 排序
+            </button>
+            <button onclick="toggleTheme()" class="px-3 py-1 rounded bg-white/50 dark:bg-gray-700/50 text-sm">
+                <i id="themeIcon" class="fa fa-moon-o mr-1"></i> 主题
+            </button>
+        </div>
+    </div>
+
+    <header class="text-center mb-8">
+        <h1 class="text-4xl md:text-5xl font-bold mb-3 flex items-center justify-center gap-3">
+            <i class="fa fa-database text-primary"></i> SQL语句保存工具
+        </h1>
+        <p class="text-gray-600 dark:text-gray-400">分业务管理SQL | 折叠展开 | 语法高亮 | 密码保护</p>
+    </header>
+
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="glass rounded-2xl p-6 card-hover">
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                <i class="fa fa-folder-open text-primary"></i> 业务分类
+            </h2>
+            <div class="flex gap-2 mb-4">
+                <input type="text" id="cateName" placeholder="输入分类名称" class="flex-1 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded-lg p-2">
+                <button onclick="addCategory()" class="btn-primary text-white px-3 py-2 rounded-lg font-medium">
+                    <i class="fa fa-plus"></i>
+                </button>
+            </div>
+            <ul id="cateList" class="space-y-2 max-h-96 overflow-y-auto"></ul>
+        </div>
+
+        <div class="md:col-span-3 space-y-6">
+            <div class="glass rounded-2xl p-6 card-hover">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i class="fa fa-edit text-primary"></i> SQL管理
+                </h2>
+                <div class="grid grid-cols-1 gap-4 mb-4">
+                    <div>
+                        <label class="block mb-2 text-gray-600 dark:text-gray-300 text-sm font-medium">SQL名称（备注）</label>
+                        <input type="text" id="sqlTitle" placeholder="例如：用户近30天订单统计" class="w-full bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
+                    </div>
+                    <div>
+                        <label class="block mb-2 text-gray-600 dark:text-gray-300 text-sm font-medium">SQL语句</label>
+                        <div class="resize-handle"></div>
+                        <textarea id="sqlContent" placeholder="粘贴你的SQL语句..." class="w-full bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3 font-mono text-sm"></textarea>
+                        <div class="resize-handle"></div>
+                    </div>
+                </div>
+                <button onclick="saveSql()" class="btn-primary text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2">
+                    <i class="fa fa-save"></i> 保存当前SQL
+                </button>
+            </div>
+
+            <div class="glass rounded-2xl p-6 card-hover">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i class="fa fa-list-alt text-primary"></i> 已保存SQL
+                </h2>
+                <div id="sqlList" class="space-y-4"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// 粒子背景
+const canvas = document.getElementById('particles');
+const ctx = canvas.getContext('2d');
+let particles = [];
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+class Particle {
+    constructor(){this.reset()}
+    reset(){
+        this.x = Math.random()*canvas.width;
+        this.y = Math.random()*canvas.height;
+        this.radius = Math.random()*3+1;
+        this.speedX = (Math.random()-0.5)*0.5;
+        this.speedY = (Math.random()-0.5)*0.5;
+        this.opacity = Math.random()*0.5+0.2;
+    }
+    update(){
+        this.x += this.speedX;
+        this.y += this.speedY;
+        if(this.x<0||this.x>canvas.width||this.y<0||this.y>canvas.height) this.reset();
+    }
+    draw(){
+        ctx.beginPath();
+        ctx.arc(this.x,this.y,this.radius,0,Math.PI*2);
+        ctx.fillStyle = document.documentElement.classList.contains('dark')
+            ? `rgba(0,212,255,${this.opacity*0.6})`
+            : `rgba(0,212,255,${this.opacity})`;
+        ctx.fill();
+    }
+}
+for(let i=0;i<80;i++) particles.push(new Particle());
+function animate(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    particles.forEach(p=>{p.update();p.draw()});
+    requestAnimationFrame(animate);
+}
+animate();
+
+// 全局数据
+let data = JSON.parse(localStorage.getItem('sqlTool')) || {
+    categories: ['用户数据','订单数据','商品数据'],
+    sqlList: [],
+    currentCate: '用户数据',
+    config: {
+        password: "",
+        collapseHeight: 120,
+        sortBy: "time",
+        sortOrder: "desc",
+        darkMode: false
+    }
+};
+
+// ========== 密码登录核心逻辑（重写，稳定版） ==========
+const pwdMask = document.getElementById('passwordMask');
+const mainContent = document.getElementById('mainContent');
+const pwdInput = document.getElementById('pwdInput');
+const loginBtn = document.getElementById('loginBtn');
+
+// 登录函数
+function doLogin(){
+    const inputPwd = pwdInput.value.trim();
+    // 首次设置密码
+    if(!data.config.password){
+        if(!inputPwd){
+            alert("请设置登录密码！");
+            return;
+        }
+        data.config.password = inputPwd;
+        localStorage.setItem('sqlTool', JSON.stringify(data));
+        alert("密码设置成功，已进入系统！");
+        pwdMask.classList.add('hidden');
+        mainContent.classList.remove('hidden');
+        initTheme();
+        renderAll();
+        return;
+    }
+    // 密码校验
+    if(inputPwd === data.config.password){
+        pwdMask.classList.add('hidden');
+        mainContent.classList.remove('hidden');
+        initTheme();
+        renderAll();
+    }else{
+        alert("密码错误，请重新输入！");
+        pwdInput.value = "";
+        pwdInput.focus();
+    }
+}
+
+// 绑定点击 + 回车事件
+loginBtn.addEventListener('click', doLogin);
+pwdInput.addEventListener('keydown', function(e){
+    if(e.key === 'Enter') doLogin();
+});
+
+// ========== 主题 ==========
+function initTheme(){
+    if(data.config.darkMode){
+        document.documentElement.classList.add('dark');
+        document.getElementById('themeIcon').className = 'fa fa-sun-o mr-1';
+    }
+}
+function toggleTheme(){
+    data.config.darkMode = !data.config.darkMode;
+    document.documentElement.classList.toggle('dark');
+    document.getElementById('themeIcon').className = data.config.darkMode ? 'fa fa-sun-o mr-1' : 'fa fa-moon-o mr-1';
+    saveData();
+}
+
+// ========== 编辑框拖拽调整高度 ==========
+let isResizing = false;
+const sqlArea = document.getElementById('sqlContent');
+document.querySelectorAll('.resize-handle').forEach(handle=>{
+    handle.onmousedown = ()=>isResizing = true;
+});
+window.onmouseup = ()=>isResizing = false;
+window.onmousemove = (e)=>{
+    if(!isResizing) return;
+    let h = parseInt(sqlArea.style.height || "160px");
+    sqlArea.style.height = Math.max(80, h + e.movementY) + "px";
+};
+
+// ========== 折叠高度设置 ==========
+function setCollapseHeight(){
+    let h = prompt("设置SQL默认折叠高度(px)", data.config.collapseHeight);
+    if(h && !isNaN(h)){
+        data.config.collapseHeight = parseInt(h);
+        saveData();
+        renderAll();
+    }
+}
+
+// ========== 排序 ==========
+function toggleSort(){
+    const sortList = ['time','name'];
+    let idx = sortList.indexOf(data.config.sortBy);
+    idx = (idx + 1) % sortList.length;
+    data.config.sortBy = sortList[idx];
+    data.config.sortOrder = data.config.sortOrder === 'desc' ? 'asc' : 'desc';
+    saveData();
+    renderAll();
+    showToast(`已按${sortList[idx]==='time'?'时间':'名称'}${data.config.sortOrder==='desc'?'倒序':'正序'}`);
+}
+
+// ========== SQL语法高亮 ==========
+function highlightSql(sql){
+    let ret = sql;
+    const keywords = /\b(SELECT|FROM|WHERE|AND|OR|JOIN|LEFT|INNER|RIGHT|GROUP|ORDER|BY|LIMIT|INSERT|UPDATE|DELETE|CREATE|TABLE|ALTER|DROP|UNION|ALL|DISTINCT|AS|ON|IN|LIKE|BETWEEN|IS|NULL|NOT|CASE|WHEN|THEN|ELSE|END)\b/gi;
+    const funcs = /\b(COUNT|SUM|AVG|MAX|MIN|IFNULL|COALESCE|CONCAT|SUBSTRING|REPLACE|UPPER|LOWER|DATE|NOW|CURDATE)\b/gi;
+    const strs = /'[^']*'|"[^"]*"/g;
+    const comments = /--.*$/gm;
+    ret = ret.replace(comments, m=>`<span class="sql-comment">${m}</span>`);
+    ret = ret.replace(strs, m=>`<span class="sql-string">${m}</span>`);
+    ret = ret.replace(funcs, m=>`<span class="sql-function">${m}</span>`);
+    ret = ret.replace(keywords, m=>`<span class="sql-keyword">${m}</span>`);
+    return ret;
+}
+
+// ========== 悬浮提示 ==========
+function showToast(msg){
+    const div = document.createElement('div');
+    div.className = 'toast bg-primary/90';
+    div.innerText = msg;
+    document.body.appendChild(div);
+    setTimeout(()=>div.remove(), 1800);
+}
+
+// ========== 分类管理 ==========
+function renderCate(){
+    const list = document.getElementById('cateList');
+    list.innerHTML = "";
+    data.categories.forEach(cate=>{
+        const li = document.createElement('li');
+        li.className = `p-3 rounded-lg cursor-pointer transition-all ${cate === data.currentCate ? 'bg-primary/20 border-l-4 border-primary font-medium' : 'bg-white/30 dark:bg-gray-700/30 hover:bg-white/50'}`;
+        li.innerHTML = `
+            <div class="flex justify-between items-center">
+                <span>${cate}</span>
+                <div class="flex gap-2">
+                    <button onclick="renameCategory('${cate}')" class="text-yellow-500 text-xs"><i class="fa fa-pencil"></i></button>
+                    <button onclick="delCategory('${cate}')" class="text-red-400 text-xs"><i class="fa fa-trash"></i></button>
+                </div>
+            </div>
+        `;
+        li.onclick = e=>{
+            if(e.target.tagName === 'BUTTON') return;
+            data.currentCate = cate;
+            saveData();
+            renderAll();
+        };
+        list.appendChild(li);
+    });
+}
+function addCategory(){
+    const name = document.getElementById('cateName').value.trim();
+    if(!name) return alert("请输入分类名称");
+    if(data.categories.includes(name)) return alert("分类已存在");
+    data.categories.push(name);
+    document.getElementById('cateName').value = "";
+    saveData();
+    renderAll();
+}
+function delCategory(cate){
+    if(!confirm("确定删除该分类及所有关联SQL？")) return;
+    data.categories = data.categories.filter(c=>c!==cate);
+    data.sqlList = data.sqlList.filter(s=>s.cate!==cate);
+    if(data.currentCate === cate) data.currentCate = data.categories[0] || "";
+    saveData();
+    renderAll();
+}
+function renameCategory(oldName){
+    let newName = prompt("请输入新分类名称", oldName);
+    if(!newName) return;
+    if(newName !== oldName && data.categories.includes(newName)) return alert("分类名称已存在");
+    data.categories = data.categories.map(c=>c===oldName?newName:c);
+    data.sqlList.forEach(s=>{if(s.cate === oldName) s.cate = newName;});
+    if(data.currentCate === oldName) data.currentCate = newName;
+    saveData();
+    renderAll();
+    showToast("分类重命名成功");
+}
+
+// ========== SQL管理 ==========
+function saveSql(){
+    const title = document.getElementById('sqlTitle').value.trim();
+    const content = document.getElementById('sqlContent').value.trim();
+    if(!title || !content) return alert("请填写名称和SQL内容");
+    let editDom = document.getElementById('editId');
+    if(editDom){
+        let id = editDom.value;
+        let idx = data.sqlList.findIndex(item=>item.id == id);
+        data.sqlList[idx] = {id:id, title, content, cate:data.currentCate, time:Date.now()};
+        editDom.remove();
+    }else{
+        data.sqlList.push({
+            id: Date.now(),
+            title,
+            content,
+            cate: data.currentCate,
+            time: Date.now()
+        });
+    }
+    document.getElementById('sqlTitle').value = "";
+    document.getElementById('sqlContent').value = "";
+    saveData();
+    renderAll();
+    showToast("SQL保存成功");
+}
+function renderSql(){
+    const list = document.getElementById('sqlList');
+    let items = data.sqlList.filter(item=>item.cate === data.currentCate);
+    // 排序
+    if(data.config.sortBy === 'name'){
+        items.sort((a,b)=>{
+            return data.config.sortOrder === 'asc' ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title);
+        });
+    }else{
+        items.sort((a,b)=>{
+            return data.config.sortOrder === 'asc' ? a.time - b.time : b.time - a.time;
+        });
+    }
+    if(items.length === 0){
+        list.innerHTML = '<div class="text-center py-10 text-gray-500">暂无保存的SQL</div>';
+        return;
+    }
+    list.innerHTML = "";
+    const collapseH = data.config.collapseHeight + "px";
+    items.forEach(item=>{
+        const div = document.createElement('div');
+        div.className = 'bg-white/40 dark:bg-gray-800/40 rounded-xl p-4 border border-white/50';
+        div.innerHTML = `
+            <div class="flex justify-between items-center mb-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa fa-file-text-o text-primary"></i>
+                    <span class="font-medium">${item.title}</span>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="copySql(${item.id})" class="bg-primary/20 text-primary px-3 py-1 rounded text-sm">
+                        <i class="fa fa-copy"></i> 复制
+                    </button>
+                    <button onclick="editSql(${item.id})" class="bg-green-100 dark:bg-green-900/30 text-green-600 px-3 py-1 rounded text-sm">
+                        <i class="fa fa-pencil"></i> 编辑
+                    </button>
+                    <button onclick="delSql(${item.id})" class="bg-red-100 text-red-600 px-3 py-1 rounded text-sm">
+                        <i class="fa fa-trash"></i> 删除
+                    </button>
+                </div>
+            </div>
+            <div id="sql-${item.id}" class="sql-content-collapsed bg-gray-100 dark:bg-gray-800/60 p-3 rounded-lg font-mono text-sm whitespace-pre-wrap" style="max-height:${collapseH}">
+                ${highlightSql(item.content)}
+            </div>
+            <div class="text-center mt-2">
+                <button onclick="toggleSql(${item.id})" class="text-primary text-sm">
+                    <i class="fa fa-chevron-down"></i> 展开
+                </button>
+            </div>
+        `;
+        list.appendChild(div);
+    });
+}
+function toggleSql(id){
+    const el = document.getElementById(`sql-${id}`);
+    const btn = el.nextElementSibling.querySelector('button');
+    if(el.classList.contains('sql-content-collapsed')){
+        el.classList.remove('sql-content-collapsed');
+        btn.innerHTML = '<i class="fa fa-chevron-up"></i> 收起';
+    }else{
+        el.classList.add('sql-content-collapsed');
+        btn.innerHTML = '<i class="fa fa-chevron-down"></i> 展开';
+    }
+}
+function copySql(id){
+    let sql = data.sqlList.find(item=>item.id == id).content;
+    navigator.clipboard.writeText(sql).then(()=>showToast("复制成功"));
+}
+function editSql(id){
+    let item = data.sqlList.find(item=>item.id == id);
+    document.getElementById('sqlTitle').value = item.title;
+    document.getElementById('sqlContent').value = item.content;
+    let input = document.createElement('input');
+    input.type = 'hidden';
+    input.id = 'editId';
+    input.value = id;
+    document.querySelector('.md\\:col-span-3').appendChild(input);
+}
+function delSql(id){
+    if(!confirm("确定删除这条SQL？")) return;
+    data.sqlList = data.sqlList.filter(item=>item.id != id);
+    saveData();
+    renderAll();
+}
+
+// 本地存储
+function saveData(){
+    localStorage.setItem('sqlTool', JSON.stringify(data));
+}
+function renderAll(){
+    renderCate();
+    renderSql();
+}
+</script>
+</body>
+</html>
