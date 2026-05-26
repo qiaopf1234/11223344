@@ -3,77 +3,156 @@
 <head>
     <meta charset="UTF-8">
     <title>批量账号生成工具（教育系统版）</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#7C3AED',
+                        secondary: '#4F46E5',
+                        glass: 'rgba(255, 255, 255, 0.15)',
+                        'glass-border': 'rgba(255, 255, 255, 0.2)',
+                        'text-primary': '#FFFFFF',
+                        'text-secondary': '#E0E7FF',
+                    },
+                    boxShadow: {
+                        'glass': '0 8px 32px rgba(0, 0, 0, 0.2)',
+                        'glass-hover': '0 12px 40px rgba(124, 58, 237, 0.3)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .glass-effect {
+                background: rgba(255, 255, 255, 0.15);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+            .card-hover {
+                transition: all 0.3s ease;
+            }
+            .card-hover:hover {
+                transform: translateY(-2px);
+                box-shadow: var(--tw-shadow-glass-hover);
+            }
+            .input-focus {
+                transition: all 0.3s ease;
+            }
+            .input-focus:focus {
+                border-color: rgba(255, 255, 255, 0.5);
+                box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.3);
+            }
+            .btn-hover {
+                transition: all 0.3s ease;
+            }
+            .btn-hover:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3);
+            }
+        }
+    </style>
     <style>
-        * {box-sizing: border-box; margin: 0; padding: 0; font-family: "Microsoft YaHei", sans-serif;}
-        body {background: #f0f4f8; padding: 20px;}
-        .container {max-width: 1200px; margin: 0 auto; background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 24px;}
-        h1 {color: #2c3e50; margin-bottom: 24px; text-align: center;}
-        .config-section {display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap;}
-        .config-item {flex: 1; min-width: 200px;}
-        label {display: block; color: #34495e; font-weight: 600; margin-bottom: 8px;}
-        input, textarea, button {padding: 10px 12px; border: 1px solid #d0d7de; border-radius: 6px; font-size: 14px; width: 100%;}
-        button {background: #2ea44f; color: #fff; border: none; cursor: pointer; font-weight: 600; transition: background 0.2s;}
-        button:hover {background: #2c974b;}
-        .btn-group {display: flex; gap: 12px; margin-top: 12px;}
-        .btn-secondary {background: #6f42c1;}
-        .btn-secondary:hover {background: #5a32a3;}
-        .btn-danger {background: #d73a49;}
-        .btn-danger:hover {background: #cb2431;}
-        .section-title {color: #2c3e50; margin: 20px 0 12px; padding-bottom: 8px; border-bottom: 1px solid #eee;}
-        textarea {resize: vertical; min-height: 150px; font-family: Consolas, monospace;}
-        table {width: 100%; border-collapse: collapse; margin-top: 16px;}
-        th, td {border: 1px solid #d0d7de; padding: 10px; text-align: left; font-size: 14px;}
-        th {background: #f6f8fa; color: #24292f; font-weight: 600;}
-        tr:nth-child(even) {background: #f9fafb;}
-        .tip {color: #656d76; font-size: 13px; margin-top: 8px;}
+        /* 文本域渲染优化 */
+        #unitList, #phoneList, #resultTable {
+            will-change: auto;
+            backface-visibility: hidden;
+            -webkit-font-smoothing: antialiased;
+            font-variant-ligatures: none;
+            transform: translateZ(0);
+        }
+        /* 渐变背景 */
+        body {
+            background: linear-gradient(135deg, #7C3AED 0%, #4F46E5 100%);
+            min-height: 100vh;
+        }
     </style>
 </head>
-<body>
-<div class="container">
-    <h1>批量账号生成工具</h1>
+<body class="text-text-primary p-4 md:p-8">
+    <div class="max-w-5xl mx-auto">
+        <!-- 标题区域 -->
+        <header class="text-center mb-10">
+            <h1 class="text-3xl md:text-4xl font-bold mb-3 flex items-center justify-center gap-3">
+                <i class="fa fa-user-circle text-text-secondary"></i>
+                批量账号生成工具
+            </h1>
+            <p class="text-text-secondary">教育系统专用 · 单位账号批量生成 · 导出CSV</p>
+        </header>
 
-    <div class="config-section">
-        <div class="config-item">
-            <label for="prefix">自定义前缀（默认：xfgl_）</label>
-            <input type="text" id="prefix" value="xfgl_">
+        <!-- 配置卡片 -->
+        <div class="glass-effect rounded-2xl p-6 md:p-8 mb-8 card-hover">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div>
+                    <label class="block mb-2 text-text-secondary text-sm font-medium flex items-center gap-2">
+                        <i class="fa fa-cog"></i> 自定义前缀（默认：xfgl_）
+                    </label>
+                    <input type="text" id="prefix" value="xfgl_" class="w-full bg-glass border border-glass-border rounded-lg p-3 text-text-primary input-focus">
+                </div>
+                <div>
+                    <label class="block mb-2 text-text-secondary text-sm font-medium flex items-center gap-2">
+                        <i class="fa fa-pencil"></i> 自定义后缀（可选）
+                    </label>
+                    <input type="text" id="suffix" placeholder="例如：_2026" class="w-full bg-glass border border-glass-border rounded-lg p-3 text-text-primary input-focus">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div>
+                    <label class="block mb-2 text-text-secondary text-sm font-medium flex items-center gap-2">
+                        <i class="fa fa-building"></i> 单位全称列表（每行一个）
+                    </label>
+                    <textarea id="unitList" placeholder="可直接复制表格里的A列" class="w-full h-32 bg-glass border border-glass-border rounded-lg p-3 text-text-primary input-focus"></textarea>
+                </div>
+                <div>
+                    <label class="block mb-2 text-text-secondary text-sm font-medium flex items-center gap-2">
+                        <i class="fa fa-phone"></i> 手机号列表（和单位一一对应）
+                    </label>
+                    <textarea id="phoneList" placeholder="可复制表格里的C列" class="w-full h-32 bg-glass border border-glass-border rounded-lg p-3 text-text-primary input-focus"></textarea>
+                </div>
+            </div>
+
+            <!-- 按钮组 -->
+            <div class="flex flex-wrap gap-4">
+                <button onclick="generateAccounts()" class="flex-1 bg-green-500 text-white font-bold py-3 rounded-lg btn-hover flex items-center justify-center gap-2">
+                    <i class="fa fa-magic"></i> 一键生成账号
+                </button>
+                <button onclick="exportToCSV()" class="flex-1 bg-primary text-white font-bold py-3 rounded-lg btn-hover flex items-center justify-center gap-2">
+                    <i class="fa fa-download"></i> 导出为CSV表格
+                </button>
+                <button onclick="clearAll()" class="flex-1 bg-red-500 text-white font-bold py-3 rounded-lg btn-hover flex items-center justify-center gap-2">
+                    <i class="fa fa-trash"></i> 清空所有内容
+                </button>
+            </div>
         </div>
-        <div class="config-item">
-            <label for="suffix">自定义后缀（可选，如无则留空）</label>
-            <input type="text" id="suffix" placeholder="例如：_2026">
+
+        <!-- 结果卡片 -->
+        <div class="glass-effect rounded-2xl p-6 md:p-8 card-hover">
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                <i class="fa fa-table text-text-secondary"></i> 生成结果预览
+            </h2>
+            <div class="overflow-x-auto">
+                <table id="resultTable" class="w-full">
+                    <thead>
+                        <tr class="border-b border-glass-border">
+                            <th class="text-left py-3 px-4 text-text-secondary font-medium">序号</th>
+                            <th class="text-left py-3 px-4 text-text-secondary font-medium">单位全称</th>
+                            <th class="text-left py-3 px-4 text-text-secondary font-medium">生成账号名称</th>
+                            <th class="text-left py-3 px-4 text-text-secondary font-medium">手机号</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- 数据将动态插入 -->
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-text-secondary text-xs mt-4 flex items-center gap-1">
+                <i class="fa fa-lightbulb-o"></i> 说明：生成的账号为「前缀_单位全称拼音首字母小写+后缀」格式
+            </p>
         </div>
     </div>
-
-    <div class="config-section">
-        <div class="config-item" style="flex: 2;">
-            <label for="unitList">单位全称列表（每行一个，可直接复制表格里的A列）</label>
-            <textarea id="unitList" placeholder=""></textarea>
-        </div>
-        <div class="config-item" style="flex: 2;">
-            <label for="phoneList">手机号列表（和单位一一对应，每行一个，可复制表格里的C列）</label>
-            <textarea id="phoneList" placeholder=""></textarea>
-        </div>
-    </div>
-
-    <div class="btn-group">
-        <button onclick="generateAccounts()">一键生成账号</button>
-        <button class="btn-secondary" onclick="exportToCSV()">导出为CSV表格（可直接用Excel打开）</button>
-        <button class="btn-danger" onclick="clearAll()">清空所有内容</button>
-    </div>
-
-    <div class="section-title">生成结果预览</div>
-    <table id="resultTable">
-        <thead>
-            <tr>
-                <th>序号</th>
-                <th>单位全称</th>
-                <th>生成账号名称</th>
-                <th>手机号</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-    <p class="tip">💡 说明：生成的账号为「前缀_单位全称拼音首字母小写+后缀」格式，和你示例的格式完全一致</p>
-</div>
 
 <script>
     // 汉字转拼音首字母核心逻辑
@@ -146,11 +225,12 @@
 
             // 渲染到表格
             const tr = document.createElement('tr');
+            tr.className = 'border-b border-glass-border hover:bg-glass transition-colors';
             tr.innerHTML = `
-                <td>${index + 1}</td>
-                <td>${unitTrim}</td>
-                <td>${account}</td>
-                <td>${phone}</td>
+                <td class="py-3 px-4">${index + 1}</td>
+                <td class="py-3 px-4">${unitTrim}</td>
+                <td class="py-3 px-4">${account}</td>
+                <td class="py-3 px-4">${phone}</td>
             `;
             tbody.appendChild(tr);
         });
