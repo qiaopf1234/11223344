@@ -21,18 +21,21 @@
                         'neutral-dark': '#334155',
                         success: '#10B981',
                         error: '#EF4444',
+                        'bg-main': '#0F1744',
+                        'bg-card': '#1A237E',
+                        'text-primary': '#E0E7FF',
+                        'text-secondary': '#A5B4FC',
                     },
                     fontFamily: {
                         sans: ['Inter', 'system-ui', 'sans-serif'],
                     },
                     boxShadow: {
-                        'soft': '0 5px 15px rgba(0, 0, 0, 0.05)',
-                        'medium': '0 8px 30px rgba(0, 0, 0, 0.12)',
-                        'hard': '0 12px 40px rgba(0, 0, 0, 0.18)',
-                        'inner-soft': 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.06)',
-                        'card': '0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02)',
-                        'card-hover': '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
-                        'toast': '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+                        'soft': '0 5px 15px rgba(59, 130, 246, 0.1)',
+                        'medium': '0 8px 30px rgba(59, 130, 246, 0.15)',
+                        'hard': '0 12px 40px rgba(59, 130, 246, 0.2)',
+                        'card': '0 10px 25px -5px rgba(59, 130, 246, 0.1), 0 8px 10px -6px rgba(139, 92, 246, 0.05)',
+                        'card-hover': '0 20px 25px -5px rgba(59, 130, 246, 0.15), 0 10px 10px -5px rgba(139, 92, 246, 0.1)',
+                        'toast': '0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2)',
                     },
                     animation: {
                         'fade-in': 'fadeIn 0.5s ease-in-out',
@@ -59,10 +62,10 @@
                 content-visibility: auto;
             }
             .text-shadow {
-                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
             }
             .text-shadow-lg {
-                text-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+                text-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
             }
             .card-3d {
                 transform: perspective(1000px) rotateX(0deg);
@@ -77,17 +80,17 @@
             }
             .button-press:active {
                 transform: translateY(2px);
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
             }
             .input-focus {
                 transition: all 0.2s ease;
             }
             .input-focus:focus {
                 transform: translateY(-1px);
-                box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
             }
             .glass-effect {
-                background: rgba(255, 255, 255, 0.7);
+                background: rgba(26, 35, 126, 0.8);
                 backdrop-filter: blur(10px);
                 -webkit-backdrop-filter: blur(10px);
             }
@@ -116,19 +119,19 @@
                 height: 6px;
             }
             .scrollbar-thin::-webkit-scrollbar-track {
-                background: #f1f5f9;
+                background: #1A237E;
                 border-radius: 3px;
             }
             .scrollbar-thin::-webkit-scrollbar-thumb {
-                background: #cbd5e1;
+                background: #3B82F6;
                 border-radius: 3px;
             }
             .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-                background: #94a3b8;
+                background: #8B5CF6;
             }
             .tab-active {
                 border-bottom: 3px solid #3B82F6;
-                color: #3B82F6;
+                color: #E0E7FF;
                 font-weight: 600;
             }
             .toast-success {
@@ -138,7 +141,7 @@
                 background-color: rgba(239, 68, 68, 0.95);
             }
             .toast-content {
-                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
             }
         }
     </style>
@@ -165,29 +168,29 @@
         }
     </style>
 </head>
-<body class="bg-gradient-to-br from-gray-50 to-gray-100 min-h-screen font-sans text-dark">
+<body class="bg-bg-main min-h-screen font-sans text-text-primary">
     <div class="container mx-auto px-4 py-8 max-w-6xl">
         <!-- 标题区域 -->
         <header class="mb-8 text-center animate-fade-in">
-            <h1 class="text-[clamp(2rem,5vw,3rem)] font-bold text-dark mb-2 text-shadow-lg">
+            <h1 class="text-[clamp(2rem,5vw,3rem)] font-bold text-text-primary mb-2 text-shadow-lg">
                 <i class="fa fa-database text-primary mr-3"></i>SQL语句生成工具箱
             </h1>
-            <p class="text-gray-600 text-lg max-w-2xl mx-auto">
+            <p class="text-text-secondary text-lg max-w-2xl mx-auto">
                 支持批量生成SQL插入/更新语句，通过Excel模板快速处理数据
             </p>
 
             <!-- 功能切换标签 -->
-            <div class="flex justify-center mt-6 border-b border-gray-200 max-w-3xl mx-auto">
+            <div class="flex justify-center mt-6 border-b border-primary/30 max-w-3xl mx-auto">
                 <button id="insertTab" class="tab-active px-6 py-3 text-lg focus:outline-none transition-all">
                     中职插入语句
                 </button>
-                <button id="updateTab" class="px-6 py-3 text-lg text-gray-500 focus:outline-none transition-all">
+                <button id="updateTab" class="px-6 py-3 text-lg text-text-secondary focus:outline-none transition-all hover:text-text-primary">
                     中职更新语句
                 </button>
-                <button id="middleInsertTab" class="px-6 py-3 text-lg text-gray-500 focus:outline-none transition-all">
+                <button id="middleInsertTab" class="px-6 py-3 text-lg text-text-secondary focus:outline-none transition-all hover:text-text-primary">
                     高/初中插入语句
                 </button>
-                <button id="middleUpdateTab" class="px-6 py-3 text-lg text-gray-500 focus:outline-none transition-all">
+                <button id="middleUpdateTab" class="px-6 py-3 text-lg text-text-secondary focus:outline-none transition-all hover:text-text-primary">
                     高/初中更新语句
                 </button>
             </div>
@@ -198,25 +201,25 @@
             <!-- 左侧控制面板 -->
             <div class="lg:col-span-1 space-y-6 animate-slide-up" style="animation-delay: 0.1s">
                 <!-- 控制面板卡片 -->
-                <div class="bg-white rounded-xl shadow-card p-6 card-3d">
-                    <h2 class="text-xl font-bold mb-4 flex items-center text-neutral-dark">
+                <div class="bg-bg-card rounded-xl shadow-card p-6 card-3d border border-primary/20">
+                    <h2 class="text-xl font-bold mb-4 flex items-center text-text-primary">
                         <i class="fa fa-sliders text-primary mr-2"></i>控制面板
                     </h2>
                     
                     <!-- 文件操作按钮 -->
                     <div class="space-y-4">
-                        <button id="downloadTemplate" class="w-full bg-primary hover:bg-primary/90 text-white font-medium py-3 px-4 rounded-lg shadow-soft flex items-center justify-center button-press gradient-border">
+                        <button id="downloadTemplate" class="w-full bg-gradient-to-r from-primary to-accent text-white font-medium py-3 px-4 rounded-lg shadow-soft flex items-center justify-center button-press gradient-border">
                             <i class="fa fa-download mr-2"></i> 下载Excel模板
                         </button>
                         
                         <div class="relative">
-                            <label for="excelFile" class="w-full bg-secondary hover:bg-secondary/90 text-white font-medium py-3 px-4 rounded-lg shadow-soft flex items-center justify-center cursor-pointer button-press gradient-border">
+                            <label for="excelFile" class="w-full bg-gradient-to-r from-secondary to-emerald-400 text-white font-medium py-3 px-4 rounded-lg shadow-soft flex items-center justify-center cursor-pointer button-press gradient-border">
                                 <i class="fa fa-upload mr-2"></i> 导入Excel文件
                                 <input type="file" id="excelFile" accept=".xlsx" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                             </label>
                         </div>
                         
-                        <button id="generateSQL" class="w-full bg-accent hover:bg-accent/90 text-white font-medium py-3 px-4 rounded-lg shadow-soft flex items-center justify-center button-press gradient-border">
+                        <button id="generateSQL" class="w-full bg-gradient-to-r from-accent to-purple-400 text-white font-medium py-3 px-4 rounded-lg shadow-soft flex items-center justify-center button-press gradient-border">
                             <i class="fa fa-code mr-2"></i> 生成SQL语句
                         </button>
                         
@@ -237,28 +240,28 @@
                 </div>
                 
                 <!-- 状态面板 -->
-                <div class="bg-white rounded-xl shadow-card p-6 card-3d">
-                    <h2 class="text-xl font-bold mb-4 flex items-center text-neutral-dark">
+                <div class="bg-bg-card rounded-xl shadow-card p-6 card-3d border border-primary/20">
+                    <h2 class="text-xl font-bold mb-4 flex items-center text-text-primary">
                         <i class="fa fa-info-circle text-primary mr-2"></i>当前状态
                     </h2>
-                    <div id="status" class="bg-neutral-light rounded-lg p-4 min-h-[100px] border border-gray-200">
-                        <p class="text-gray-600">请下载模板并填写数据</p>
+                    <div id="status" class="bg-bg-main rounded-lg p-4 min-h-[100px] border border-primary/20">
+                        <p class="text-text-secondary">请下载模板并填写数据</p>
                     </div>
                 </div>
             </div>
             
             <!-- 右侧结果显示区域 -->
             <div class="lg:col-span-2 animate-slide-up" style="animation-delay: 0.2s">
-                <div class="bg-white rounded-xl shadow-card p-6 h-full flex flex-col card-3d">
-                    <h2 class="text-xl font-bold mb-4 flex items-center text-neutral-dark">
+                <div class="bg-bg-card rounded-xl shadow-card p-6 h-full flex flex-col card-3d border border-primary/20">
+                    <h2 class="text-xl font-bold mb-4 flex items-center text-text-primary">
                         <i class="fa fa-code text-primary mr-2"></i>生成的SQL语句
                     </h2>
                     
                     <!-- SQL结果文本区域 -->
                     <div class="flex-grow mb-4">
                         <div class="relative h-full">
-                            <textarea id="sqlResult" class="w-full h-full p-4 bg-neutral-light rounded-lg border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 input-focus resize-none font-mono text-sm" placeholder="生成的SQL语句将显示在这里..."></textarea>
-                            <div class="absolute bottom-3 right-3 text-xs text-gray-400">
+                            <textarea id="sqlResult" class="w-full h-full p-4 bg-bg-main rounded-lg border border-primary/20 focus:border-primary focus:ring-2 focus:ring-primary/30 input-focus resize-none font-mono text-sm text-text-primary" placeholder="生成的SQL语句将显示在这里..."></textarea>
+                            <div class="absolute bottom-3 right-3 text-xs text-text-secondary">
                                 <span id="lineCount">0</span> 行
                             </div>
                         </div>
@@ -268,19 +271,19 @@
         </main>
         
         <!-- 数据预览区域 -->
-        <div class="mt-8 bg-white rounded-xl shadow-card p-6 card-3d animate-slide-up" style="animation-delay: 0.3s">
-            <h2 class="text-xl font-bold mb-4 flex items-center text-neutral-dark">
+        <div class="mt-8 bg-bg-card rounded-xl shadow-card p-6 card-3d animate-slide-up border border-primary/20" style="animation-delay: 0.3s">
+            <h2 class="text-xl font-bold mb-4 flex items-center text-text-primary">
                 <i class="fa fa-table text-primary mr-2"></i>数据预览
-                <span id="dataCount" class="ml-2 text-sm font-normal text-neutral">0 条记录</span>
+                <span id="dataCount" class="ml-2 text-sm font-normal text-text-secondary">0 条记录</span>
             </h2>
             <div id="dataPreview" class="overflow-x-auto max-h-[300px] scrollbar-thin">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="sticky top-0 z-10 bg-neutral-light">
+                <table class="min-w-full divide-y divide-primary/20">
+                    <thead class="sticky top-0 z-10 bg-bg-main">
                         <tr id="previewHeader">
                             <!-- 表头将通过JS动态生成 -->
                         </tr>
                     </thead>
-                    <tbody id="previewBody" class="bg-white divide-y divide-gray-200">
+                    <tbody id="previewBody" class="bg-bg-card divide-y divide-primary/20">
                         <!-- 数据行将通过JS动态生成 -->
                     </tbody>
                 </table>
@@ -288,7 +291,7 @@
         </div>
         
         <!-- 页脚 -->
-        <footer class="mt-12 text-center text-gray-500 text-sm animate-fade-in" style="animation-delay: 0.4s">
+        <footer class="mt-12 text-center text-text-secondary text-sm animate-fade-in" style="animation-delay: 0.4s">
             <p>SQL语句生成工具箱 &copy; 2025 | 设计与开发</p>
         </footer>
     </div>
@@ -300,10 +303,10 @@
     </div>
 
     <!-- 加载中模态框 -->
-    <div id="loadingModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 hidden">
-        <div class="bg-white rounded-xl p-6 shadow-hard flex flex-col items-center glass-effect">
+    <div id="loadingModal" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 hidden">
+        <div class="bg-bg-card rounded-xl p-6 shadow-hard flex flex-col items-center glass-effect border border-primary/30">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-            <p id="loadingMessage" class="text-gray-700 font-medium">处理中...</p>
+            <p id="loadingMessage" class="text-text-primary font-medium">处理中...</p>
         </div>
     </div>
 
@@ -377,7 +380,7 @@
         function switchMode(mode) {
             [insertTab, updateTab, middleInsertTab, middleUpdateTab].forEach(tab => {
                 tab.classList.remove('tab-active');
-                tab.classList.add('text-gray-500');
+                tab.classList.add('text-text-secondary');
             });
 
             currentMode = mode;
@@ -387,25 +390,25 @@
             switch(mode) {
                 case 'insert':
                     insertTab.classList.add('tab-active');
-                    insertTab.classList.remove('text-gray-500');
+                    insertTab.classList.remove('text-text-secondary');
                     modeText = '中职插入';
                     tableType = 'zzxs';
                     break;
                 case 'update':
                     updateTab.classList.add('tab-active');
-                    updateTab.classList.remove('text-gray-500');
+                    updateTab.classList.remove('text-text-secondary');
                     modeText = '中职更新';
                     tableType = 'zzxs';
                     break;
                 case 'middleInsert':
                     middleInsertTab.classList.add('tab-active');
-                    middleInsertTab.classList.remove('text-gray-500');
+                    middleInsertTab.classList.remove('text-text-secondary');
                     modeText = '高/初中插入';
                     tableType = 'zxxs';
                     break;
                 case 'middleUpdate':
                     middleUpdateTab.classList.add('tab-active');
-                    middleUpdateTab.classList.remove('text-gray-500');
+                    middleUpdateTab.classList.remove('text-text-secondary');
                     modeText = '高/初中更新';
                     tableType = 'zxxs';
                     break;
@@ -462,7 +465,7 @@
         
         // 更新状态
         function updateStatus(message) {
-            statusEl.innerHTML = `<p class="text-gray-600">${message}</p>`;
+            statusEl.innerHTML = `<p class="text-text-secondary">${message}</p>`;
         }
         
         function showToast(message, isSuccess = true) {
@@ -587,21 +590,21 @@
         // 预览数据
         function previewData(data) {
             if (!data || data.length === 0) {
-                dataPreviewHeader.innerHTML = '<th colspan="100%" class="text-center py-4 text-gray-500">无数据</th>';
+                dataPreviewHeader.innerHTML = '<th colspan="100%" class="text-center py-4 text-text-secondary">无数据</th>';
                 dataPreviewBody.innerHTML = '';
                 return;
             }
             const headers = Object.keys(data[0]);
             let headerHtml = '';
             headers.forEach(header => {
-                headerHtml += `<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">${header}</th>`;
+                headerHtml += `<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">${header}</th>`;
             });
             dataPreviewHeader.innerHTML = headerHtml;
             let bodyHtml = '';
             data.forEach((row, index) => {
-                let rowHtml = `<tr class="${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">`;
+                let rowHtml = `<tr class="${index % 2 === 0 ? 'bg-bg-card' : 'bg-bg-main'}">`;
                 headers.forEach(header => {
-                    rowHtml += `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${row[header] || '-'}</td>`;
+                    rowHtml += `<td class="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">${row[header] || '-'}</td>`;
                 });
                 rowHtml += '</tr>';
                 bodyHtml += rowHtml;
