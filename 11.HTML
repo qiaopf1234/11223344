@@ -4,162 +4,114 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>教育装备 - 学校填报状态查询工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        neon: '#39FF14',
+                        dark: '#121212',
+                        'dark-card': '#1E1E1E',
+                        'dark-input': '#2A2A2A',
+                        'text-primary': '#FFFFFF',
+                        'text-secondary': '#B0B0B0',
+                    },
+                    boxShadow: {
+                        'neon': '0 0 10px rgba(57, 255, 20, 0.3)',
+                        'neon-hover': '0 0 20px rgba(57, 255, 20, 0.5)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .card-hover {
+                transition: all 0.3s ease;
+            }
+            .card-hover:hover {
+                transform: translateY(-2px);
+                box-shadow: var(--tw-shadow-neon-hover);
+            }
+            .input-focus {
+                transition: all 0.3s ease;
+            }
+            .input-focus:focus {
+                border-color: #39FF14;
+                box-shadow: 0 0 0 3px rgba(57, 255, 20, 0.2);
+            }
+            .btn-hover {
+                transition: all 0.3s ease;
+            }
+            .btn-hover:hover {
+                transform: translateY(-2px);
+                box-shadow: var(--tw-shadow-neon);
+            }
+        }
+    </style>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
-        }
-
-        body {
-            min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 900px;
-            background: rgba(255,255,255,0.97);
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
-            padding: 40px;
-            backdrop-filter: blur(10px);
-            animation: fadeIn 0.5s ease;
-        }
-
-        @keyframes fadeIn {
-            from { opacity:0; transform: translateY(20px); }
-            to { opacity:1; transform: translateY(0); }
-        }
-
-        h1 {
-            text-align: center;
-            color: #2c3e50;
-            margin-bottom: 8px;
-            font-size: 24px;
-        }
-
-        .desc {
-            text-align: center;
-            color: #7f8c8d;
-            margin-bottom: 30px;
-            font-size: 14px;
-        }
-
-        .box {
-            margin-bottom: 20px;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            color: #34495e;
-        }
-
-        input, textarea {
-            width: 100%;
-            padding: 14px;
-            border: 2px solid #e1e5e9;
-            border-radius: 12px;
-            font-size: 15px;
-            transition: all 0.3s;
-            background: #f9fafb;
-        }
-
-        input:focus, textarea:focus {
-            outline: none;
-            border-color: #667eea;
-            background: #fff;
-        }
-
-        .btn-group {
-            display: flex;
-            gap: 14px;
-            margin: 25px 0;
-        }
-
-        button {
-            flex: 1;
-            padding: 15px;
-            border: none;
-            border-radius: 12px;
-            font-size: 15px;
-            font-weight: 600;
-            color: #fff;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        button:nth-child(1) {
-            background: linear-gradient(90deg, #f1c40f, #f39c12);
-            color: #000;
-        }
-
-        button:nth-child(2) {
-            background: linear-gradient(90deg, #3498db, #2980b9);
-        }
-
-        button:nth-child(3) {
-            background: #2ecc71;
-        }
-
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-        }
-
-        textarea#result {
-            height: 380px;
-            resize: none;
-            line-height: 1.6;
-        }
-
-        .tip {
-            font-size: 12px;
-            color: #95a5a6;
-            margin-top: 5px;
+        /* 文本域渲染优化 */
+        #result, #multiSchool {
+            resize: none !important;
+            will-change: auto;
+            backface-visibility: hidden;
+            -webkit-font-smoothing: antialiased;
+            font-variant-ligatures: none;
+            transform: translateZ(0);
         }
     </style>
 </head>
+<body class="bg-dark min-h-screen font-sans text-text-primary flex justify-center items-center p-4">
+    <div class="w-full max-w-3xl bg-dark-card rounded-2xl shadow-card p-8 card-hover border border-dark-input">
+        <!-- 标题区域 -->
+        <header class="mb-8 text-center">
+            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-text-primary">
+                <i class="fa fa-building text-neon mr-2"></i>教育装备 - 学校填报状态查询工具
+            </h1>
+            <p class="text-text-secondary text-sm">功能：查询学校各表填报状态（纯查询，不修改任何数据）</p>
+        </header>
 
-<body>
-<div class="container">
-    <h1>🏫 教育装备 - 学校填报状态查询工具</h1>
-    <p class="desc">功能：查询学校各表填报状态（纯查询，不修改任何数据）</p>
+        <!-- 表单区域 -->
+        <div class="space-y-6 mb-8">
+            <div>
+                <label class="block mb-2 text-text-secondary text-sm font-medium">📅 年度版本（可直接修改）</label>
+                <input type="text" id="year" value="2026" placeholder="请输入年份" class="w-full bg-dark-input border border-dark-input rounded-lg p-3 text-text-primary input-focus">
+            </div>
 
-    <div class="box">
-        <label>📅 年度版本（可直接修改）</label>
-        <input type="text" id="year" value="2026" placeholder="请输入年份">
+            <div>
+                <label class="block mb-2 text-text-secondary text-sm font-medium">🏫 单学校名称</label>
+                <input type="text" id="singleSchool" placeholder="请输入学校全称，例如：准格尔旗大路第一小学" class="w-full bg-dark-input border border-dark-input rounded-lg p-3 text-text-primary input-focus">
+                <p class="text-text-secondary text-xs mt-1">生成单学校查询SQL</p>
+            </div>
+
+            <div>
+                <label class="block mb-2 text-text-secondary text-sm font-medium">🏫🏫 多学校名称（一行一个）</label>
+                <textarea id="multiSchool" placeholder="请输入多个学校名称，一行一个" class="w-full h-32 bg-dark-input border border-dark-input rounded-lg p-3 text-text-primary input-focus"></textarea>
+                <p class="text-text-secondary text-xs mt-1">生成多学校查询SQL</p>
+            </div>
+        </div>
+
+        <!-- 按钮组 -->
+        <div class="flex gap-4 mb-8">
+            <button onclick="genSingleQuery()" class="flex-1 bg-yellow-500 text-black font-bold py-3 rounded-lg btn-hover flex items-center justify-center">
+                <i class="fa fa-building mr-2"></i>生成【单学校查询】
+            </button>
+            <button onclick="genMultiQuery()" class="flex-1 bg-primary text-white font-bold py-3 rounded-lg btn-hover flex items-center justify-center">
+                <i class="fa fa-building-o mr-2"></i>生成【多学校查询】
+            </button>
+            <button onclick="copyResult()" class="flex-1 bg-neon text-dark font-bold py-3 rounded-lg btn-hover flex items-center justify-center">
+                <i class="fa fa-copy mr-2"></i>一键复制
+            </button>
+        </div>
+
+        <!-- 结果区域 -->
+        <div>
+            <label class="block mb-2 text-text-secondary text-sm font-medium">📄 查询SQL结果（只读，安全）</label>
+            <textarea id="result" class="w-full h-80 bg-dark-input border border-dark-input rounded-lg p-4 text-text-primary font-mono text-sm input-focus" placeholder="生成的SQL语句将显示在这里..."></textarea>
+        </div>
     </div>
-
-    <div class="box">
-        <label>🏫 单学校名称</label>
-        <input type="text" id="singleSchool" placeholder="请输入学校全称，例如：准格尔旗大路第一小学">
-        <div class="tip">生成单学校查询SQL</div>
-    </div>
-
-    <div class="box">
-        <label>🏫🏫 多学校名称（一行一个）</label>
-        <textarea id="multiSchool" placeholder="请输入多个学校名称，一行一个"></textarea>
-        <div class="tip">生成多学校查询SQL</div>
-    </div>
-
-    <div class="btn-group">
-        <button onclick="genSingleQuery()">🏫 生成【单学校查询】</button>
-        <button onclick="genMultiQuery()">🏫🏫 生成【多学校查询】</button>
-        <button onclick="copyResult()">📋 一键复制</button>
-    </div>
-
-    <div class="box">
-        <label>📄 查询SQL结果（只读，安全）</label>
-        <textarea id="result" placeholder="生成的SQL语句将显示在这里..."></textarea>
-    </div>
-</div>
 
 <script>
 // 9张表名（你提供的正确顺序）
