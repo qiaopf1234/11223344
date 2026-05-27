@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户查询导出工具（两步法）</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: #000;
+            color: #fff;
+            overflow-x: hidden;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 30px 15px;
+        }
+
+        /* 动态粒子背景 */
+        #particles-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .box {
+            width: 100%;
+            max-width: 900px;
+            background: rgba(20, 25, 40, 0.9);
+            border-radius: 20px;
+            padding: 35px;
+            box-shadow: 0 0 40px rgba(82, 165, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            z-index: 1;
+        }
+
+        h2 {
+            color: #fff;
+            text-align: center;
+            font-size: 26px;
+            margin-bottom: 30px;
+            letter-spacing: 1px;
+            text-shadow: 0 0 15px rgba(82, 165, 255, 0.4);
+        }
+
+        .step {
+            margin: 25px 0;
+            padding: 25px;
+            background: rgba(40, 45, 60, 0.6);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            transition: all 0.3s ease;
+        }
+
+        .step:hover {
+            background: rgba(50, 55, 70, 0.7);
+            box-shadow: 0 0 20px rgba(82, 165, 255, 0.1);
+        }
+
+        .title {
+            font-weight: bold;
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #82c1ff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .title::before {
+            content: "🔹";
+        }
+
+        input {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            margin: 10px 0;
+            font-size: 14px;
+            background: rgba(30, 35, 50, 0.8);
+            color: #fff;
+            transition: all 0.3s ease;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #52a5ff;
+            box-shadow: 0 0 10px rgba(82, 165, 255, 0.3);
+        }
+
+        input::placeholder {
+            color: #8899aa;
+        }
+
+        .btn-group {
+            margin: 10px 0;
+            display: flex;
+            gap: 12px;
+        }
+
+        button {
+            padding: 12px 22px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-generate {
+            background: linear-gradient(90deg, #52a5ff, #2b8def);
+            color: #fff;
+        }
+
+        .btn-generate:hover {
+            background: linear-gradient(90deg, #63b6ff, #3c9eff);
+            box-shadow: 0 0 15px rgba(82, 165, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        .btn-copy {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .btn-copy:hover {
+            background: rgba(255, 255, 255, 0.18);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        textarea {
+            width: 100%;
+            height: 160px;
+            padding: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 10px;
+            font-size: 14px;
+            resize: none;
+            background: rgba(30, 35, 50, 0.8);
+            color: #fff;
+            margin-top: 10px;
+            font-family: Consolas, "Microsoft YaHei", monospace;
+            line-height: 1.6;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #52a5ff;
+            box-shadow: 0 0 10px rgba(82, 165, 255, 0.3);
+        }
+
+        /* 装饰性几何元素 */
+        .decoration {
+            position: absolute;
+            z-index: -1;
+            opacity: 0.6;
+        }
+
+        .circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ffdd00, #ff9500);
+            top: -20px;
+            right: -20px;
+        }
+
+        .star {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #52a5ff, #2b8def);
+            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+            bottom: -15px;
+            left: -15px;
+        }
+    </style>
+</head>
+<body>
+<!-- 动态粒子背景 -->
+<canvas id="particles-canvas"></canvas>
+
+<div class="box">
+    <!-- 装饰元素 -->
+    <div class="decoration circle"></div>
+    <div class="decoration star"></div>
+
+    <h2>📋 管理局用户查询工具（两步法）</h2>
+
+    <!-- ================== 第一步：查部门ID ================== -->
+    <div class="step">
+        <div class="title">第一步：输入部门名称 → 生成查ID的SQL</div>
+        <input id="deptName" placeholder="例如：大青山管理局本级" value="">
+        <div class="btn-group">
+            <button class="btn-generate" onclick="genStep1()">⚡ 生成SQL</button>
+            <button class="btn-copy" onclick="copyStep1()">📋 复制SQL</button>
+        </div>
+        <textarea id="sql1" readonly placeholder="第一步SQL将显示在这里"></textarea>
+    </div>
+
+    <!-- ================== 第二步：查用户信息 ================== -->
+    <div class="step">
+        <div class="title">第二步：输入部门ID → 生成查询用户的SQL</div>
+        <input id="deptId" placeholder="例如：1501" value="">
+        <div class="btn-group">
+            <button class="btn-generate" onclick="genStep2()">⚡ 生成SQL</button>
+            <button class="btn-copy" onclick="copyStep2()">📋 复制SQL</button>
+        </div>
+        <textarea id="sql2" readonly placeholder="第二步SQL将显示在这里"></textarea>
+    </div>
+</div>
+
+<script>
+// 动态粒子背景
+const canvas = document.getElementById('particles-canvas');
+const ctx = canvas.getContext('2d');
+let particles = [];
+
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+class Particle {
+    constructor() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.radius = Math.random() * 3 + 1;
+        this.color = `rgba(${Math.floor(Math.random()*100+155)}, ${Math.floor(Math.random()*100+155)}, 255, ${Math.random()*0.3+0.2})`;
+        this.vx = (Math.random() - 0.5) * 0.5;
+        this.vy = (Math.random() - 0.5) * 0.5;
+    }
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+        if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+    }
+    draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.fill();
+    }
+}
+
+function initParticles() {
+    particles = [];
+    for (let i = 0; i < 80; i++) {
+        particles.push(new Particle());
+    }
+}
+initParticles();
+
+function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    particles.forEach(p => {
+        p.update();
+        p.draw();
+    });
+    requestAnimationFrame(animate);
+}
+animate();
+
+// ================== 原有功能代码 ==================
+// 第一步：生成查部门ID的SQL
+function genStep1() {
+    let name = document.getElementById("deptName").value.trim();
+    let sql = `SELECT ID, NAME, FULLPATH FROM BASE_ORG WHERE NAME LIKE '%${name}%';`;
+    document.getElementById("sql1").value = sql;
+}
+
+// 复制第一步SQL
+function copyStep1() {
+    let sql = document.getElementById("sql1");
+    sql.select();
+    document.execCommand("copy");
+    alert("第一步SQL已复制！");
+}
+
+// 第二步：生成查询用户的SQL
+function genStep2() {
+    let id = document.getElementById("deptId").value.trim();
+    let sql = `SELECT
+    u.NAME AS "姓名",
+    u.LOGIN_CODE AS "登录账号",
+    u.RANGE AS "权重",
+    o.NAME AS "部门"
+FROM
+    BASE_USER u
+LEFT JOIN
+    BASE_ORG o ON u.MEMBERSHIP_ORG_ID = o.ID
+WHERE
+    u.IS_DELETE = 0
+    AND o.FULLPATH LIKE '%/${id}/%'
+ORDER BY
+    o.NAME, u.NAME;`;
+    document.getElementById("sql2").value = sql;
+}
+
+// 复制第二步SQL
+function copyStep2() {
+    let sql = document.getElementById("sql2");
+    sql.select();
+    document.execCommand("copy");
+    alert("第二步SQL已复制！");
+}
+</script>
+</body>
+</html>

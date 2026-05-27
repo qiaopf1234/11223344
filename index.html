@@ -7,7 +7,6 @@
     <style>
         *{margin:0;padding:0;box-sizing:border-box;}
         body{width:100vw;height:100vh;display:flex;overflow:hidden;background:#0c111f;font-family:"Microsoft YaHei",sans-serif;}
-        /* 左侧侧边栏全局美化 */
         .left-menu{
             width:240px;
             background:linear-gradient(180deg,#121a33,#0c111f);
@@ -15,11 +14,9 @@
             overflow-y:auto;
             border-right:1px solid rgba(120,180,255,0.15);
         }
-        /* 自定义精致滚动条 */
         .left-menu::-webkit-scrollbar{width:5px;}
         .left-menu::-webkit-scrollbar-track{background:transparent;}
         .left-menu::-webkit-scrollbar-thumb{background:rgba(100,170,255,0.4);border-radius:10px;}
-        /* 标题样式 */
         .menu-title{
             color:#73b8ff;
             text-align:center;
@@ -29,7 +26,6 @@
             font-weight:600;
             text-shadow:0 0 8px rgba(115,184,255,0.3);
         }
-        /* 菜单主项 丝滑交互 */
         .menu-item{
             padding:13px 22px;
             color:#c9d8f0;
@@ -52,7 +48,24 @@
             font-weight:500;
             border-left:3px solid #52a5ff;
         }
-        /* 功能按钮区域 */
+        /* 折叠菜单箭头 */
+        .menu-item .arrow{
+            float:right;
+            transition:transform 0.2s;
+        }
+        .menu-item.open .arrow{
+            transform:rotate(90deg);
+        }
+        /* 二级菜单样式 */
+        .sub-menu{
+            display:none;
+            padding-left:12px;
+            margin-top:4px;
+        }
+        .sub-menu .menu-item{
+            font-size:13px;
+            padding:10px 20px;
+        }
         .func-box{
             margin:30px 15px 20px;
             padding-top:20px;
@@ -74,58 +87,80 @@
             background:rgba(60,110,200,0.4);
             color:#fff;
         }
-        /* 右侧内容区 */
         .main-box{flex:1;height:100%;}
         #iframeBox{width:100%;height:100%;border:none;background:#f5f7fa;}
     </style>
 </head>
 <body>
-    <!-- 左侧美化菜单 -->
-    <div class="left-menu">
-        <h3 class="menu-title">🧰 工具聚合平台</h3>
 
-        <div class="menu-item active" data-href="1.html">证照数据・学生信息批量录入工具</div>
-        <div class="menu-item" data-href="13.html">证照数据・学生信息批量更新工具</div>
-        <div class="menu-item" data-href="10.html">装备填报・状态查询工具（V1）</div>
-        <div class="menu-item" data-href="11.HTML">装备填报・状态查询工具（V2）</div>
-        <div class="menu-item" data-href="12.html">装备填报・状态批量更新工具</div>
-		<div class="menu-item" data-href="14.html">运维辅助・周报一键生成工具</div>
-		<div class="menu-item" data-href="15.html">账号管理・批量账号生成工具</div>
-		<div class="menu-item" data-href="16.html">SQL语句保存工具</div>
+<div class="left-menu">
+    <h3 class="menu-title">🧰 工具聚合平台</h3>
 
-        <!-- 新增实用功能按钮 -->
-        <div class="func-box">
-            <button class="func-btn" id="refreshBtn">🔄 刷新当前工具</button>
-            <button class="func-btn" id="openNewBtn">↗️ 新标签全屏打开</button>
-        </div>
+    <div class="menu-item active" data-href="1.html">证照数据・学生信息批量录入工具</div>
+    <div class="menu-item" data-href="13.html">证照数据・学生信息批量更新工具</div>
+    <div class="menu-item" data-href="10.html">装备填报・状态查询工具（V1）</div>
+    <div class="menu-item" data-href="11.HTML">装备填报・状态查询工具（V2）</div>
+    <div class="menu-item" data-href="12.html">装备填报・状态批量更新工具</div>
+    <div class="menu-item" data-href="14.html">运维辅助・周报一键生成工具</div>
+    <div class="menu-item" data-href="15.html">账号管理・批量账号生成工具</div>
+    <div class="menu-item" data-href="16.html">SQL语句保存工具</div>
+
+    <!-- ====================== 【新增：折叠菜单 - 大管局】 ====================== -->
+    <div class="menu-item" onclick="toggleSubMenu(this)">
+        📋 大管局 <span class="arrow">▶</span>
     </div>
-
-    <!-- 右侧内嵌加载区域 -->
-    <div class="main-box">
-        <iframe id="iframeBox" src="1.html"></iframe>
+    <div class="sub-menu">
+        <div class="menu-item" data-href="17.html">大管局用户查询</div>
+        <div class="menu-item" data-href="18.html">文件查询</div>
+        <div class="menu-item" data-href="19.html">未知</div>
+        <div class="menu-item" data-href="20.html">未知</div>
     </div>
+    <!-- ====================== 折叠菜单结束 ====================== -->
+
+    <div class="func-box">
+        <button class="func-btn" id="refreshBtn">🔄 刷新当前工具</button>
+        <button class="func-btn" id="openNewBtn">↗️ 新标签全屏打开</button>
+    </div>
+</div>
+
+<div class="main-box">
+    <iframe id="iframeBox" src="1.html"></iframe>
+</div>
 
 <script>
     const items = document.querySelectorAll('.menu-item');
     const iframe = document.getElementById('iframeBox');
     let nowUrl = "1.html";
 
-    // 菜单切换逻辑
+    // 菜单切换
     items.forEach(item=>{
         item.addEventListener('click',function(){
-            items.forEach(i=>i.classList.remove('active'));
-            this.classList.add('active');
-            nowUrl = this.getAttribute('data-href');
-            iframe.src = nowUrl;
+            if(this.getAttribute('data-href')){
+                items.forEach(i=>i.classList.remove('active'));
+                this.classList.add('active');
+                nowUrl = this.getAttribute('data-href');
+                iframe.src = nowUrl;
+            }
         })
-    });
+    })
 
-    // 刷新当前页面
+    // 折叠展开二级菜单
+    function toggleSubMenu(el){
+        el.classList.toggle('open');
+        let sub = el.nextElementSibling;
+        if(sub.style.display === 'block'){
+            sub.style.display = 'none';
+        }else{
+            sub.style.display = 'block';
+        }
+    }
+
+    // 刷新
     document.getElementById('refreshBtn').addEventListener('click',()=>{
         iframe.src = nowUrl;
     })
 
-    // 新标签页打开
+    // 新标签打开
     document.getElementById('openNewBtn').addEventListener('click',()=>{
         window.open(nowUrl,"_blank");
     })
