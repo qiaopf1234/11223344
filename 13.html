@@ -306,7 +306,7 @@
         }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(4px); }
-            to { opacity: 1; transform: translateY(0); }
+            to { opacity: 1; transform: translateY(0px); }
         }
 
         /* 粒子 */
@@ -435,7 +435,7 @@ function updateFieldOptions() {
         o1.value = 'xb'; o1.textContent = '性别'; o1.className = 'dynamic';
         sel.appendChild(o1);
         const o2 = document.createElement('option');
-        o2.value = 'hkszd'; o2.textContent = '户口所在地'; o2.className = 'dynamic';
+        o2.value = 'hkszd'; o2.textContent = '户口所在地'; o1.className = 'dynamic';
         sel.appendChild(o2);
     }
 
@@ -488,12 +488,22 @@ function generateSql() {
         let field = f;
         if (v === 'B' && field === 'bj') field = 'bjmc';
 
+        // ================= 核心正确修复：只对 byzsh 处理 NULL =================
+        let sqlValue;
+        if (field === 'byzsh' && val.toLowerCase() === 'null') {
+            // 只有 毕业证书号 且输入null → 生成不带引号的 NULL
+            sqlValue = 'NULL';
+        } else {
+            // 其他所有情况 → 正常带引号
+            sqlValue = `'${val}'`;
+        }
+
         if (field === 'xxmc') {
             sql += `UPDATE ${table} SET xxmc = '${val}' WHERE xxmc = '${key}';\n`;
         } else if (field === 'sfzjh') {
             sql += `UPDATE ${table} SET ${idField} = '${val}' WHERE ${idField} = '${key}';\n`;
         } else {
-            sql += `UPDATE ${table} SET ${field} = '${val}' WHERE ${idField} = '${key}';\n`;
+            sql += `UPDATE ${table} SET ${field} = ${sqlValue} WHERE ${idField} = '${key}';\n`;
         }
     });
 
