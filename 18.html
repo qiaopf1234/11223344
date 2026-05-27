@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>文件查询</title>
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background: #000;
+    color: #fff;
+    font-family: "Microsoft YaHei", sans-serif;
+    position: relative;
+    overflow-x: hidden;
+    padding: 30px 15px;
+}
+
+/* tsParticles 容器 */
+#ts-particles {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+}
+
+h1 {
+    text-align: center;
+    margin-bottom: 2rem;
+    color: #20c997;
+    font-weight: 700;
+    text-shadow: 0 0 15px rgba(32, 201, 151, 0.4);
+}
+
+.card {
+    background: rgba(20, 25, 40, 0.9);
+    border-radius: 20px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.card::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 150px;
+    height: 150px;
+    background: radial-gradient(circle, rgba(255, 221, 0, 0.2), transparent 70%);
+    border-radius: 50%;
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.card:hover {
+    background: rgba(40, 45, 60, 0.9);
+    box-shadow: 0 0 20px rgba(32, 201, 151, 0.15);
+    transform: translateY(-4px);
+}
+
+.card h3 {
+    color: #20c997;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 18px;
+}
+
+/* 表单元素 */
+input, button, textarea {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    font-size: 1rem;
+    margin-top: 0.5rem;
+    font-family: inherit;
+    background: rgba(30, 35, 50, 0.8);
+    color: #fff;
+    transition: all 0.3s ease;
+}
+
+input:focus, textarea:focus {
+    outline: none;
+    border-color: #20c997;
+    box-shadow: 0 0 10px rgba(32, 201, 151, 0.3);
+}
+
+button {
+    background: linear-gradient(90deg, #20c997, #19a979);
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+button:hover {
+    background: linear-gradient(90deg, #23d8a4, #1fb886);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(32, 201, 151, 0.3);
+}
+
+textarea {
+    height: 180px;
+    resize: none;
+    font-family: Consolas, monospace;
+    line-height: 1.6;
+}
+
+.tip {
+    color: #aaa;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+}
+
+/* 动态字段区域 */
+#fields-container {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.btn-danger {
+    background: linear-gradient(90deg, #dc3545, #bb2d3b);
+    padding: 0.8rem;
+    width: auto;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(90deg, #e04453, #c73141);
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+}
+
+/* 按钮组 */
+.btn-group {
+    display: flex;
+    gap: 0.8rem;
+    margin-top: 1rem;
+}
+</style>
+</head>
+<body>
+<!-- tsParticles 网络粒子效果 -->
+<div id="ts-particles"></div>
+
+<div class="container">
+    <h1>文件查询</h1>
+
+    <div class="card">
+        <h3>📄 文件名/关键词</h3>
+        <input id="key" placeholder="例如：145454" value="">
+    </div>
+
+    <div class="card">
+        <h3>🔍 一键生成查询 SQL</h3>
+        <button onclick="genQuery()">⚡ 生成查询 SQL</button>
+        <textarea id="querySql" readonly placeholder="点击上方按钮生成查询语句"></textarea>
+        <button onclick="copy('querySql')" style="margin-top: 0.5rem;">📋 复制查询 SQL</button>
+    </div>
+
+    <div class="card">
+        <h3>✏️ 日常事务（ZWGL_RCSW）字段修改</h3>
+        <div id="fields-container">
+            <!-- 默认字段 -->
+            <div class="field-row">
+                <input type="text" class="field-name" placeholder="数据库字段名（如 JBR）" value="">
+                <input type="text" class="field-label" placeholder="字段说明（如 经办人）" value="">
+                <button class="btn-danger" onclick="removeField(this)">删除</button>
+            </div>
+            <div class="field-row">
+                <input type="text" class="field-name" placeholder="数据库字段名（如 CHRYWB）" value="">
+                <input type="text" class="field-label" placeholder="字段说明（如 外出人员）" value="">
+                <button class="btn-danger" onclick="removeField(this)">删除</button>
+            </div>
+            <div class="field-row">
+                <input type="text" class="field-name" placeholder="数据库字段名（如 CHRYNB_NAME）" value="">
+                <input type="text" class="field-label" placeholder="字段说明（如 处理人）" value="">
+                <button class="btn-danger" onclick="removeField(this)">删除</button>
+            </div>
+        </div>
+        <button onclick="addField()" style="margin-top: 1rem;">+ 添加自定义字段</button>
+        <button onclick="genUpdate()" style="margin-top: 1rem;">生成修改 SQL（含备份）</button>
+        <textarea id="updateSql" readonly placeholder="点击上方按钮生成修改语句"></textarea>
+        <button onclick="copy('updateSql')" style="margin-top: 0.5rem;">📋 复制修改 SQL</button>
+        <div class="tip">提示：留空的字段不会出现在 UPDATE 语句中，仅修改你输入了新值的字段</div>
+    </div>
+</div>
+
+<script type="module">
+import { tsParticles } from "https://cdn.jsdelivr.net/npm/@tsparticles/engine@3.1.0/+esm";
+import { loadAll } from "https://cdn.jsdelivr.net/npm/@tsparticles/all@3.1.0/+esm";
+
+async function loadParticles(options) {
+    await loadAll(tsParticles);
+    await tsParticles.load({ id: "ts-particles", options });
+}
+
+const configs = {
+    background: { color: { value: "#000000" } },
+    fpsLimit: 60,
+    interactivity: {
+        events: {
+            onHover: { enable: true, mode: "repulse" },
+            resize: true,
+        },
+        modes: {
+            repulse: { distance: 100, duration: 0.4 },
+        },
+    },
+    particles: {
+        color: { value: "#ffffff" },
+        links: {
+            color: "#ffffff",
+            distance: 150,
+            enable: true,
+            opacity: 0.3,
+            width: 1,
+        },
+        move: {
+            direction: "none",
+            enable: true,
+            outModes: { default: "bounce" },
+            random: false,
+            speed: 1,
+            straight: false,
+        },
+        number: { density: { enable: true }, value: 100 },
+        opacity: { value: 0.5 },
+        shape: { type: "circle" },
+        size: { value: { min: 1, max: 3 } },
+    },
+    detectRetina: true,
+};
+
+loadParticles(configs);
+</script>
+
+<script>
+// 工具逻辑
+function g(id) { return document.getElementById(id); }
+function copy(id) {
+    const t = g(id);
+    t.select();
+    document.execCommand("copy");
+    alert("✅ 已复制到剪贴板！");
+}
+
+// 添加/删除字段
+function addField() {
+    const container = document.getElementById('fields-container');
+    const row = document.createElement('div');
+    row.className = 'field-row';
+    row.innerHTML = `
+        <input type="text" class="field-name" placeholder="数据库字段名（如 JBR）">
+        <input type="text" class="field-label" placeholder="字段说明（如 经办人）">
+        <button class="btn-danger" onclick="removeField(this)">删除</button>
+    `;
+    container.appendChild(row);
+}
+function removeField(btn) {
+    const row = btn.parentElement;
+    row.remove();
+}
+
+// 生成查询 SQL
+function genQuery() {
+    const key = g("key").value.trim() || "145454";
+    const sql = `-- OA全流程万能单据查询
+SELECT 
+    'COM_RECEIVE(收文)' AS 模块,
+    FILE_TITLE AS 单据名称,
+    HANDLE_NAME AS 办理人,
+    RECEIVE_USER_NAME AS 接收人,
+    CREATE_TIME AS 创建时间
+FROM COM_RECEIVE WHERE FILE_TITLE ILIKE '%${key}%'
+
+UNION ALL
+
+SELECT 
+    'COM_SUPERVISE(督办)' AS 模块,
+    FILE_TITLE AS 单据名称,
+    SUPERVISE_TO_NAME AS 承办人,
+    SUPERVISE_BY_NAME AS 督办人,
+    CREATE_TIME AS 创建时间
+FROM COM_SUPERVISE WHERE FILE_TITLE ILIKE '%${key}%'
+
+UNION ALL
+
+SELECT 
+    'ISSUE_INFO(发文)' AS 模块,
+    TITLE AS 单据名称,
+    SEND_NAME AS 经办人,
+    ORGAN_NAME AS 主办部门,
+    CREATE_TIME AS 创建时间
+FROM ISSUE_INFO WHERE TITLE ILIKE '%${key}%'
+
+UNION ALL
+
+SELECT 
+    'COM_NOTICE(通知公告)' AS 模块,
+    TITLE AS 单据名称,
+    USERNAME AS 发布人,
+    '' AS 接收人,
+    CREATE_TIME AS 创建时间
+FROM COM_NOTICE WHERE TITLE ILIKE '%${key}%'
+
+UNION ALL
+
+SELECT 
+    'ZWGL_RCSW(日常事务/值班)' AS 模块,
+    TITLE AS 单据名称,
+    CHRYNB_NAME AS 处理人,
+    JBR AS 经办人,
+    CHRYWB AS 外出人员,
+    CREATETIME AS 创建时间
+FROM ZWGL_RCSW WHERE TITLE ILIKE '%${key}%';
+
+-- 查看主表所有字段
+SELECT * FROM ZWGL_RCSW WHERE TITLE = '${key}';`;
+    g("querySql").value = sql;
+}
+
+// 生成修改 SQL
+function genUpdate() {
+    const key = g("key").value.trim() || "145454";
+    const fieldRows = document.querySelectorAll('.field-row');
+    const setArr = [];
+    fieldRows.forEach(row => {
+        const fieldName = row.querySelector('.field-name').value.trim();
+        const fieldLabel = row.querySelector('.field-label').value.trim();
+        if (fieldName && fieldLabel) {
+            setArr.push(`${fieldName} = ''`);
+        }
+    });
+
+    if (setArr.length === 0) {
+        alert("⚠️ 请至少添加一个字段！");
+        return;
+    }
+
+    const setSql = setArr.join(",\n    ");
+    const sql = `-- 1. 备份（必做）
+CREATE TABLE ZWGL_RCSW_BAK_20260526 AS
+SELECT * FROM ZWGL_RCSW WHERE TITLE = '${key}';
+
+-- 2. 更新日常事务（ZWGL_RCSW）
+-- 请把下面单引号里的空值替换成你要修改的内容
+UPDATE ZWGL_RCSW
+SET ${setSql}
+WHERE TITLE = '${key}';`;
+    g("updateSql").value = sql;
+}
+</script>
+</body>
+</html>
