@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>运维月报生成器</title>
+<style>
+* {
+  box-sizing: border-box;
+  font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+}
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  color: #e0e0e0;
+}
+.container {
+  max-width: 900px;
+  margin: 30px auto;
+  padding: 30px;
+  background: rgba(22, 33, 62, 0.7);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 1px rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+h2 {
+  text-align: center;
+  color: #fff;
+  margin-bottom: 30px;
+  font-size: 28px;
+  font-weight: 700;
+  background: linear-gradient(90deg, #72edf2, #5151e5, #ee00ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.item {
+  margin-bottom: 24px;
+}
+label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #a0a0ff;
+  font-size: 14px;
+}
+input, textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  transition: all 0.3s ease;
+}
+select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid rgba(114, 237, 242, 0.5);
+  border-radius: 8px;
+  font-size: 14px;
+  background: #1a1a2e;
+  color: #ffffff;
+  transition: all 0.3s ease;
+}
+select:focus {
+  outline: none;
+  border-color: #72edf2;
+  box-shadow: 0 0 8px rgba(114, 237, 242, 0.5);
+}
+select option {
+  background: #1a1a2e;
+  color: #ffffff;
+}
+input:focus, textarea:focus {
+  outline: none;
+  border-color: #72edf2;
+  box-shadow: 0 0 8px rgba(114, 237, 242, 0.5);
+}
+.date-row {
+  display: flex;
+  gap: 12px;
+}
+.date-row .item {
+  flex: 1;
+}
+.btn-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+.btn-blue {
+  background: linear-gradient(90deg, #5151e5, #72edf2);
+  color: white;
+}
+.btn-blue:hover {
+  box-shadow: 0 0 15px rgba(114, 237, 242, 0.6);
+  transform: translateY(-2px);
+}
+.btn-green {
+  background: linear-gradient(90deg, #00b894, #55efc4);
+  color: white;
+}
+.btn-green:hover {
+  box-shadow: 0 0 15px rgba(0, 184, 148, 0.6);
+  transform: translateY(-2px);
+}
+.btn-gray {
+  background: linear-gradient(90deg, #636e72, #b2bec3);
+  color: white;
+}
+.btn-gray:hover {
+  box-shadow: 0 0 15px rgba(99, 110, 114, 0.6);
+  transform: translateY(-2px);
+}
+.btn-red {
+  background: linear-gradient(90deg, #d63031, #ff7675);
+  color: white;
+}
+.btn-red:hover {
+  box-shadow: 0 0 15px rgba(214, 48, 49, 0.6);
+  transform: translateY(-2px);
+}
+.btn-purple {
+  background: linear-gradient(90deg, #9d50bb, #6e48aa);
+  color: #fff;
+}
+.btn-purple:hover {
+  box-shadow: 0 0 15px rgba(157, 80, 187, 0.6);
+  transform: translateY(-2px);
+}
+textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h2>运维月报生成器</h2>
+
+  <div class="item">
+    <label>选择/自定义报告标题</label>
+    <select id="titleSel">
+      <option value="教育厅基础教育大数据服务平台">教育厅基础教育大数据服务平台</option>
+      <option value="教育厅机关智能化管理平台、学生体质健康监测数据管理平台、民办机构管理系统运维服务">多系统模式</option>
+      <option value="自定义">手动自定义输入</option>
+    </select>
+  </div>
+  <div class="item" id="titleInputBox" style="display:none;">
+    <input type="text" id="customTitle" placeholder="请手动输入报告主标题">
+  </div>
+
+  <div class="date-row">
+    <div class="item">
+      <label>报告年份</label>
+      <select id="reportYear">
+        <option value="2026">2026年</option>
+        <option value="2025">2025年</option>
+      </select>
+    </div>
+    <div class="item">
+      <label>报告月份</label>
+      <select id="reportMonth">
+        <option value="01">1月</option>
+        <option value="02">2月</option>
+        <option value="03">3月</option>
+        <option value="04">4月</option>
+        <option value="05" selected>5月</option>
+        <option value="06">6月</option>
+        <option value="07">7月</option>
+        <option value="08">8月</option>
+        <option value="09">9月</option>
+        <option value="10">10月</option>
+        <option value="11">11月</option>
+        <option value="12">12月</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="date-row">
+    <div class="item">
+      <label>开始日期</label>
+      <input type="date" id="startDate">
+    </div>
+    <div class="item">
+      <label>结束日期</label>
+      <input type="date" id="endDate">
+    </div>
+  </div>
+
+  <div class="item">
+    <label>本月工作内容（可编辑修改模板）</label>
+    <div class="btn-bar">
+      <button class="btn-green" onclick="copyWork()">复制</button>
+      <button class="btn-gray" onclick="cutWork()">剪切</button>
+      <button class="btn-red" onclick="resetTemplate()">恢复默认模板</button>
+    </div>
+    <textarea id="mainWork" rows="12" placeholder="系统工作模板内容"></textarea>
+  </div>
+
+  <div class="item">
+    <label id="eventLabel">运维事件记录表（粘贴字段：事件内容、问题分析、完成状态、服务对象、需求提出、处理日期、处理人）</label>
+    <div class="btn-bar">
+      <button class="btn-green" onclick="copyEvent()">复制</button>
+      <button class="btn-gray" onclick="cutEvent()">剪切</button>
+      <button class="btn-red" onclick="clearEvent()">清空</button>
+    </div>
+    <textarea id="eventList" rows="12" placeholder="直接从Excel整行粘贴数据"></textarea>
+  </div>
+
+  <div class="item" style="text-align:center;">
+    <button class="btn-blue" onclick="generateAndExport()">生成并导出 Word 总结报告</button>
+  </div>
+</div>
+
+<script>
+const defaultTemplate = ``;
+
+document.getElementById('mainWork').value = defaultTemplate;
+const titleSel = document.getElementById('titleSel');
+const titleInputBox = document.getElementById('titleInputBox');
+const eventLabel = document.getElementById('eventLabel');
+
+// 切换标题时，同步更新粘贴字段说明
+function updateLabel() {
+  let val = titleSel.value;
+  titleInputBox.style.display = val === '自定义' ? 'block' : 'none';
+  // 多系统/自定义含多个系统 → 增加【系统名称】字段
+  if (val === '自定义' || val.indexOf('、') > -1) {
+    eventLabel.innerText = '运维事件记录表（粘贴字段：系统名称、事件内容、问题分析、完成状态、服务对象、需求提出、处理日期、处理人）';
+  } else {
+    eventLabel.innerText = '运维事件记录表（粘贴字段：事件内容、问题分析、完成状态、服务对象、需求提出、处理日期、处理人）';
+  }
+}
+titleSel.addEventListener('change', updateLabel);
+updateLabel();
+
+function fmt(dateStr){
+  if(!dateStr) return '';
+  let d=new Date(dateStr);
+  let y=d.getFullYear();
+  let m=String(d.getMonth()+1).padStart(2,'0');
+  let d2=String(d.getDate()).padStart(2,'0');
+  return `${y}年${m}月${d2}日`;
+}
+
+function splitLine(str){
+  return str.trim().split(/\t/);
+}
+
+function copyWork(){
+  let t=document.getElementById('mainWork');
+  t.select();document.execCommand('copy');alert('复制成功');
+}
+function cutWork(){
+  let t=document.getElementById('mainWork');
+  t.select();document.execCommand('cut');alert('剪切成功');
+}
+function resetTemplate(){
+  document.getElementById('mainWork').value = defaultTemplate;
+  alert('已恢复默认工作模板');
+}
+
+function copyEvent(){
+  let t=document.getElementById('eventList');
+  t.select();document.execCommand('copy');alert('复制成功');
+}
+function cutEvent(){
+  let t=document.getElementById('eventList');
+  t.select();document.execCommand('cut');alert('剪切成功');
+}
+function clearEvent(){
+  document.getElementById('eventList').value='';
+}
+
+function generateAndExport(){
+  let titleSelVal = titleSel.value;
+  let mainTitle = titleSelVal === '自定义' ? document.getElementById('customTitle').value.trim() : titleSelVal;
+  // 判断是否为多系统
+  const isMultiSys = (titleSelVal === '自定义') || (mainTitle.indexOf('、') > -1);
+
+  let reportYear = document.getElementById('reportYear').value;
+  let reportMonth = document.getElementById('reportMonth').value;
+  let start=document.getElementById('startDate').value;
+  let end=document.getElementById('endDate').value;
+
+  let startStr = fmt(start);
+  let endStr = fmt(end);
+  let periodText = `（${startStr}-${endStr}）`;
+  let monthText = `${reportMonth.replace('0','')}月`;
+  let titleLine1 = `${mainTitle}${reportYear}年${reportMonth.replace('0','')}月月度总结报告`;
+
+  let mainWorkContent = document.getElementById('mainWork').value.trim();
+  mainWorkContent = mainWorkContent.replace(/^本月/g, monthText);
+
+  let eventLines = document.getElementById('eventList').value.trim().split('\n').filter(x=>x.trim());
+  let eventRows = '';
+
+  eventLines.forEach((line,idx)=>{
+    let arr = splitLine(line);
+    let xh = idx+1;
+    let sysName, nr, zt, dw, xq, rq, clr;
+
+    if(isMultiSys){
+      // 多系统：0系统名称 1事件内容 2问题分析(忽略) 3完成状态 4服务对象 5需求提出 6处理日期 7处理人
+      sysName = arr[0] || '';
+      nr = arr[1] || '';
+      zt = arr[3] || '';
+      dw = arr[4] || '';
+      xq = arr[5] || '';
+      rq = arr[6] || '';
+      clr = arr[7] || '';
+
+      eventRows += `<tr>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${xh}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${sysName}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${nr}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${zt}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${dw}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${xq}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${rq}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${clr}</td>
+      </tr>`;
+    }else{
+      // 单系统：0事件内容 1问题分析(忽略) 2完成状态 3服务对象 4需求提出 5处理日期 6处理人
+      nr = arr[0] || '';
+      zt = arr[2] || '';
+      dw = arr[3] || '';
+      xq = arr[4] || '';
+      rq = arr[5] || '';
+      clr = arr[6] || '';
+
+      eventRows += `<tr>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${xh}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${nr}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${zt}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${dw}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${xq}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${rq}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${clr}</td>
+      </tr>`;
+    }
+  });
+
+  // 拼接表头
+  let tableHead = '';
+  if(isMultiSys){
+    tableHead = `<tr>
+      <th>序号</th>
+      <th>系统名称</th>
+      <th>事件内容</th>
+      <th>完成状态</th>
+      <th>服务对象</th>
+      <th>需求提出</th>
+      <th>处理日期</th>
+      <th>处理人</th>
+    </tr>`;
+  }else{
+    tableHead = `<tr>
+      <th>序号</th>
+      <th>事件内容</th>
+      <th>完成状态</th>
+      <th>服务对象</th>
+      <th>需求提出</th>
+      <th>处理日期</th>
+      <th>处理人</th>
+    </tr>`;
+  }
+
+  let html=`<html
+xmlns:v="urn:schemas-microsoft-com:vml"
+xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:w="urn:schemas-microsoft-com:office:word"
+xmlns:m="http://schemas.microsoft.com/office/2004/12/omml"
+xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<![if gte mso 9]><xml>
+<w:WordDocument>
+  <w:View>Print</w:View>
+  <w:Zoom>100</w:Zoom>
+</w:WordDocument>
+</xml><![endif]>
+<style>
+body{margin:0;padding:20px;}
+table{width:100%;border-collapse:collapse;margin-top:10px;}
+.main-title-line1, .main-title-line2{
+  font-family:"方正小标宋简体";
+  font-size:22pt;
+  font-weight:normal;
+  text-align:center;
+}
+.main-title-line1{
+  margin-bottom:5px;
+}
+.main-title-line2{
+  margin-bottom:20px;
+}
+.main-content p{
+  font-family:"仿宋";
+  font-size:16pt;
+  line-height:1.5;
+  text-indent:2em;
+  margin:0 0 8px 0;
+}
+.sub-title{
+  font-family:"黑体";
+  font-size:16pt;
+  font-weight:normal;
+  margin:15px 0 8px 0;
+  text-indent:0;
+}
+th{
+  font-family:宋体;
+  font-size:11pt;
+  border:1px solid #333;
+  padding:6px;
+  text-align:center;
+  background:#f5f5f5;
+}
+</style>
+</head>
+<body>
+
+<div class="main-title-line1">${titleLine1}</div>
+<div class="main-title-line2">${periodText}</div>
+
+<div class="sub-title">一、本月工作</div>
+<div class="main-content">
+  ${mainWorkContent.split('\n').map(p => `<p>${p}</p>`).join('')}
+</div>
+
+<div class="sub-title">二、服务配合与支撑</div>
+<table>
+  ${tableHead}
+  ${eventRows}
+</table>
+
+</body>
+</html>`;
+
+  let fileName = `${mainTitle}${reportYear}年${reportMonth.replace('0','')}月月度总结报告.doc`;
+  let blob=new Blob([html],{type:'application/msword'});
+  let url=URL.createObjectURL(blob);
+  let a=document.createElement('a');
+  a.href=url;
+  a.download=fileName;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+</script>
+</body>
+</html>
