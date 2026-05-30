@@ -12,40 +12,227 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  background: linear-gradient(135deg, #1a1a2e 0%, #16233e 50%, #0f3460 100%);
   color: #e0e0e0;
+  overflow-x: hidden;
 }
+
+/* 粒子背景 */
+#tsparticles {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+}
+
+/* 3D金字塔 - 左上角 永久显示 */
+.pyramid-loader {
+  position: fixed;
+  top: 50px;
+  left: 50px;
+  width: 120px;
+  height: 120px;
+  display: block;
+  transform-style: preserve-3d;
+  transform: rotateX(-20deg);
+  z-index: 999;
+}
+.wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  animation: spin 4s linear infinite;
+}
+@keyframes spin {
+  100% { transform: rotateY(360deg); }
+}
+.pyramid-loader .wrapper .side {
+  width: 70px;
+  height: 70px;
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  margin: auto;
+  transform-origin: center top;
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+}
+.pyramid-loader .wrapper .side1 {
+  transform: rotateZ(-30deg) rotateY(90deg);
+  background: conic-gradient( #2BDEAC, #F028FD, #D8CCE6, #2F2585);
+}
+.pyramid-loader .wrapper .side2 {
+  transform: rotateZ(30deg) rotateY(90deg);
+  background: conic-gradient( #2F2585, #D8CCE6, #F028FD, #2BDEAC);
+}
+.pyramid-loader .wrapper .side3 {
+  transform: rotateX(30deg);
+  background: conic-gradient( #2F2585, #D8CCE6, #F028FD, #2BDEAC);
+}
+.pyramid-loader .wrapper .side4 {
+  transform: rotateX(-30deg);
+  background: conic-gradient( #2BDEAC, #F028FD, #D8CCE6, #2F2585);
+}
+.pyramid-loader .wrapper .shadow {
+  width: 60px;
+  height: 60px;
+  background: #8B5AD5;
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  margin: auto;
+  transform: rotateX(90deg) translateZ(-40px);
+  filter: blur(12px);
+}
+
+/* 渐变旋转加载器 - 右上角 永久显示 */
+.loader {
+  --color-one: #ffbf48;
+  --color-two: #be4a1d;
+  --color-three: #ffbf4780;
+  --color-four: #bf4a1d80;
+  --color-five: #ffbf4740;
+  --time-animation: 2s;
+  --size: 0.8;
+  position: fixed;
+  top: 60px;
+  right: 60px;
+  display: block;
+  border-radius: 50%;
+  transform: scale(var(--size));
+  box-shadow: 0 0 25px 0 var(--color-three), 0 20px 50px 0 var(--color-four);
+  animation: colorize calc(var(--time-animation) * 3) ease-in-out infinite;
+  z-index: 999;
+}
+.loader::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border-top: solid 1px var(--color-one);
+  border-bottom: solid 1px var(--color-two);
+  background: linear-gradient(180deg, var(--color-five), var(--color-four));
+  box-shadow: inset 0 10px 10px 0 var(--color-three), inset 0 -10px 10px 0 var(--color-four);
+}
+.loader .box {
+  width: 100px;
+  height: 100px;
+  background: linear-gradient(180deg, var(--color-one) 30%, var(--color-two) 70%);
+  mask: url(#clipping);
+  -webkit-mask: url(#clipping);
+}
+.loader svg {
+  position: absolute;
+}
+.loader svg #clipping {
+  filter: contrast(15);
+  animation: roundness calc(var(--time-animation) / 2) linear infinite;
+}
+.loader svg #clipping polygon {
+  filter: blur(7px);
+}
+.loader svg #clipping polygon:nth-child(1) {
+  transform-origin: 75% 25%;
+  transform: rotate(90deg);
+}
+.loader svg #clipping polygon:nth-child(2) {
+  transform-origin: 50% 50%;
+  animation: rotation var(--time-animation) linear infinite reverse;
+}
+.loader svg #clipping polygon:nth-child(3) {
+  transform-origin: 50% 60%;
+  animation: rotation var(--time-animation) linear infinite;
+  animation-delay: calc(var(--time-animation) / -3);
+}
+.loader svg #clipping polygon:nth-child(4) {
+  transform-origin: 40% 40%;
+  animation: rotation var(--time-animation) linear infinite reverse;
+}
+.loader svg #clipping polygon:nth-child(5) {
+  transform-origin: 40% 40%;
+  animation: rotation var(--time-animation) linear infinite reverse;
+  animation-delay: calc(var(--time-animation) / -2);
+}
+.loader svg #clipping polygon:nth-child(6) {
+  transform-origin: 60% 40%;
+  animation: rotation var(--time-animation) linear infinite;
+}
+.loader svg #clipping polygon:nth-child(7) {
+  transform-origin: 60% 40%;
+  animation: rotation var(--time-animation) linear infinite;
+  animation-delay: calc(var(--time-animation) / -1.5);
+}
+@keyframes rotation {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes roundness {
+  0% { filter: contrast(15); }
+  20% { filter: contrast(3); }
+  40% { filter: contrast(3); }
+  60% { filter: contrast(15); }
+  100% { filter: contrast(15); }
+}
+@keyframes colorize {
+  0% { filter: hue-rotate(0deg); }
+  20% { filter: hue-rotate(-30deg); }
+  40% { filter: hue-rotate(-60deg); }
+  60% { filter: hue-rotate(-90deg); }
+  80% { filter: hue-rotate(-45deg); }
+  100% { filter: hue-rotate(0deg); }
+}
+
+/* 科技毛玻璃卡片 */
 .container {
   max-width: 900px;
-  margin: 30px auto;
-  padding: 30px;
-  background: rgba(22, 33, 62, 0.7);
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 1px rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin: 50px auto;
+  padding: 35px;
+  background: rgba(22, 33, 62, 0.6);
+  border-radius: 20px;
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(114, 237, 242, 0.2);
+  box-shadow: 0 0 30px rgba(114, 237, 242, 0.15), 0 8px 32px rgba(0, 0, 0, 0.4);
+  position: relative;
+  z-index: 1;
+  transition: all 0.3s ease;
 }
+.container:hover {
+  box-shadow: 0 0 40px rgba(114, 237, 242, 0.25);
+}
+
+/* 渐变发光标题 */
 h2 {
   text-align: center;
-  color: #fff;
-  margin-bottom: 30px;
-  font-size: 28px;
+  margin-bottom: 35px;
+  font-size: 32px;
   font-weight: 700;
-  background: linear-gradient(90deg, #72edf2, #5151e5, #ee00ff);
+  background: linear-gradient(90deg, #72edf2, #5151e5, #ee00ff, #72edf2);
+  background-size: 300% 100%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  animation: titleGradient 6s linear infinite;
 }
+@keyframes titleGradient {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+
 .item {
-  margin-bottom: 24px;
+  margin-bottom: 26px;
 }
+
 label {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   font-weight: 500;
-  color: #a0a0ff;
-  font-size: 14px;
+  color: #c0cfff;
+  font-size: 15px;
 }
+
+/* 输入框样式 */
 input, textarea {
   width: 100%;
   padding: 12px 16px;
@@ -56,110 +243,200 @@ input, textarea {
   color: #fff;
   transition: all 0.3s ease;
 }
-select {
-  width: 100%;
-  padding: 12px 16px;
-  border: 1px solid rgba(114, 237, 242, 0.5);
-  border-radius: 8px;
-  font-size: 14px;
-  background: #1a1a2e;
-  color: #ffffff;
-  transition: all 0.3s ease;
-}
-select:focus {
-  outline: none;
-  border-color: #72edf2;
-  box-shadow: 0 0 8px rgba(114, 237, 242, 0.5);
-}
-select option {
-  background: #1a1a2e;
-  color: #ffffff;
-}
 input:focus, textarea:focus {
   outline: none;
   border-color: #72edf2;
   box-shadow: 0 0 8px rgba(114, 237, 242, 0.5);
 }
+
+/* 玻璃态下拉选择器 */
+.glass-selector {
+  position: relative;
+  width: 100%;
+}
+select {
+  width: 100%;
+  padding: 12px 40px 12px 16px;
+  border: 1px solid rgba(114, 237, 242, 0.5);
+  border-radius: 8px;
+  font-size: 14px;
+  background: rgba(26, 26, 46, 0.8);
+  backdrop-filter: blur(8px);
+  color: #ffffff;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+}
+select:focus {
+  outline: none;
+  border-color: #72edf2;
+  box-shadow: 0 0 12px rgba(114, 237, 242, 0.5);
+}
+select option {
+  background: #1a1a2e;
+  color: #ffffff;
+}
+.glass-selector::after {
+  content: "▼";
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: rgba(114, 237, 242, 0.8);
+  pointer-events: none;
+  transition: transform 0.3s;
+}
+.glass-selector:hover::after {
+  transform: translateY(-50%) rotate(180deg);
+}
+
 .date-row {
   display: flex;
-  gap: 12px;
+  gap: 15px;
 }
 .date-row .item {
   flex: 1;
 }
+
 .btn-bar {
   display: flex;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
+
+/* 霓虹渐变发光按钮 */
 button {
-  padding: 8px 16px;
+  padding: 10px 18px;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
   transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
+button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: rgba(255,255,255,0.1);
+  transition: left 0.4s;
+}
+button:hover::before {
+  left: 100%;
+}
+
 .btn-blue {
   background: linear-gradient(90deg, #5151e5, #72edf2);
   color: white;
+  box-shadow: 0 0 12px rgba(114, 237, 242, 0.3);
 }
 .btn-blue:hover {
-  box-shadow: 0 0 15px rgba(114, 237, 242, 0.6);
   transform: translateY(-2px);
+  box-shadow: 0 0 20px rgba(114, 237, 242, 0.5);
 }
+
 .btn-green {
   background: linear-gradient(90deg, #00b894, #55efc4);
   color: white;
+  box-shadow: 0 0 12px rgba(85, 239, 196, 0.3);
 }
 .btn-green:hover {
-  box-shadow: 0 0 15px rgba(0, 184, 148, 0.6);
   transform: translateY(-2px);
+  box-shadow: 0 0 20px rgba(85, 239, 196, 0.5);
 }
+
 .btn-gray {
   background: linear-gradient(90deg, #636e72, #b2bec3);
   color: white;
+  box-shadow: 0 0 12px rgba(178, 190, 195, 0.3);
 }
 .btn-gray:hover {
-  box-shadow: 0 0 15px rgba(99, 110, 114, 0.6);
   transform: translateY(-2px);
+  box-shadow: 0 0 20px rgba(178, 190, 195, 0.5);
 }
+
 .btn-red {
   background: linear-gradient(90deg, #d63031, #ff7675);
   color: white;
+  box-shadow: 0 0 12px rgba(255, 118, 117, 0.3);
 }
 .btn-red:hover {
-  box-shadow: 0 0 15px rgba(214, 48, 49, 0.6);
   transform: translateY(-2px);
+  box-shadow: 0 0 20px rgba(255, 118, 117, 0.5);
 }
+
 textarea {
   resize: vertical;
-  min-height: 80px;
+  min-height: 100px;
+  border-radius: 8px;
 }
+
 ::placeholder {
   color: rgba(255, 255, 255, 0.5);
 }
 </style>
 </head>
+
 <body>
+
+<!-- 粒子背景 -->
+<div id="tsparticles"></div>
+
+<!-- 3D金字塔 永久显示 -->
+<div class="pyramid-loader" id="pyramid">
+  <div class="wrapper">
+    <span class="side side1"></span>
+    <span class="side side2"></span>
+    <span class="side side3"></span>
+    <span class="side side4"></span>
+    <span class="shadow"></span>
+  </div>
+</div>
+
+<!-- 渐变旋转加载器 永久显示 -->
+<div class="loader" id="circleLoader">
+  <svg width="100" height="100" viewBox="0 0 100 100">
+    <defs>
+      <mask id="clipping">
+        <polygon points="0,0 100,0 100,100 0,100" fill="black"></polygon>
+        <polygon points="25,25 75,25 50,75" fill="white"></polygon>
+        <polygon points="50,25 75,75 25,75" fill="white"></polygon>
+        <polygon points="35,35 65,35 50,65" fill="white"></polygon>
+        <polygon points="35,35 65,35 50,65" fill="white"></polygon>
+        <polygon points="35,35 65,35 50,65" fill="white"></polygon>
+        <polygon points="35,35 65,35 50,65" fill="white"></polygon>
+      </mask>
+    </defs>
+  </svg>
+  <div class="box"></div>
+</div>
+
 <div class="container">
   <h2>运维季度报告生成器</h2>
 
-  <!-- 标题选择 单/多系统/自定义 -->
+  <!-- 标题选择 -->
   <div class="item">
     <label>选择/自定义报告标题</label>
-    <select id="titleSel">
-      <option value="教育厅内蒙古基础教育大数据服务平台">教育厅内蒙古基础教育大数据服务平台</option>
-      <option value="教育厅机关智能化管理平台、学生体质健康监测数据管理平台、民办机构管理系统运维服务">多系统模式</option>
-      <option value="自定义">手动自定义输入</option>
-    </select>
+    <div class="glass-selector">
+      <select id="titleSel">
+        <option value="教育厅内蒙古基础教育大数据服务平台">教育厅内蒙古基础教育大数据服务平台</option>
+        <option value="教育厅机关智能化管理平台、学生体质健康监测数据管理平台、民办机构管理系统运维服务">多系统模式</option>
+        <option value="自定义">手动自定义输入</option>
+      </select>
+    </div>
   </div>
   <div class="item" id="titleInputBox" style="display:none;">
     <input type="text" id="customTitle" placeholder="请手动输入报告主标题">
   </div>
 
-  <!-- 季度起止日期 -->
+  <!-- 日期 -->
   <div class="date-row">
     <div class="item">
       <label>季度开始日期</label>
@@ -171,13 +448,12 @@ textarea {
     </div>
   </div>
 
-  <!-- 处理人（用于节假日保障表） -->
   <div class="item">
     <label>处理人（用于节假日保障表）</label>
     <input type="text" id="handler" placeholder="例如：乔鹏飞">
   </div>
 
-  <!-- 服务事项明细（和月度表格逻辑完全一致） -->
+  <!-- 服务事项 -->
   <div class="item">
     <label id="eventLabel">服务事项明细（粘贴字段：事件内容、问题分析、完成状态、服务对象、需求提出、处理日期、处理人）</label>
     <div class="btn-bar">
@@ -188,7 +464,7 @@ textarea {
     <textarea id="eventList" rows="6" placeholder="直接从Excel整行粘贴数据，填“无”=不生成表格"></textarea>
   </div>
 
-  <!-- 漏洞修复明细 -->
+  <!-- 漏洞修复 -->
   <div class="item">
     <label>漏洞修复明细（粘贴字段：序号、修复时间、漏洞修复内容、处理方式、处理人）</label>
     <div class="btn-bar">
@@ -199,7 +475,7 @@ textarea {
     <textarea id="bugList" rows="4" placeholder="直接从Excel整行粘贴数据，填“无”=显示无漏洞修复"></textarea>
   </div>
 
-  <!-- 故障处理明细 -->
+  <!-- 故障处理 -->
   <div class="item">
     <label>故障处理明细（粘贴字段：故障处理时间、系统、故障内容、处理方式、处理结果、处理人）</label>
     <div class="btn-bar">
@@ -210,7 +486,7 @@ textarea {
     <textarea id="faultList" rows="4" placeholder="直接从Excel整行粘贴数据，填“无”=显示0起故障"></textarea>
   </div>
 
-  <!-- 需求处置明细 -->
+  <!-- 需求处置 -->
   <div class="item">
     <label>需求处置明细（粘贴字段：序号、需求接收时间、需求内容、处理方式、处理结果）</label>
     <div class="btn-bar">
@@ -231,7 +507,6 @@ const titleSel = document.getElementById('titleSel');
 const titleInputBox = document.getElementById('titleInputBox');
 const eventLabel = document.getElementById('eventLabel');
 
-// 切换标题，同步字段提示（和月度逻辑一致）
 function updateLabel() {
   let val = titleSel.value;
   titleInputBox.style.display = val === '自定义' ? 'block' : 'none';
@@ -244,7 +519,6 @@ function updateLabel() {
 titleSel.addEventListener('change', updateLabel);
 updateLabel();
 
-// 日期格式化：yyyy年mm月dd日
 function fmt(dateStr){
   if(!dateStr) return '';
   let d = new Date(dateStr);
@@ -254,7 +528,6 @@ function fmt(dateStr){
   return `${y}年${m}月${day}日`;
 }
 
-// 获取季度连续三个月（用于安全审查表头）
 function getQuarterThreeMonth(startDateStr){
   let d = new Date(startDateStr);
   let m1 = d.getMonth() + 1;
@@ -263,12 +536,11 @@ function getQuarterThreeMonth(startDateStr){
   return [`${m1}月`, `${m2}月`, `${m3}月`];
 }
 
-// 制表符分割Excel粘贴内容
 function splitLine(str){
   return str.trim().split(/\t/);
 }
 
-// ========== 复制/剪切/清空 通用方法 ==========
+// 复制剪切清空
 function copyEvent(){let t=document.getElementById('eventList');t.select();document.execCommand('copy');alert('复制成功');}
 function cutEvent(){let t=document.getElementById('eventList');t.select();document.execCommand('cut');alert('剪切成功');}
 function clearEvent(){document.getElementById('eventList').value='';}
@@ -285,7 +557,6 @@ function copyNeed(){let t=document.getElementById('needList');t.select();documen
 function cutNeed(){let t=document.getElementById('needList');t.select();document.execCommand('cut');alert('剪切成功');}
 function clearNeed(){document.getElementById('needList').value='';}
 
-// 获取季度包含的月份
 function getMonth(d) {
   return new Date(d).getMonth() + 1;
 }
@@ -303,9 +574,8 @@ function getHolidays(start, end) {
   return list;
 }
 
-// ========== 核心生成导出 ==========
+// 核心生成（已移除动画显隐逻辑）
 function generateAndExport(){
-  // 1. 基础信息
   let titleSelVal = titleSel.value;
   let mainTitle = titleSelVal === '自定义' ? document.getElementById('customTitle').value.trim() : titleSelVal;
   const isMultiSys = (titleSelVal === '自定义') || (mainTitle.indexOf('、') > -1);
@@ -320,10 +590,8 @@ function generateAndExport(){
   let year = startStr.substring(0, 4);
   let handler = document.getElementById('handler').value || '运维人员';
 
-  // 报告主标题
   let docTitle = `${mainTitle}${year}年${mon1}-${mon3}季度总结报告`;
 
-  // 2. 服务事项明细（完全沿用月度表格逻辑）
   let eventText = document.getElementById('eventList').value.trim();
   let eventLines = eventText === '无' ? [] : eventText.split('\n').filter(item => item.trim());
   let serviceTotal = eventLines.length;
@@ -373,7 +641,6 @@ function generateAndExport(){
     ? `<tr><th>序号</th><th>系统名称</th><th>事件内容</th><th>完成状态</th><th>服务对象</th><th>需求提出</th><th>处理日期</th><th>处理人</th></tr>`
     : `<tr><th>序号</th><th>事件内容</th><th>完成状态</th><th>服务对象</th><th>需求提出</th><th>处理日期</th><th>处理人</th></tr>`;
 
-  // 3. 漏洞修复明细
   let bugText = document.getElementById('bugList').value.trim();
   let bugLines = bugText === '无' ? [] : bugText.split('\n').filter(item => item.trim());
   let bugTotal = bugLines.length;
@@ -391,7 +658,6 @@ function generateAndExport(){
     });
   }
 
-  // 4. 故障处理明细
   let faultText = document.getElementById('faultList').value.trim();
   let faultLines = faultText === '无' ? [] : faultText.split('\n').filter(item => item.trim());
   let faultTotal = faultLines.length;
@@ -410,7 +676,6 @@ function generateAndExport(){
     });
   }
 
-  // 5. 需求处置明细
   let needText = document.getElementById('needList').value.trim();
   let needLines = needText === '无' ? [] : needText.split('\n').filter(item => item.trim());
   let needTotal = needLines.length;
@@ -428,7 +693,6 @@ function generateAndExport(){
     });
   }
 
-  // 节假日保障
   let holidays = getHolidays(startDate, endDate);
   let hasHoliday = holidays.length > 0;
   let holidayText = '';
@@ -451,7 +715,6 @@ function generateAndExport(){
     holidayText = `<p>本季度无节假日专项保障需求。</p>`;
   }
 
-  // 6. 拼接Word文档HTML（字体、字号、缩进完全对标原月度模板，强制打印视图）
   let wordHtml = `<!DOCTYPE html>
 <html
 xmlns:v="urn:schemas-microsoft-com:vml"
@@ -591,9 +854,8 @@ ${hasHoliday ? holidayTable : `<div class="main-content"><p>无。</p></div>`}
 </body>
 </html>`;
 
-  // 导出Word文件
   let blob = new Blob([wordHtml], { type: 'application/msword' });
-  let url = URL.createObjectURL(blob);
+  let url = URL.createObjectURL(url);
   let a = document.createElement('a');
   a.href = url;
   a.download = `${docTitle}.doc`;
@@ -601,5 +863,35 @@ ${hasHoliday ? holidayTable : `<div class="main-content"><p>无。</p></div>`}
   URL.revokeObjectURL(url);
 }
 </script>
+
+<!-- 高级粒子背景 -->
+<script type="module">
+import { tsParticles } from "https://cdn.jsdelivr.net/npm/@tsparticles/engine@3.0.3/+esm";
+import { loadAll } from "https://cdn.jsdelivr.net/npm/@tsparticles/all@3.0.3/+esm";
+
+async function loadParticles(options) {
+  await loadAll(tsParticles);
+  await tsParticles.load({ id: "tsparticles", options });
+}
+
+const configs = {
+  particles: {
+    number: { value: 50, density: { enable: true } },
+    color: { value: "#72edf2" },
+    effect: { type: "trail", options: { trail: { fade: true, length: 8 } } },
+    shape: { type: "circle" },
+    size: { value: 3 },
+    move: {
+      path: { enable: true, options: { size: 15, increment: 0.002 }, generator: "simplexNoise" },
+      enable: true,
+      speed: { min: 1, max: 4 }
+    }
+  },
+  background: { color: "transparent" }
+};
+
+loadParticles(configs);
+</script>
+
 </body>
 </html>
