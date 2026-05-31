@@ -14,7 +14,47 @@ body {
   min-height: 100vh;
   background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
   color: #e0e0e0;
+  position: relative;
+  overflow-x: hidden;
 }
+
+/* ========== 全屏3D悬浮球背景动画 ========== */
+.bg-animation {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.bg-animation .dot {
+  position: absolute;
+  background-color: transparent;
+  width: calc(var(--i) * 2.5vmin);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: .9vmin solid rgb(0, 200, 255);
+  transform-style: preserve-3d;
+  transform: rotateX(70deg) translateZ(50px);
+  animation: my-move 3s ease-in-out calc(var(--i) * 0.08s) infinite;
+  box-shadow: 0px 0px 15px rgb(124, 124, 124),
+    inset 0px 0px 15px rgb(124, 124, 124);
+}
+@keyframes my-move {
+  0%,100% {
+    transform: rotateX(70deg) translateZ(50px) translateY(0px);
+    filter: hue-rotate(0deg);
+  }
+  50% {
+    transform: rotateX(70deg) translateZ(50px) translateY(-50vmin);
+    filter: hue-rotate(180deg);
+  }
+}
+
 .container {
   max-width: 900px;
   margin: 30px auto;
@@ -24,7 +64,10 @@ body {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 1px rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  z-index: 10;
 }
+
 h2 {
   text-align: center;
   color: #fff;
@@ -151,6 +194,21 @@ textarea {
 </style>
 </head>
 <body>
+
+<!-- 3D悬浮球全屏背景 -->
+<div class="bg-animation">
+  <div class="dot" style="--i:1"></div>
+  <div class="dot" style="--i:2"></div>
+  <div class="dot" style="--i:3"></div>
+  <div class="dot" style="--i:4"></div>
+  <div class="dot" style="--i:5"></div>
+  <div class="dot" style="--i:6"></div>
+  <div class="dot" style="--i:7"></div>
+  <div class="dot" style="--i:8"></div>
+  <div class="dot" style="--i:9"></div>
+  <div class="dot" style="--i:10"></div>
+</div>
+
 <div class="container">
   <h2>运维周报生成器</h2>
 
@@ -301,7 +359,6 @@ function localSummary() {
   const lines = eventText.split('\n').filter(x => x.trim());
   const sysMap = {};
 
-  // 按系统分组
   lines.forEach(line => {
     const arr = splitLine(line);
     const sysName = arr[0] || '未知系统';
@@ -313,7 +370,6 @@ function localSummary() {
     sysMap[sysName].add(eventContent);
   });
 
-  // 专业话术模板
   const templates = {
     '巡检': '常态化开展系统运维巡检，对应用服务、数据库、中间件等核心组件进行多轮排查，重点核查资源占用、连接稳定性及日志报错情况，未发现异常隐患。',
     '检查': '全面校验系统各业务页面与核心功能入口，检查数据展示效果、业务操作响应速度，平台整体运行基线稳定，各项功能均正常可用。',
@@ -324,12 +380,11 @@ function localSummary() {
   let summary = [];
   let totalIdx = 1;
 
-  // 多系统模式：按系统分类
   if (mode === 'multi') {
     for (let sys in sysMap) {
       summary.push(`一、${sys}`);
       const events = Array.from(sysMap[sys]);
-      events.forEach((event, idx) => {
+      events.forEach((event) => {
         let text = templates['默认'];
         if (event.includes('巡检')) text = templates['巡检'];
         else if (event.includes('检查')) text = templates['检查'];
@@ -339,13 +394,12 @@ function localSummary() {
       });
     }
   } else {
-    // 单系统模式：直接分条
     const events = new Set();
     lines.forEach(line => {
       const arr = splitLine(line);
       events.add(arr.join(' '));
     });
-    Array.from(events).forEach((event, idx) => {
+    Array.from(events).forEach((event) => {
       let text = templates['默认'];
       if (event.includes('巡检')) text = templates['巡检'];
       else if (event.includes('检查')) text = templates['检查'];
