@@ -2,169 +2,221 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>教育装备 SQL 生成工具-升级版</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>教育装备 SQL 生成工具 - 3D 视觉增强版</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: "Microsoft YaHei", sans-serif;
+            font-family: "Microsoft YaHei", "Inter", system-ui, -apple-system, sans-serif;
         }
+
+        /* 基础布局 */
         body {
             background-color: #0f172a;
-            padding: 20px;
-            color: #e2e8f0;
+            overflow-x: hidden;
             min-height: 100vh;
         }
-        .container {
-            max-width: 1000px;
-            margin: 0 auto;
-            background: #1e293b;
-            border-radius: 16px;
-            box-shadow: 0 0 40px rgba(59, 130, 246, 0.15);
-            padding: 30px;
-            border: 1px solid rgba(59, 130, 246, 0.2);
+
+        /* Canvas 3D 背景层 */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            display: block;
         }
+
+        /* 主容器 - 毛玻璃悬浮效果 */
+        .container {
+            position: relative;
+            z-index: 10;
+            max-width: 1000px;
+            margin: 40px auto;
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 32px;
+            box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(59, 130, 246, 0.2);
+            padding: 30px;
+            transition: transform 0.3s ease;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+
+        /* 轻微鼠标视差移动 */
+        .container:hover {
+            transform: translateY(-2px);
+        }
+
+        /* 标题渐变 */
         .title {
             text-align: center;
-            color: #e2e8f0;
             margin-bottom: 30px;
-            font-size: 26px;
-            font-weight: 600;
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #e2e8f0 0%, #3b82f6 50%, #c084fc 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            letter-spacing: -0.3px;
         }
-        .tab-group {
+
+        /* 状态行 (年度+原状态+目标状态) */
+        .inline-row {
             display: flex;
-            margin-bottom: 20px;
-            border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+            gap: 20px;
             background: rgba(15, 23, 42, 0.6);
-            border-radius: 12px 12px 0 0;
-        }
-        .tab {
-            padding: 14px 30px;
-            cursor: pointer;
-            background: transparent;
-            border: none;
-            font-size: 16px;
-            color: #94a3b8;
-            transition: all 0.3s;
-            position: relative;
-        }
-        .tab::after {
-            content: "";
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 3px;
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-            transform: scaleX(0);
-            transition: transform 0.3s;
-        }
-        .tab:hover {
-            color: #e2e8f0;
-        }
-        .tab.active {
-            color: #e2e8f0;
-            background: rgba(59, 130, 246, 0.1);
-        }
-        .tab.active::after {
-            transform: scaleX(1);
-        }
-        .tab-content {
-            display: none;
-            background: rgba(15, 23, 42, 0.4);
-            border-radius: 0 0 12px 12px;
             padding: 20px;
+            border-radius: 24px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            backdrop-filter: blur(4px);
         }
-        .tab-content.active {
-            display: block;
+
+        .form-item {
+            flex: 1;
         }
-        .form-group {
-            margin-bottom: 20px;
-        }
+
         label {
             display: block;
             margin-bottom: 8px;
             color: #e2e8f0;
             font-weight: 500;
+            font-size: 14px;
+            letter-spacing: 0.5px;
         }
-        input[type="text"], textarea, select {
+
+        input, select, textarea {
             width: 100%;
-            padding: 12px 15px;
-            border: 1px solid rgba(59, 130, 246, 0.3);
-            border-radius: 8px;
+            padding: 12px 16px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(59, 130, 246, 0.4);
+            border-radius: 16px;
+            color: #f1f5f9;
             font-size: 14px;
             outline: none;
-            background: rgba(15, 23, 42, 0.6);
-            color: #e2e8f0;
-            transition: border-color 0.3s, box-shadow 0.3s;
+            transition: all 0.2s ease;
         }
-        .inline-row{
-            display: flex;
-            gap:15px;
-            background: rgba(15, 23, 42, 0.4);
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-        }
-        .inline-row .form-item{
-            flex:1;
-        }
-        input[type="text"]:focus, textarea:focus, select:focus {
+
+        input:focus, select:focus, textarea:focus {
             border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+            background: rgba(30, 41, 59, 0.9);
         }
+
         textarea {
-            height: 300px;
+            font-family: 'Courier New', 'Fira Code', monospace;
+            line-height: 1.5;
             resize: vertical;
-            font-family: Consolas, monospace;
-            line-height: 1.6;
         }
+
         .btn {
-            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-            color: white;
+            background: linear-gradient(95deg, #3b82f6, #8b5cf6);
             border: none;
-            padding: 12px 25px;
-            border-radius: 8px;
+            padding: 10px 24px;
+            border-radius: 40px;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
             cursor: pointer;
-            font-size: 16px;
-            margin-right: 10px;
-            transition: transform 0.2s, box-shadow 0.3s;
+            transition: all 0.2s ease;
+            margin-right: 12px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
         }
+
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(59, 130, 246, 0.3);
+            filter: brightness(1.05);
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
         }
+
         .btn-warning {
-            background: linear-gradient(90deg, #f59e0b, #d97706);
+            background: linear-gradient(95deg, #f59e0b, #d97706);
         }
-        .btn-warning:hover {
-            box-shadow: 0 5px 15px rgba(245, 158, 11, 0.3);
+
+        .tab-group {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 24px;
+            background: rgba(15, 23, 42, 0.5);
+            padding: 6px;
+            border-radius: 60px;
+            width: fit-content;
+            backdrop-filter: blur(4px);
         }
+
+        .tab {
+            padding: 10px 28px;
+            border-radius: 40px;
+            background: transparent;
+            border: none;
+            color: #cbd5e1;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            background: #3b82f6;
+            color: white;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px);}
+            to { opacity: 1; transform: translateY(0);}
+        }
+
         .tip {
             color: #94a3b8;
             font-size: 13px;
-            margin-top: 5px;
+            margin: 12px 0 16px 0;
+            padding-left: 8px;
+            border-left: 2px solid #3b82f6;
+        }
+
+        /* 响应式适配 */
+        @media (max-width: 780px) {
+            .container {
+                margin: 20px;
+                padding: 20px;
+            }
+            .inline-row {
+                flex-direction: column;
+                gap: 12px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1 class="title">教育装备 SQL 生成工具【状态可配置】</h1>
 
-        <!-- 顶部配置：年度+原状态+目标状态 -->
+    <!-- 3D Canvas 背景层 -->
+    <canvas id="bg-canvas"></canvas>
+
+    <div class="container">
+        <h1 class="title">✨ 教育装备 SQL 生成工具 · 光晕粒子版</h1>
+
+        <!-- 配置行 -->
         <div class="inline-row">
             <div class="form-item">
-                <label>业务年度</label>
-                <input type="text" id="yearVal" value="2026" placeholder="2025/2026/2027">
+                <label>📅 业务年度</label>
+                <input type="text" id="yearVal" value="2026">
             </div>
             <div class="form-item">
-                <label>原状态(筛选)</label>
+                <label>🔽 原状态</label>
                 <select id="oldState">
                     <option value="0">0 - 待编辑</option>
                     <option value="1">1 - 旗县待审核</option>
@@ -173,57 +225,215 @@
                 </select>
             </div>
             <div class="form-item">
-                <label>目标状态(修改为)</label>
+                <label>🔼 目标状态</label>
                 <select id="newState">
-                    <option value="0" selected>0 - 待编辑</option>
+                    <option value="0">0 - 待编辑</option>
                     <option value="1">1 - 旗县待审核</option>
                     <option value="2">2 - 盟市待审核</option>
-                    <option value="3">3 - 盟市已审核</option>
+                    <option value="3" selected>3 - 盟市已审核</option>
                 </select>
             </div>
         </div>
-        <div class="tip" style="margin-bottom:20px; padding-left:10px;">
-            💡 业务说明：将【原状态】数据，批量修改为【目标状态】
-        </div>
 
+        <!-- Tab 切换 -->
         <div class="tab-group">
-            <button class="tab active" data-tab="single">单学校生成 SQL</button>
-            <button class="tab" data-tab="multi">多学校生成 SQL</button>
+            <button class="tab active" data-tab="single">🏫 单学校 SQL</button>
+            <button class="tab" data-tab="multi">🏢 多学校 SQL</button>
         </div>
 
-        <!-- 单学校 -->
+        <!-- 单学校模块 -->
         <div id="single" class="tab-content active">
-            <div class="form-group">
+            <div class="form-group" style="margin-bottom: 20px;">
                 <label>学校名称</label>
-                <input type="text" id="singleSchool" placeholder="请输入学校名称">
+                <input type="text" id="singleSchool" placeholder="例: 呼和浩特市第一中学">
             </div>
-            <button class="btn btn-warning" onclick="generateSingleSql()">生成 SQL</button>
-            <button class="btn" onclick="copySingleSql()">复制到剪贴板</button>
-            <button class="btn" onclick="clearSingleSql()">清空内容</button>
-            <div class="form-group">
-                <label>生成结果</label>
-                <textarea id="singleResult"></textarea>
+            <div>
+                <button class="btn btn-warning" onclick="generateSingleSql()">⚡ 生成 SQL</button>
+                <button class="btn" onclick="copySingleSql()">📋 复制 SQL</button>
+                <button class="btn" onclick="clearSingleSql()">🗑️ 清空</button>
+            </div>
+            <div style="margin-top: 20px;">
+                <label>📄 SQL 结果</label>
+                <textarea id="singleResult" rows="12"></textarea>
             </div>
         </div>
 
-        <!-- 多学校 -->
+        <!-- 多学校模块 -->
         <div id="multi" class="tab-content">
-            <div class="form-group">
-                <label>学校名称（一行一个）</label>
-                <textarea id="multiSchool" placeholder="请输入多个学校名称，一行一个"></textarea>
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label>学校列表 (一行一个)</label>
+                <textarea id="multiSchool" rows="6" placeholder="呼和浩特市第一中学&#10;呼和浩特市第二中学&#10;内蒙古师范大学附属中学"></textarea>
             </div>
-            <button class="btn" onclick="generateMultiSql()">生成 SQL</button>
-            <button class="btn" onclick="copyMultiSql()">复制到剪贴板</button>
-            <button class="btn" onclick="clearMultiSql()">清空内容</button>
-            <div class="form-group">
-                <label>生成结果</label>
-                <textarea id="multiResult"></textarea>
+            <div>
+                <button class="btn btn-warning" onclick="generateMultiSql()">⚡ 生成 SQL</button>
+                <button class="btn" onclick="copyMultiSql()">📋 复制 SQL</button>
+                <button class="btn" onclick="clearMultiSql()">🗑️ 清空</button>
             </div>
+            <div style="margin-top: 20px;">
+                <label>📄 SQL 结果</label>
+                <textarea id="multiResult" rows="12"></textarea>
+            </div>
+        </div>
+        <div class="tip">
+            💡 提示：业务表共 9 张（tbl_equ_two_*），自动批量生成 UPDATE 语句，支持年度/原状态/新状态灵活切换。
         </div>
     </div>
 
+    <!-- 引入 Three.js 核心库 -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // --- 初始化 Three.js 场景 ---
+        const canvas = document.getElementById('bg-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, alpha: true });
+        const scene = new THREE.Scene();
+        
+        // 相机: 透视相机，视野60，宽高比动态，近平面0.1，远平面1000
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 2, 12);
+        camera.lookAt(0, 0, 0);
+
+        // --- 粒子系统: 科技感星云/浮点效果 ---
+        const particleCount = 1800;
+        const geometry = new THREE.BufferGeometry();
+        
+        // 随机位置 (范围 -12 到 12 的空间)
+        const positions = new Float32Array(particleCount * 3);
+        for (let i = 0; i < particleCount; i++) {
+            positions[i*3] = (Math.random() - 0.5) * 28;
+            positions[i*3+1] = (Math.random() - 0.5) * 18;
+            positions[i*3+2] = (Math.random() - 0.5) * 15 - 5;
+        }
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        
+        // 粒子材质: 发光的蓝紫色渐变圆点
+        const material = new THREE.PointsMaterial({
+            color: 0x5b6cff,
+            size: 0.12,
+            transparent: true,
+            opacity: 0.65,
+            blending: THREE.AdditiveBlending
+        });
+        
+        const particles = new THREE.Points(geometry, material);
+        scene.add(particles);
+        
+        // 添加第二层粒子 (更稀疏、更大、不同颜色，增加层次感)
+        const geometry2 = new THREE.BufferGeometry();
+        const pos2 = new Float32Array(800 * 3);
+        for (let i = 0; i < 800; i++) {
+            pos2[i*3] = (Math.random() - 0.5) * 35;
+            pos2[i*3+1] = (Math.random() - 0.5) * 22;
+            pos2[i*3+2] = (Math.random() - 0.5) * 20 - 8;
+        }
+        geometry2.setAttribute('position', new THREE.BufferAttribute(pos2, 3));
+        const material2 = new THREE.PointsMaterial({
+            color: 0xb97eff,
+            size: 0.18,
+            transparent: true,
+            opacity: 0.45,
+            blending: THREE.AdditiveBlending
+        });
+        const particles2 = new THREE.Points(geometry2, material2);
+        scene.add(particles2);
+        
+        // 柔和的雾气效果，增加深邃感
+        scene.fog = new THREE.FogExp2(0x0f172a, 0.012);
+        
+        // 简单的环境光让整个画面更柔和（虽然Points材质不受光影响，但背景光晕氛围需保留）
+        const ambientLight = new THREE.AmbientLight(0x111122);
+        scene.add(ambientLight);
+        
+        // 添加一个极简的环状粒子群（装饰）
+        const ringCount = 400;
+        const ringGeo = new THREE.BufferGeometry();
+        const ringPos = new Float32Array(ringCount * 3);
+        for (let i = 0; i < ringCount; i++) {
+            const angle = (i / ringCount) * Math.PI * 2;
+            const radius = 5.2;
+            ringPos[i*3] = Math.cos(angle) * radius;
+            ringPos[i*3+1] = Math.sin(angle) * radius * 0.6;  // 略微压扁
+            ringPos[i*3+2] = -2 + Math.sin(angle * 2) * 0.8;
+        }
+        ringGeo.setAttribute('position', new THREE.BufferAttribute(ringPos, 3));
+        const ringPoints = new THREE.Points(ringGeo, new THREE.PointsMaterial({ color: 0x5b8cff, size: 0.09, transparent: true, blending: THREE.AdditiveBlending }));
+        scene.add(ringPoints);
+        
+        // --- 鼠标交互: 相机轻微跟随鼠标移动 (视差感，增强沉浸体验) ---
+        let mouseX = 0;
+        let mouseY = 0;
+        let targetX = 0;
+        let targetY = 0;
+        
+        window.addEventListener('mousemove', (event) => {
+            // 归一化坐标 -1 到 1
+            mouseX = (event.clientX / window.innerWidth) * 2 - 1;
+            mouseY = (event.clientY / window.innerHeight) * 2 - 1;
+            // 目标偏移量较小，保证不会让界面太晃
+            targetX = mouseX * 1.2;
+            targetY = mouseY * 0.8;
+        });
+        
+        // --- 动画循环: 粒子缓慢旋转 & 跟随鼠标平滑移动 ---
+        let time = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.002;
+            
+            // 粒子自转特效 (极缓慢)
+            particles.rotation.y = time * 0.1;
+            particles.rotation.x = Math.sin(time * 0.2) * 0.1;
+            particles2.rotation.y = time * 0.08;
+            particles2.rotation.x = Math.cos(time * 0.15) * 0.05;
+            ringPoints.rotation.z = time * 0.2;
+            ringPoints.rotation.x = Math.sin(time * 0.3) * 0.1;
+            
+            // 跟随鼠标平滑移动相机视角
+            const currentCamX = camera.position.x;
+            const currentCamY = camera.position.y;
+            const newX = currentCamX + (targetX * 0.5 - currentCamX) * 0.05;
+            const newY = currentCamY + (targetY * 0.3 - currentCamY) * 0.05;
+            camera.position.x = newX;
+            camera.position.y = newY;
+            camera.lookAt(0, 0, 0);
+            
+            renderer.render(scene, camera);
+        }
+        
+        // 自适应窗口大小
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setClearColor(0x0f172a, 1); // 设置背景色与深色主题融合
+        
+        window.addEventListener('resize', onWindowResize);
+        animate();
+        
+        // 可选：将 Canvas 层级确保在最底层但覆盖全屏
+        canvas.style.position = 'fixed';
+        canvas.style.top = '0';
+        canvas.style.left = '0';
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        canvas.style.zIndex = '0';
+    </script>
+    
+    <!-- 核心业务逻辑 JS (保持不变，完美适配原有功能) -->
     <script>
-        // 全部业务表
+        // ---------- 数据表定义 ----------
         const TABLES = [
             "tbl_equ_two_ptjslbsb",
             "tbl_equ_two_ptjsjrcs",
@@ -236,7 +446,7 @@
             "tbl_equ_two_laboratory_activity"
         ];
 
-        // 标签切换
+        // ---------- 标签页切换 ----------
         document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -246,31 +456,25 @@
             });
         });
 
-        // 获取公共参数
-        function getBaseParam(){
+        // 获取当前配置参数
+        function getBaseParam() {
             let year = document.getElementById('yearVal').value.trim();
             let oldS = document.getElementById('oldState').value;
             let newS = document.getElementById('newState').value;
-            if(!year){
-                alert("请填写业务年度！");
-                return null;
-            }
-            return {year, oldS, newS};
+            if (!year) { alert("请填写业务年度"); return null; }
+            return { year, oldS, newS };
         }
 
-        // 单学校
-        function generateSingleSql() {
+        // 单学校生成 SQL
+        window.generateSingleSql = function() {
             let p = getBaseParam();
-            if(!p) return;
+            if (!p) return;
             let school = document.getElementById('singleSchool').value.trim();
-            if (!school) {
-                alert("请输入学校名称");
-                return;
-            }
+            if (!school) { alert("请输入学校名称"); return; }
             school = school.replace(/'/g, "''");
             let sql = "";
-            TABLES.forEach((table, index) => {
-                sql += `-- 表${index+1}\n`;
+            TABLES.forEach((table, idx) => {
+                sql += `-- 表${idx+1}\n`;
                 sql += `UPDATE ${table} e\n`;
                 sql += `JOIN sys_user u ON u.id = e.create_by\n`;
                 sql += `JOIN sys_dept d ON u.dept_id = d.id\n`;
@@ -278,23 +482,19 @@
                 sql += `WHERE d.name = '${school}' AND e.state = ${p.oldS} AND e.version = '${p.year}';\n\n`;
             });
             document.getElementById('singleResult').value = sql;
-        }
+        };
 
-        // 多学校
-        function generateMultiSql() {
+        // 多学校生成 SQL
+        window.generateMultiSql = function() {
             let p = getBaseParam();
-            if(!p) return;
+            if (!p) return;
             let content = document.getElementById('multiSchool').value.trim();
-            if (!content) {
-                alert("请输入学校名称");
-                return;
-            }
+            if (!content) { alert("请输入学校名称列表"); return; }
             let schools = content.split(/\n/).map(s => s.trim()).filter(s => s);
             let schoolStr = schools.map(s => `'${s.replace(/'/g, "''")}'`).join(", ");
-            
             let sql = "";
-            TABLES.forEach((table, index) => {
-                sql += `-- 表${index+1}\n`;
+            TABLES.forEach((table, idx) => {
+                sql += `-- 表${idx+1}\n`;
                 sql += `UPDATE ${table} e\n`;
                 sql += `JOIN sys_user u ON u.id = e.create_by\n`;
                 sql += `JOIN sys_dept d ON u.dept_id = d.id\n`;
@@ -302,31 +502,29 @@
                 sql += `WHERE d.name IN (${schoolStr}) AND e.state = ${p.oldS} AND e.version = '${p.year}';\n\n`;
             });
             document.getElementById('multiResult').value = sql;
-        }
+        };
 
-        // 复制
-        function copySingleSql() {
+        // 复制与清空功能
+        window.copySingleSql = () => {
             let area = document.getElementById('singleResult');
             area.select();
             document.execCommand('copy');
-            alert("已复制到剪贴板");
-        }
-        function copyMultiSql() {
+            alert("✅ 已复制到剪贴板");
+        };
+        window.copyMultiSql = () => {
             let area = document.getElementById('multiResult');
             area.select();
             document.execCommand('copy');
-            alert("已复制到剪贴板");
-        }
-
-        // 清空
-        function clearSingleSql() {
+            alert("✅ 已复制到剪贴板");
+        };
+        window.clearSingleSql = () => {
             document.getElementById('singleSchool').value = "";
             document.getElementById('singleResult').value = "";
-        }
-        function clearMultiSql() {
+        };
+        window.clearMultiSql = () => {
             document.getElementById('multiSchool').value = "";
             document.getElementById('multiResult').value = "";
-        }
+        };
     </script>
 </body>
 </html>
