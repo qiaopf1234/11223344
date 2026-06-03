@@ -2,307 +2,502 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>用户查询导出工具（两步法）</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>管理局用户查询工具 · 毛玻璃粒子版</title>
     <style>
         * {
-            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: "Microsoft YaHei", sans-serif;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Inter', system-ui, 'Microsoft YaHei', sans-serif;
         }
 
         body {
             min-height: 100vh;
-            background: #000;
-            color: #fff;
-            overflow-x: hidden;
-            position: relative;
+            background: #0a0c12;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 30px 15px;
+            padding: 2rem;
+            position: relative;
+            overflow-x: hidden;
         }
 
-        /* 动态粒子背景 */
-        #particles-canvas {
+        /* ===== 3D 粒子画布背景 ===== */
+        #bg-canvas {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
             z-index: 0;
+            background: radial-gradient(circle at 30% 20%, #0a0a1a, #020308);
+        }
+
+        /* ===== 鼠标跟随光晕 ===== */
+        .mouse-glow {
+            position: fixed;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, rgba(6, 182, 212, 0) 70%);
+            border-radius: 50%;
             pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            transition: transform 0.05s linear;
+            will-change: transform;
         }
 
-        .box {
-            width: 100%;
-            max-width: 900px;
-            background: rgba(20, 25, 40, 0.9);
-            border-radius: 20px;
-            padding: 35px;
-            box-shadow: 0 0 40px rgba(82, 165, 255, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+        /* ===== 主容器 — 毛玻璃卡片 ===== */
+        .glass-container {
             position: relative;
-            z-index: 1;
+            z-index: 20;
+            width: 100%;
+            max-width: 1000px;
+            background: rgba(15, 25, 45, 0.45);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 2rem;
+            border: 1px solid rgba(139, 92, 246, 0.35);
+            box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(139, 92, 246, 0.1) inset;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            padding: 2.2rem 2rem 2.5rem;
         }
 
-        h2 {
-            color: #fff;
+        .glass-container:hover {
+            transform: translateY(-3px);
+            border-color: rgba(139, 92, 246, 0.65);
+            box-shadow: 0 28px 44px -12px rgba(139, 92, 246, 0.25), 0 0 0 1px rgba(139, 92, 246, 0.25) inset;
+        }
+
+        /* 标题区 */
+        .title-section {
             text-align: center;
-            font-size: 26px;
-            margin-bottom: 30px;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 1.9rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #f0f3ff, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -0.3px;
+            margin-bottom: 0.6rem;
+        }
+
+        .sub {
+            color: #94a3b8;
+            font-size: 0.8rem;
             letter-spacing: 1px;
-            text-shadow: 0 0 15px rgba(82, 165, 255, 0.4);
+            border-bottom: 1px dashed rgba(139, 92, 246, 0.5);
+            display: inline-block;
+            padding-bottom: 0.4rem;
         }
 
-        .step {
-            margin: 25px 0;
-            padding: 25px;
-            background: rgba(40, 45, 60, 0.6);
-            border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            transition: all 0.3s ease;
+        /* 步骤卡片 — 毛玻璃子面板 */
+        .step-card {
+            margin: 1.8rem 0;
+            padding: 1.6rem 1.8rem;
+            background: rgba(20, 30, 50, 0.5);
+            backdrop-filter: blur(8px);
+            border-radius: 1.5rem;
+            border: 1px solid rgba(139, 92, 246, 0.25);
+            transition: all 0.25s ease;
         }
 
-        .step:hover {
-            background: rgba(50, 55, 70, 0.7);
-            box-shadow: 0 0 20px rgba(82, 165, 255, 0.1);
+        .step-card:hover {
+            border-color: rgba(6, 182, 212, 0.5);
+            background: rgba(25, 38, 60, 0.55);
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.08);
         }
 
-        .title {
-            font-weight: bold;
-            font-size: 16px;
-            margin-bottom: 15px;
-            color: #82c1ff;
+        .step-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 1.2rem;
+            font-weight: 600;
+            font-size: 1.1rem;
+            color: #a78bfa;
+            letter-spacing: 0.5px;
+            border-left: 3px solid #06b6d4;
+            padding-left: 14px;
+        }
+
+        .step-title::before {
+            content: "✨";
+            font-size: 1rem;
+        }
+
+        /* 输入框组 */
+        .input-group {
+            margin: 0.8rem 0 1.2rem 0;
+        }
+
+        .glass-input {
+            width: 100%;
+            padding: 0.9rem 1.2rem;
+            background: rgba(10, 18, 30, 0.7);
+            border: 1.5px solid rgba(139, 92, 246, 0.35);
+            border-radius: 1.2rem;
+            font-size: 0.9rem;
+            color: #e2e8f0;
+            transition: all 0.25s ease;
+            outline: none;
+        }
+
+        .glass-input:focus {
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25);
+            background: rgba(20, 32, 50, 0.8);
+        }
+
+        .glass-input::placeholder {
+            color: #5c6f87;
+        }
+
+        /* 按钮组 — 流光霓虹风 */
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+            margin: 1rem 0 1.2rem;
+            flex-wrap: wrap;
+        }
+
+        .glass-btn {
+            position: relative;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(139, 92, 246, 0.5);
+            padding: 0.7rem 1.4rem;
+            border-radius: 2rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #e0e7ff;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+            overflow: hidden;
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        .title::before {
-            content: "🔹";
-        }
-
-        input {
+        .glass-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
             width: 100%;
-            padding: 14px 16px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 10px;
-            margin: 10px 0;
-            font-size: 14px;
-            background: rgba(30, 35, 50, 0.8);
-            color: #fff;
-            transition: all 0.3s ease;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.4), transparent);
+            transition: left 0.5s ease;
         }
 
-        input:focus {
+        .glass-btn:hover::before {
+            left: 100%;
+        }
+
+        .glass-btn:hover {
+            transform: translateY(-2px);
+            border-color: #a78bfa;
+            box-shadow: 0 5px 15px rgba(139, 92, 246, 0.3);
+            color: white;
+        }
+
+        .btn-copy {
+            background: linear-gradient(95deg, rgba(6, 182, 212, 0.2), rgba(139, 92, 246, 0.15));
+            border-color: rgba(6, 182, 212, 0.6);
+        }
+
+        /* SQL 输出文本框 */
+        .sql-output {
+            width: 100%;
+            min-height: 150px;
+            padding: 1rem 1.2rem;
+            background: rgba(8, 15, 25, 0.7);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 1.2rem;
+            font-size: 0.8rem;
+            font-family: 'Fira Code', 'JetBrains Mono', monospace;
+            color: #b9e6f3;
+            resize: vertical;
+            line-height: 1.6;
+            transition: all 0.2s;
+        }
+
+        .sql-output:focus {
             outline: none;
-            border-color: #52a5ff;
-            box-shadow: 0 0 10px rgba(82, 165, 255, 0.3);
+            border-color: #06b6d4;
+            box-shadow: 0 0 0 2px rgba(6, 182, 212, 0.2);
         }
 
-        input::placeholder {
-            color: #8899aa;
-        }
-
-        .btn-group {
-            margin: 10px 0;
-            display: flex;
-            gap: 12px;
-        }
-
-        button {
-            padding: 12px 22px;
-            border: none;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.3s ease;
+        /* 提示小字 */
+        .info-tip {
+            font-size: 0.7rem;
+            color: #7e8ba0;
+            margin-top: 0.5rem;
             display: flex;
             align-items: center;
             gap: 6px;
         }
 
-        .btn-generate {
-            background: linear-gradient(90deg, #52a5ff, #2b8def);
-            color: #fff;
+        .info-tip span {
+            background: rgba(139, 92, 246, 0.2);
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 0.65rem;
         }
 
-        .btn-generate:hover {
-            background: linear-gradient(90deg, #63b6ff, #3c9eff);
-            box-shadow: 0 0 15px rgba(82, 165, 255, 0.4);
-            transform: translateY(-2px);
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+            border-radius: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #8b5cf6;
+            border-radius: 6px;
         }
 
-        .btn-copy {
-            background: rgba(255, 255, 255, 0.1);
-            color: #fff;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .btn-copy:hover {
-            background: rgba(255, 255, 255, 0.18);
-            box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
-            transform: translateY(-2px);
-        }
-
-        textarea {
-            width: 100%;
-            height: 160px;
-            padding: 14px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 10px;
-            font-size: 14px;
-            resize: none;
-            background: rgba(30, 35, 50, 0.8);
-            color: #fff;
-            margin-top: 10px;
-            font-family: Consolas, "Microsoft YaHei", monospace;
-            line-height: 1.6;
-        }
-
-        textarea:focus {
-            outline: none;
-            border-color: #52a5ff;
-            box-shadow: 0 0 10px rgba(82, 165, 255, 0.3);
-        }
-
-        /* 装饰性几何元素 */
-        .decoration {
-            position: absolute;
-            z-index: -1;
-            opacity: 0.6;
-        }
-
-        .circle {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #ffdd00, #ff9500);
-            top: -20px;
-            right: -20px;
-        }
-
-        .star {
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, #52a5ff, #2b8def);
-            clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
-            bottom: -15px;
-            left: -15px;
+        /* 响应式 */
+        @media (max-width: 700px) {
+            body {
+                padding: 1rem;
+            }
+            .glass-container {
+                padding: 1.3rem;
+            }
+            .step-card {
+                padding: 1rem;
+            }
+            .btn-group {
+                gap: 0.8rem;
+            }
+            h1 {
+                font-size: 1.5rem;
+            }
         }
     </style>
 </head>
 <body>
-<!-- 动态粒子背景 -->
-<canvas id="particles-canvas"></canvas>
 
-<div class="box">
-    <!-- 装饰元素 -->
-    <div class="decoration circle"></div>
-    <div class="decoration star"></div>
+    <!-- Three.js 粒子画布 -->
+    <canvas id="bg-canvas"></canvas>
+    <!-- 鼠标光晕层 -->
+    <div class="mouse-glow" id="mouseGlow"></div>
 
-    <h2>📋 管理局用户查询工具（两步法）</h2>
-
-    <!-- ================== 第一步：查部门ID ================== -->
-    <div class="step">
-        <div class="title">第一步：输入部门名称 → 生成查ID的SQL</div>
-        <input id="deptName" placeholder="例如：大青山管理局本级" value="">
-        <div class="btn-group">
-            <button class="btn-generate" onclick="genStep1()">⚡ 生成SQL</button>
-            <button class="btn-copy" onclick="copyStep1()">📋 复制SQL</button>
+    <div class="glass-container">
+        <div class="title-section">
+            <h1>📋 管理局用户查询工具</h1>
+            <div class="sub">⚡ 两步法 · 毛玻璃粒子 · 精准SQL生成</div>
         </div>
-        <textarea id="sql1" readonly placeholder="第一步SQL将显示在这里"></textarea>
+
+        <!-- ========= 第一步：部门查询 ========= -->
+        <div class="step-card">
+            <div class="step-title">第一步：部门名称 → 生成查ID的SQL</div>
+            <div class="input-group">
+                <input type="text" id="deptName" class="glass-input" placeholder="例如：大青山管理局本级" value="">
+                <div class="info-tip"><span>💡 支持模糊匹配</span> 输入部门名称关键字</div>
+            </div>
+            <div class="btn-group">
+                <button class="glass-btn" id="genStep1Btn">⚡ 生成SQL</button>
+                <button class="glass-btn btn-copy" id="copyStep1Btn">📋 复制SQL</button>
+            </div>
+            <textarea id="sql1" class="sql-output" readonly placeholder="第一步SQL将显示在这里..."></textarea>
+        </div>
+
+        <!-- ========= 第二步：用户信息查询 ========= -->
+        <div class="step-card">
+            <div class="step-title">第二步：部门ID → 生成查询用户的SQL</div>
+            <div class="input-group">
+                <input type="text" id="deptId" class="glass-input" placeholder="例如：1501" value="">
+                <div class="info-tip"><span>🔑 从第一步结果获得ID</span> 支持多个ID组合 (使用 / 分隔)</div>
+            </div>
+            <div class="btn-group">
+                <button class="glass-btn" id="genStep2Btn">⚡ 生成SQL</button>
+                <button class="glass-btn btn-copy" id="copyStep2Btn">📋 复制SQL</button>
+            </div>
+            <textarea id="sql2" class="sql-output" readonly placeholder="第二步SQL将显示在这里..."></textarea>
+        </div>
     </div>
 
-    <!-- ================== 第二步：查用户信息 ================== -->
-    <div class="step">
-        <div class="title">第二步：输入部门ID → 生成查询用户的SQL</div>
-        <input id="deptId" placeholder="例如：1501" value="">
-        <div class="btn-group">
-            <button class="btn-generate" onclick="genStep2()">⚡ 生成SQL</button>
-            <button class="btn-copy" onclick="copyStep2()">📋 复制SQL</button>
-        </div>
-        <textarea id="sql2" readonly placeholder="第二步SQL将显示在这里"></textarea>
-    </div>
-</div>
+    <!-- Three.js 动态粒子系统 (三层流光粒子) -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
+            }
+        }
+    </script>
 
-<script>
-// 动态粒子背景
-const canvas = document.getElementById('particles-canvas');
-const ctx = canvas.getContext('2d');
-let particles = [];
+    <script type="module">
+        import * as THREE from 'three';
 
-function resizeCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-}
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
+        const canvas = document.getElementById('bg-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, alpha: false });
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x03050b);
+        
+        const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 1.2, 14);
+        camera.lookAt(0, 0, 0);
+        
+        // 主粒子群 (紫罗兰色)
+        const particleCount = 2100;
+        const geom = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        for (let i = 0; i < particleCount; i++) {
+            positions[i*3] = (Math.random() - 0.5) * 38;
+            positions[i*3+1] = (Math.random() - 0.5) * 24;
+            positions[i*3+2] = (Math.random() - 0.5) * 30 - 8;
+        }
+        geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const particleMat = new THREE.PointsMaterial({
+            color: 0x8b5cf6,
+            size: 0.09,
+            transparent: true,
+            opacity: 0.65,
+            blending: THREE.AdditiveBlending
+        });
+        const particleSys = new THREE.Points(geom, particleMat);
+        scene.add(particleSys);
+        
+        // 第二层粒子 (青色/蓝绿色)
+        const geom2 = new THREE.BufferGeometry();
+        const pos2 = new Float32Array(1400 * 3);
+        for (let i = 0; i < 1400; i++) {
+            pos2[i*3] = (Math.random() - 0.5) * 44;
+            pos2[i*3+1] = (Math.random() - 0.5) * 28;
+            pos2[i*3+2] = (Math.random() - 0.5) * 34 - 10;
+        }
+        geom2.setAttribute('position', new THREE.BufferAttribute(pos2, 3));
+        const mat2 = new THREE.PointsMaterial({
+            color: 0x06b6d4,
+            size: 0.08,
+            transparent: true,
+            opacity: 0.55,
+            blending: THREE.AdditiveBlending
+        });
+        const particleSys2 = new THREE.Points(geom2, mat2);
+        scene.add(particleSys2);
+        
+        // 第三层暖色点缀 (粉晶)
+        const geom3 = new THREE.BufferGeometry();
+        const pos3 = new Float32Array(900 * 3);
+        for (let i = 0; i < 900; i++) {
+            pos3[i*3] = (Math.random() - 0.5) * 48;
+            pos3[i*3+1] = (Math.random() - 0.5) * 30;
+            pos3[i*3+2] = (Math.random() - 0.5) * 38 - 12;
+        }
+        geom3.setAttribute('position', new THREE.BufferAttribute(pos3, 3));
+        const mat3 = new THREE.PointsMaterial({
+            color: 0xf472b6,
+            size: 0.1,
+            transparent: true,
+            opacity: 0.5,
+            blending: THREE.AdditiveBlending
+        });
+        const particleSys3 = new THREE.Points(geom3, mat3);
+        scene.add(particleSys3);
+        
+        // 漂浮环 (科技装饰)
+        const ringCount = 380;
+        const ringGeo = new THREE.BufferGeometry();
+        const ringPositions = new Float32Array(ringCount * 3);
+        for (let i = 0; i < ringCount; i++) {
+            const angle = (i / ringCount) * Math.PI * 2;
+            const r = 5.2;
+            ringPositions[i*3] = Math.cos(angle) * r;
+            ringPositions[i*3+1] = Math.sin(angle) * r * 0.4;
+            ringPositions[i*3+2] = -1.8;
+        }
+        ringGeo.setAttribute('position', new THREE.BufferAttribute(ringPositions, 3));
+        const ringPoints = new THREE.Points(ringGeo, new THREE.PointsMaterial({ color: 0xa78bfa, size: 0.09, blending: THREE.AdditiveBlending }));
+        scene.add(ringPoints);
+        
+        // 雾效增强景深
+        scene.fog = new THREE.FogExp2(0x03050b, 0.008);
+        
+        // 鼠标视差 (相机轻微跟随)
+        let mouseX = 0, mouseY = 0;
+        let targetCamX = 0, targetCamY = 0;
+        window.addEventListener('mousemove', (e) => {
+            mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+            mouseY = (e.clientY / window.innerHeight) * 2 - 1;
+            targetCamX = mouseX * 0.9;
+            targetCamY = mouseY * 0.6;
+        });
+        
+        let time = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.007;
+            
+            // 粒子系统缓慢旋转
+            particleSys.rotation.y = time * 0.06;
+            particleSys.rotation.x = Math.sin(time * 0.18) * 0.08;
+            particleSys2.rotation.y = time * 0.04;
+            particleSys2.rotation.z = time * 0.02;
+            particleSys3.rotation.x = time * 0.03;
+            ringPoints.rotation.z = time * 0.12;
+            ringPoints.rotation.x = Math.sin(time * 0.25) * 0.1;
+            
+            // 相机平滑跟随鼠标视差
+            camera.position.x += (targetCamX * 0.5 - camera.position.x) * 0.04;
+            camera.position.y += (targetCamY * 0.4 - camera.position.y) * 0.04;
+            camera.lookAt(0, 0, 0);
+            
+            renderer.render(scene, camera);
+        }
+        
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        window.addEventListener('resize', onWindowResize);
+        animate();
+    </script>
 
-class Particle {
-    constructor() {
-        this.x = Math.random() * canvas.width;
-        this.y = Math.random() * canvas.height;
-        this.radius = Math.random() * 3 + 1;
-        this.color = `rgba(${Math.floor(Math.random()*100+155)}, ${Math.floor(Math.random()*100+155)}, 255, ${Math.random()*0.3+0.2})`;
-        this.vx = (Math.random() - 0.5) * 0.5;
-        this.vy = (Math.random() - 0.5) * 0.5;
-    }
-    update() {
-        this.x += this.vx;
-        this.y += this.vy;
-        if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
-        if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
-    }
-    draw() {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fillStyle = this.color;
-        ctx.fill();
-    }
-}
-
-function initParticles() {
-    particles = [];
-    for (let i = 0; i < 80; i++) {
-        particles.push(new Particle());
-    }
-}
-initParticles();
-
-function animate() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    particles.forEach(p => {
-        p.update();
-        p.draw();
-    });
-    requestAnimationFrame(animate);
-}
-animate();
-
-// ================== 原有功能代码 ==================
-// 第一步：生成查部门ID的SQL
-function genStep1() {
-    let name = document.getElementById("deptName").value.trim();
-    let sql = `SELECT ID, NAME, FULLPATH FROM BASE_ORG WHERE NAME LIKE '%${name}%';`;
-    document.getElementById("sql1").value = sql;
-}
-
-// 复制第一步SQL
-function copyStep1() {
-    let sql = document.getElementById("sql1");
-    sql.select();
-    document.execCommand("copy");
-    alert("第一步SQL已复制！");
-}
-
-// 第二步：生成查询用户的SQL
-function genStep2() {
-    let id = document.getElementById("deptId").value.trim();
-    let sql = `SELECT
+    <!-- 鼠标光晕跟随 & 核心业务逻辑（完整保留原功能，界面升级） -->
+    <script>
+        // 鼠标光晕
+        const glowDiv = document.getElementById('mouseGlow');
+        document.addEventListener('mousemove', (e) => {
+            glowDiv.style.left = e.clientX + 'px';
+            glowDiv.style.top = e.clientY + 'px';
+        });
+        
+        // ========= 第一步 SQL 生成（部门ID查询）=========
+        function generateStep1Sql() {
+            let name = document.getElementById("deptName").value.trim();
+            let sql = `SELECT ID, NAME, FULLPATH FROM BASE_ORG WHERE NAME LIKE '%${name}%';`;
+            document.getElementById("sql1").value = sql;
+        }
+        
+        function copyStep1Sql() {
+            let sqlArea = document.getElementById("sql1");
+            sqlArea.select();
+            navigator.clipboard.writeText(sqlArea.value).then(() => {
+                showTempTip("✅ 第一步SQL已复制", "sql1");
+            }).catch(() => alert("复制失败"));
+        }
+        
+        // ========= 第二步 SQL 生成（用户查询）=========
+        function generateStep2Sql() {
+            let id = document.getElementById("deptId").value.trim();
+            if (id === "") {
+                document.getElementById("sql2").value = "-- 请输入部门ID再生成";
+                return;
+            }
+            let sql = `SELECT
     u.NAME AS "姓名",
     u.LOGIN_CODE AS "登录账号",
     u.RANGE AS "权重",
@@ -316,16 +511,52 @@ WHERE
     AND o.FULLPATH LIKE '%/${id}/%'
 ORDER BY
     o.NAME, u.NAME;`;
-    document.getElementById("sql2").value = sql;
-}
-
-// 复制第二步SQL
-function copyStep2() {
-    let sql = document.getElementById("sql2");
-    sql.select();
-    document.execCommand("copy");
-    alert("第二步SQL已复制！");
-}
-</script>
+            document.getElementById("sql2").value = sql;
+        }
+        
+        function copyStep2Sql() {
+            let sqlArea = document.getElementById("sql2");
+            sqlArea.select();
+            navigator.clipboard.writeText(sqlArea.value).then(() => {
+                showTempTip("✅ 第二步SQL已复制", "sql2");
+            }).catch(() => alert("复制失败"));
+        }
+        
+        // 临时提示小弹窗（优雅反馈）
+        function showTempTip(msg, targetId) {
+            const target = document.getElementById(targetId);
+            if (!target) return;
+            const tipDiv = document.createElement('div');
+            tipDiv.innerText = msg;
+            tipDiv.style.position = 'absolute';
+            tipDiv.style.backgroundColor = '#1e293b';
+            tipDiv.style.color = '#a78bfa';
+            tipDiv.style.fontSize = '12px';
+            tipDiv.style.padding = '4px 12px';
+            tipDiv.style.borderRadius = '40px';
+            tipDiv.style.border = '1px solid #a78bfa';
+            tipDiv.style.backdropFilter = 'blur(8px)';
+            tipDiv.style.zIndex = '100';
+            tipDiv.style.whiteSpace = 'nowrap';
+            tipDiv.style.pointerEvents = 'none';
+            const rect = target.getBoundingClientRect();
+            tipDiv.style.left = rect.left + 'px';
+            tipDiv.style.top = (rect.top - 28) + 'px';
+            document.body.appendChild(tipDiv);
+            setTimeout(() => tipDiv.remove(), 1800);
+        }
+        
+        // 绑定事件
+        document.getElementById('genStep1Btn').addEventListener('click', generateStep1Sql);
+        document.getElementById('copyStep1Btn').addEventListener('click', copyStep1Sql);
+        document.getElementById('genStep2Btn').addEventListener('click', generateStep2Sql);
+        document.getElementById('copyStep2Btn').addEventListener('click', copyStep2Sql);
+        
+        // 页面加载时默认显示占位提示（而不是自动生成SQL）
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('sql1').value = '第一步SQL将显示在这里...';
+            document.getElementById('sql2').value = '第二步SQL将显示在这里...';
+        });
+    </script>
 </body>
 </html>
