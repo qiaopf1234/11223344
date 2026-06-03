@@ -2,143 +2,217 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>文件查询</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>文件查询 · 毛玻璃粒子版</title>
 <style>
 * {
-    box-sizing: border-box;
     margin: 0;
     padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', 'Inter', system-ui, 'Microsoft YaHei', sans-serif;
 }
 
 body {
-    background: #000;
-    color: #fff;
-    font-family: "Microsoft YaHei", sans-serif;
+    min-height: 100vh;
+    background: #0a0c12;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 2rem;
     position: relative;
     overflow-x: hidden;
-    padding: 30px 15px;
 }
 
-/* tsParticles 容器 */
-#ts-particles {
+/* Three.js 粒子画布背景 */
+#bg-canvas {
     position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     z-index: 0;
-    pointer-events: none;
+    background: radial-gradient(circle at 20% 30%, #0a0a1a, #020308);
 }
 
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
+/* 鼠标跟随光晕 */
+.mouse-glow {
+    position: fixed;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, rgba(6, 182, 212, 0) 70%);
+    border-radius: 50%;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    transition: transform 0.05s linear;
+    will-change: transform;
+}
+
+/* 主容器 — 毛玻璃整体卡片 */
+.glass-main {
     position: relative;
-    z-index: 1;
+    z-index: 20;
+    width: 100%;
+    max-width: 1200px;
+    background: rgba(15, 25, 45, 0.45);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: 2rem;
+    border: 1px solid rgba(139, 92, 246, 0.35);
+    box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(139, 92, 246, 0.1) inset;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    padding: 2rem 2rem 2.2rem;
+}
+
+.glass-main:hover {
+    transform: translateY(-3px);
+    border-color: rgba(139, 92, 246, 0.65);
+    box-shadow: 0 28px 44px -12px rgba(139, 92, 246, 0.25), 0 0 0 1px rgba(139, 92, 246, 0.25) inset;
+}
+
+/* 标题区 */
+.title-section {
+    text-align: center;
+    margin-bottom: 2rem;
 }
 
 h1 {
-    text-align: center;
-    margin-bottom: 2rem;
-    color: #20c997;
+    font-size: 2rem;
     font-weight: 700;
-    text-shadow: 0 0 15px rgba(32, 201, 151, 0.4);
+    background: linear-gradient(135deg, #f0f3ff, #a78bfa, #f472b6);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    letter-spacing: -0.3px;
+    margin-bottom: 0.5rem;
 }
 
-.card {
-    background: rgba(20, 25, 40, 0.9);
-    border-radius: 20px;
+.sub {
+    color: #94a3b8;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    border-bottom: 1px dashed rgba(139, 92, 246, 0.5);
+    display: inline-block;
+    padding-bottom: 0.4rem;
+}
+
+/* 毛玻璃子卡片 */
+.glass-card {
+    background: rgba(20, 30, 50, 0.5);
+    backdrop-filter: blur(8px);
+    border-radius: 1.5rem;
+    border: 1px solid rgba(139, 92, 246, 0.25);
     padding: 1.5rem;
-    margin-bottom: 1.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
+    margin-bottom: 1.8rem;
+    transition: all 0.25s ease;
 }
 
-.card::before {
-    content: "";
-    position: absolute;
-    top: -50%;
-    right: -50%;
-    width: 150px;
-    height: 150px;
-    background: radial-gradient(circle, rgba(255, 221, 0, 0.2), transparent 70%);
-    border-radius: 50%;
-    opacity: 0.6;
-    pointer-events: none;
+.glass-card:hover {
+    border-color: rgba(6, 182, 212, 0.5);
+    background: rgba(25, 38, 60, 0.55);
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.08);
 }
 
-.card:hover {
-    background: rgba(40, 45, 60, 0.9);
-    box-shadow: 0 0 20px rgba(32, 201, 151, 0.15);
-    transform: translateY(-4px);
-}
-
-.card h3 {
-    color: #20c997;
-    margin-bottom: 1rem;
+.card-header {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    font-size: 18px;
+    gap: 10px;
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #a78bfa;
+    border-left: 3px solid #06b6d4;
+    padding-left: 14px;
 }
 
-/* 表单元素 */
-input, button, textarea {
+/* 输入框 / 按钮 / 文本域 玻璃质感 */
+.glass-input {
     width: 100%;
     padding: 0.8rem 1rem;
-    border-radius: 10px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    font-size: 1rem;
-    margin-top: 0.5rem;
-    font-family: inherit;
-    background: rgba(30, 35, 50, 0.8);
-    color: #fff;
-    transition: all 0.3s ease;
-}
-
-input:focus, textarea:focus {
-    outline: none;
-    border-color: #20c997;
-    box-shadow: 0 0 10px rgba(32, 201, 151, 0.3);
-}
-
-button {
-    background: linear-gradient(90deg, #20c997, #19a979);
-    color: white;
-    font-weight: 600;
-    cursor: pointer;
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-}
-
-button:hover {
-    background: linear-gradient(90deg, #23d8a4, #1fb886);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(32, 201, 151, 0.3);
-}
-
-textarea {
-    height: 180px;
-    resize: none;
-    font-family: Consolas, monospace;
-    line-height: 1.6;
-}
-
-.tip {
-    color: #aaa;
+    background: rgba(10, 18, 30, 0.7);
+    border: 1.5px solid rgba(139, 92, 246, 0.35);
+    border-radius: 1rem;
     font-size: 0.9rem;
-    margin-top: 0.5rem;
+    color: #e2e8f0;
+    transition: all 0.25s ease;
+    outline: none;
+    margin-bottom: 0.5rem;
 }
 
-/* 动态字段区域 */
+.glass-input:focus {
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25);
+    background: rgba(20, 32, 50, 0.8);
+}
+
+.glass-input::placeholder {
+    color: #5c6f87;
+}
+
+textarea.glass-input {
+    font-family: 'Fira Code', 'JetBrains Mono', monospace;
+    resize: vertical;
+    min-height: 150px;
+    line-height: 1.5;
+}
+
+/* 按钮样式 — 流光霓虹 */
+.glass-btn {
+    position: relative;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(139, 92, 246, 0.5);
+    padding: 0.7rem 1.4rem;
+    border-radius: 2rem;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #e0e7ff;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: auto;
+    margin-right: 0.8rem;
+    margin-bottom: 0.5rem;
+}
+
+.glass-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.4), transparent);
+    transition: left 0.5s ease;
+}
+
+.glass-btn:hover::before {
+    left: 100%;
+}
+
+.glass-btn:hover {
+    transform: translateY(-2px);
+    border-color: #a78bfa;
+    box-shadow: 0 5px 15px rgba(139, 92, 246, 0.3);
+    color: white;
+}
+
+.btn-danger {
+    background: linear-gradient(95deg, rgba(220, 53, 69, 0.3), rgba(187, 45, 59, 0.2));
+    border-color: rgba(220, 53, 69, 0.6);
+}
+
+.btn-danger:hover {
+    border-color: #dc3545;
+    box-shadow: 0 0 12px rgba(220, 53, 69, 0.3);
+}
+
+/* 字段行布局 */
 #fields-container {
-    margin-top: 1rem;
+    margin: 1rem 0;
     display: flex;
     flex-direction: column;
     gap: 0.8rem;
@@ -147,156 +221,276 @@ textarea {
 .field-row {
     display: grid;
     grid-template-columns: 1fr 1fr auto;
-    gap: 0.5rem;
+    gap: 0.8rem;
     align-items: center;
 }
 
-.btn-danger {
-    background: linear-gradient(90deg, #dc3545, #bb2d3b);
-    padding: 0.8rem;
-    width: auto;
+.field-row .glass-input {
+    margin-bottom: 0;
 }
 
-.btn-danger:hover {
-    background: linear-gradient(90deg, #e04453, #c73141);
-    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
-}
-
-/* 按钮组 */
-.btn-group {
+/* 提示文字 */
+.tip {
+    font-size: 0.7rem;
+    color: #7e8ba0;
+    margin-top: 0.8rem;
     display: flex;
-    gap: 0.8rem;
-    margin-top: 1rem;
+    align-items: center;
+    gap: 6px;
+}
+
+.tip span {
+    background: rgba(139, 92, 246, 0.2);
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 0.65rem;
+}
+
+/* 滚动条 */
+::-webkit-scrollbar {
+    width: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #0f172a;
+    border-radius: 6px;
+}
+::-webkit-scrollbar-thumb {
+    background: #8b5cf6;
+    border-radius: 6px;
+}
+
+/* 响应式 */
+@media (max-width: 760px) {
+    body {
+        padding: 1rem;
+    }
+    .glass-main {
+        padding: 1.2rem;
+    }
+    .field-row {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+    }
+    .field-row button {
+        width: 100%;
+    }
+    .glass-btn {
+        width: 100%;
+        justify-content: center;
+        margin-right: 0;
+    }
 }
 </style>
 </head>
 <body>
-<!-- tsParticles 网络粒子效果 -->
-<div id="ts-particles"></div>
 
-<div class="container">
-    <h1>文件查询</h1>
+<!-- Three.js 粒子画布 -->
+<canvas id="bg-canvas"></canvas>
+<!-- 鼠标光晕层 -->
+<div class="mouse-glow" id="mouseGlow"></div>
 
-    <div class="card">
-        <h3>📄 文件名/关键词</h3>
-        <input id="key" placeholder="例如：145454" value="">
+<div class="glass-main">
+    <div class="title-section">
+        <h1>📁 文件查询 · 智能 SQL 引擎</h1>
+        <div class="sub">毛玻璃粒子 · 多表联合 · 字段动态修改</div>
     </div>
 
-    <div class="card">
-        <h3>🔍 一键生成查询 SQL</h3>
-        <button onclick="genQuery()">⚡ 生成查询 SQL</button>
-        <textarea id="querySql" readonly placeholder="点击上方按钮生成查询语句"></textarea>
-        <button onclick="copy('querySql')" style="margin-top: 0.5rem;">📋 复制查询 SQL</button>
+    <!-- 关键词输入模块 -->
+    <div class="glass-card">
+        <div class="card-header">📄 文件名 / 关键词</div>
+        <input type="text" id="key" class="glass-input" placeholder="例如：145454" value="">
+        <div class="tip"><span>💡 支持模糊匹配</span> 用于生成查询 SQL</div>
     </div>
 
-    <div class="card">
-        <h3>✏️ 日常事务（ZWGL_RCSW）字段修改</h3>
+    <!-- 一键生成查询 SQL -->
+    <div class="glass-card">
+        <div class="card-header">🔍 生成查询 SQL</div>
+        <button class="glass-btn" id="genQueryBtn">⚡ 生成查询 SQL</button>
+        <textarea id="querySql" class="glass-input" readonly placeholder="点击上方按钮生成查询语句"></textarea>
+        <button class="glass-btn" id="copyQueryBtn">📋 复制查询 SQL</button>
+    </div>
+
+    <!-- 日常事务字段修改 -->
+    <div class="glass-card">
+        <div class="card-header">✏️ 日常事务（ZWGL_RCSW）字段修改</div>
         <div id="fields-container">
-            <!-- 默认字段 -->
+            <!-- 默认字段三行 -->
             <div class="field-row">
-                <input type="text" class="field-name" placeholder="数据库字段名（如 JBR）" value="">
-                <input type="text" class="field-label" placeholder="字段说明（如 经办人）" value="">
-                <button class="btn-danger" onclick="removeField(this)">删除</button>
+                <input type="text" class="glass-input field-name" placeholder="数据库字段名（如 JBR）" value="">
+                <input type="text" class="glass-input field-label" placeholder="字段说明（如 经办人）" value="">
+                <button class="glass-btn btn-danger" onclick="removeField(this)">删除</button>
             </div>
             <div class="field-row">
-                <input type="text" class="field-name" placeholder="数据库字段名（如 CHRYWB）" value="">
-                <input type="text" class="field-label" placeholder="字段说明（如 外出人员）" value="">
-                <button class="btn-danger" onclick="removeField(this)">删除</button>
+                <input type="text" class="glass-input field-name" placeholder="数据库字段名（如 CHRYWB）" value="">
+                <input type="text" class="glass-input field-label" placeholder="字段说明（如 外出人员）" value="">
+                <button class="glass-btn btn-danger" onclick="removeField(this)">删除</button>
             </div>
             <div class="field-row">
-                <input type="text" class="field-name" placeholder="数据库字段名（如 CHRYNB_NAME）" value="">
-                <input type="text" class="field-label" placeholder="字段说明（如 处理人）" value="">
-                <button class="btn-danger" onclick="removeField(this)">删除</button>
+                <input type="text" class="glass-input field-name" placeholder="数据库字段名（如 CHRYNB_NAME）" value="">
+                <input type="text" class="glass-input field-label" placeholder="字段说明（如 处理人）" value="">
+                <button class="glass-btn btn-danger" onclick="removeField(this)">删除</button>
             </div>
         </div>
-        <button onclick="addField()" style="margin-top: 1rem;">+ 添加自定义字段</button>
-        <button onclick="genUpdate()" style="margin-top: 1rem;">生成修改 SQL（含备份）</button>
-        <textarea id="updateSql" readonly placeholder="点击上方按钮生成修改语句"></textarea>
-        <button onclick="copy('updateSql')" style="margin-top: 0.5rem;">📋 复制修改 SQL</button>
-        <div class="tip">提示：留空的字段不会出现在 UPDATE 语句中，仅修改你输入了新值的字段</div>
+        <button class="glass-btn" id="addFieldBtn">+ 添加自定义字段</button>
+        <button class="glass-btn" id="genUpdateBtn" style="margin-left: 0;">生成修改 SQL（含备份）</button>
+        <textarea id="updateSql" class="glass-input" readonly placeholder="点击上方按钮生成修改语句"></textarea>
+        <button class="glass-btn" id="copyUpdateBtn">📋 复制修改 SQL</button>
+        <div class="tip"><span>⚠️ 提示</span> 留空的字段不会出现在 UPDATE 语句中，仅修改你输入了新值的字段</div>
     </div>
 </div>
 
-<script type="module">
-import { tsParticles } from "https://cdn.jsdelivr.net/npm/@tsparticles/engine@3.1.0/+esm";
-import { loadAll } from "https://cdn.jsdelivr.net/npm/@tsparticles/all@3.1.0/+esm";
-
-async function loadParticles(options) {
-    await loadAll(tsParticles);
-    await tsParticles.load({ id: "ts-particles", options });
-}
-
-const configs = {
-    background: { color: { value: "#000000" } },
-    fpsLimit: 60,
-    interactivity: {
-        events: {
-            onHover: { enable: true, mode: "repulse" },
-            resize: true,
-        },
-        modes: {
-            repulse: { distance: 100, duration: 0.4 },
-        },
-    },
-    particles: {
-        color: { value: "#ffffff" },
-        links: {
-            color: "#ffffff",
-            distance: 150,
-            enable: true,
-            opacity: 0.3,
-            width: 1,
-        },
-        move: {
-            direction: "none",
-            enable: true,
-            outModes: { default: "bounce" },
-            random: false,
-            speed: 1,
-            straight: false,
-        },
-        number: { density: { enable: true }, value: 100 },
-        opacity: { value: 0.5 },
-        shape: { type: "circle" },
-        size: { value: { min: 1, max: 3 } },
-    },
-    detectRetina: true,
-};
-
-loadParticles(configs);
+<!-- Three.js 动态粒子背景脚本 -->
+<script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
+        }
+    }
 </script>
 
+<script type="module">
+    import * as THREE from 'three';
+
+    const canvas = document.getElementById('bg-canvas');
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: false });
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x03050b);
+    
+    const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 1.5, 14);
+    camera.lookAt(0, 0, 0);
+    
+    // 主粒子群 (紫罗兰)
+    const particleCount = 2100;
+    const geom = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+    for (let i = 0; i < particleCount; i++) {
+        positions[i*3] = (Math.random() - 0.5) * 38;
+        positions[i*3+1] = (Math.random() - 0.5) * 24;
+        positions[i*3+2] = (Math.random() - 0.5) * 30 - 8;
+    }
+    geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    const particleMat = new THREE.PointsMaterial({
+        color: 0x8b5cf6,
+        size: 0.09,
+        transparent: true,
+        opacity: 0.65,
+        blending: THREE.AdditiveBlending
+    });
+    const particleSys = new THREE.Points(geom, particleMat);
+    scene.add(particleSys);
+    
+    // 第二层粒子 (青)
+    const geom2 = new THREE.BufferGeometry();
+    const pos2 = new Float32Array(1400 * 3);
+    for (let i = 0; i < 1400; i++) {
+        pos2[i*3] = (Math.random() - 0.5) * 44;
+        pos2[i*3+1] = (Math.random() - 0.5) * 28;
+        pos2[i*3+2] = (Math.random() - 0.5) * 34 - 10;
+    }
+    geom2.setAttribute('position', new THREE.BufferAttribute(pos2, 3));
+    const mat2 = new THREE.PointsMaterial({
+        color: 0x06b6d4,
+        size: 0.08,
+        transparent: true,
+        opacity: 0.55,
+        blending: THREE.AdditiveBlending
+    });
+    const particleSys2 = new THREE.Points(geom2, mat2);
+    scene.add(particleSys2);
+    
+    // 第三层暖色 (粉晶)
+    const geom3 = new THREE.BufferGeometry();
+    const pos3 = new Float32Array(900 * 3);
+    for (let i = 0; i < 900; i++) {
+        pos3[i*3] = (Math.random() - 0.5) * 48;
+        pos3[i*3+1] = (Math.random() - 0.5) * 30;
+        pos3[i*3+2] = (Math.random() - 0.5) * 38 - 12;
+    }
+    geom3.setAttribute('position', new THREE.BufferAttribute(pos3, 3));
+    const mat3 = new THREE.PointsMaterial({
+        color: 0xf472b6,
+        size: 0.1,
+        transparent: true,
+        opacity: 0.5,
+        blending: THREE.AdditiveBlending
+    });
+    const particleSys3 = new THREE.Points(geom3, mat3);
+    scene.add(particleSys3);
+    
+    // 装饰环
+    const ringCount = 380;
+    const ringGeo = new THREE.BufferGeometry();
+    const ringPositions = new Float32Array(ringCount * 3);
+    for (let i = 0; i < ringCount; i++) {
+        const angle = (i / ringCount) * Math.PI * 2;
+        const r = 5.2;
+        ringPositions[i*3] = Math.cos(angle) * r;
+        ringPositions[i*3+1] = Math.sin(angle) * r * 0.4;
+        ringPositions[i*3+2] = -1.8;
+    }
+    ringGeo.setAttribute('position', new THREE.BufferAttribute(ringPositions, 3));
+    const ringPoints = new THREE.Points(ringGeo, new THREE.PointsMaterial({ color: 0xa78bfa, size: 0.09, blending: THREE.AdditiveBlending }));
+    scene.add(ringPoints);
+    
+    scene.fog = new THREE.FogExp2(0x03050b, 0.008);
+    
+    let mouseX = 0, mouseY = 0;
+    let targetCamX = 0, targetCamY = 0;
+    window.addEventListener('mousemove', (e) => {
+        mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+        mouseY = (e.clientY / window.innerHeight) * 2 - 1;
+        targetCamX = mouseX * 0.9;
+        targetCamY = mouseY * 0.6;
+    });
+    
+    let time = 0;
+    function animate() {
+        requestAnimationFrame(animate);
+        time += 0.007;
+        particleSys.rotation.y = time * 0.06;
+        particleSys.rotation.x = Math.sin(time * 0.18) * 0.08;
+        particleSys2.rotation.y = time * 0.04;
+        particleSys2.rotation.z = time * 0.02;
+        particleSys3.rotation.x = time * 0.03;
+        ringPoints.rotation.z = time * 0.12;
+        ringPoints.rotation.x = Math.sin(time * 0.25) * 0.1;
+        
+        camera.position.x += (targetCamX * 0.5 - camera.position.x) * 0.04;
+        camera.position.y += (targetCamY * 0.4 - camera.position.y) * 0.04;
+        camera.lookAt(0, 0, 0);
+        renderer.render(scene, camera);
+    }
+    
+    function onResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    window.addEventListener('resize', onResize);
+    animate();
+</script>
+
+<!-- 鼠标光晕 & 业务逻辑 -->
 <script>
-// 工具逻辑
-function g(id) { return document.getElementById(id); }
-function copy(id) {
-    const t = g(id);
-    t.select();
-    document.execCommand("copy");
-    alert("✅ 已复制到剪贴板！");
-}
-
-// 添加/删除字段
-function addField() {
-    const container = document.getElementById('fields-container');
-    const row = document.createElement('div');
-    row.className = 'field-row';
-    row.innerHTML = `
-        <input type="text" class="field-name" placeholder="数据库字段名（如 JBR）">
-        <input type="text" class="field-label" placeholder="字段说明（如 经办人）">
-        <button class="btn-danger" onclick="removeField(this)">删除</button>
-    `;
-    container.appendChild(row);
-}
-function removeField(btn) {
-    const row = btn.parentElement;
-    row.remove();
-}
-
-// 生成查询 SQL
-function genQuery() {
-    const key = g("key").value.trim() || "145454";
-    const sql = `-- OA全流程万能单据查询
+    // 鼠标光晕跟随
+    const glowDiv = document.getElementById('mouseGlow');
+    document.addEventListener('mousemove', (e) => {
+        glowDiv.style.left = e.clientX + 'px';
+        glowDiv.style.top = e.clientY + 'px';
+    });
+    
+    // DOM 元素快捷获取
+    const keyInput = document.getElementById('key');
+    const querySqlArea = document.getElementById('querySql');
+    const updateSqlArea = document.getElementById('updateSql');
+    
+    // 生成查询 SQL (原逻辑)
+    function generateQuerySql() {
+        const key = keyInput.value.trim() || "145454";
+        const sql = `-- OA全流程万能单据查询
 SELECT 
     'COM_RECEIVE(收文)' AS 模块,
     FILE_TITLE AS 单据名称,
@@ -348,29 +542,67 @@ FROM ZWGL_RCSW WHERE TITLE ILIKE '%${key}%';
 
 -- 查看主表所有字段
 SELECT * FROM ZWGL_RCSW WHERE TITLE = '${key}';`;
-    g("querySql").value = sql;
-}
-
-// 生成修改 SQL
-function genUpdate() {
-    const key = g("key").value.trim() || "145454";
-    const fieldRows = document.querySelectorAll('.field-row');
-    const setArr = [];
-    fieldRows.forEach(row => {
-        const fieldName = row.querySelector('.field-name').value.trim();
-        const fieldLabel = row.querySelector('.field-label').value.trim();
-        if (fieldName && fieldLabel) {
-            setArr.push(`${fieldName} = ''`);
-        }
-    });
-
-    if (setArr.length === 0) {
-        alert("⚠️ 请至少添加一个字段！");
-        return;
+        querySqlArea.value = sql;
     }
-
-    const setSql = setArr.join(",\n    ");
-    const sql = `-- 1. 备份（必做）
+    
+    // 复制 SQL 通用
+    async function copyText(textareaId, successMsg = "✅ 已复制到剪贴板") {
+        const area = document.getElementById(textareaId);
+        if (!area) return;
+        const text = area.value;
+        if (!text || text.trim() === "") {
+            alert("没有内容可复制");
+            return;
+        }
+        try {
+            await navigator.clipboard.writeText(text);
+            alert(successMsg);
+        } catch (err) {
+            area.select();
+            document.execCommand("copy");
+            alert(successMsg);
+        }
+    }
+    
+    // 添加字段行
+    function addField() {
+        const container = document.getElementById('fields-container');
+        const row = document.createElement('div');
+        row.className = 'field-row';
+        row.innerHTML = `
+            <input type="text" class="glass-input field-name" placeholder="数据库字段名（如 JBR）">
+            <input type="text" class="glass-input field-label" placeholder="字段说明（如 经办人）">
+            <button class="glass-btn btn-danger" onclick="removeField(this)">删除</button>
+        `;
+        container.appendChild(row);
+    }
+    
+    // 删除字段行
+    window.removeField = function(btn) {
+        btn.closest('.field-row').remove();
+    };
+    
+    // 生成修改 SQL
+    function generateUpdateSql() {
+        const key = keyInput.value.trim() || "145454";
+        const fieldRows = document.querySelectorAll('.field-row');
+        let setArr = [];
+        fieldRows.forEach(row => {
+            const fieldName = row.querySelector('.field-name').value.trim();
+            const fieldLabel = row.querySelector('.field-label').value.trim();
+            if (fieldName && fieldLabel) {
+                // 保留原逻辑：字段设置为空字符串 ''，用户可自行替换
+                setArr.push(`${fieldName} = ''`);
+            }
+        });
+        
+        if (setArr.length === 0) {
+            alert("⚠️ 请至少添加一个字段！");
+            return;
+        }
+        
+        const setSql = setArr.join(",\n    ");
+        const sql = `-- 1. 备份（必做）
 CREATE TABLE ZWGL_RCSW_BAK_20260526 AS
 SELECT * FROM ZWGL_RCSW WHERE TITLE = '${key}';
 
@@ -379,8 +611,22 @@ SELECT * FROM ZWGL_RCSW WHERE TITLE = '${key}';
 UPDATE ZWGL_RCSW
 SET ${setSql}
 WHERE TITLE = '${key}';`;
-    g("updateSql").value = sql;
-}
+        updateSqlArea.value = sql;
+    }
+    
+    // 绑定事件
+    document.getElementById('genQueryBtn').addEventListener('click', generateQuerySql);
+    document.getElementById('copyQueryBtn').addEventListener('click', () => copyText('querySql', '✅ 查询SQL已复制'));
+    document.getElementById('addFieldBtn').addEventListener('click', addField);
+    document.getElementById('genUpdateBtn').addEventListener('click', generateUpdateSql);
+    document.getElementById('copyUpdateBtn').addEventListener('click', () => copyText('updateSql', '✅ 修改SQL已复制'));
+    
+    // 页面初始化占位提示
+    window.addEventListener('DOMContentLoaded', () => {
+        querySqlArea.value = '点击「生成查询 SQL」按钮生成语句...';
+        updateSqlArea.value = '点击「生成修改 SQL」按钮生成语句...';
+        // 可选：默认生成一次查询示例？但遵循用户习惯，不自动生成
+    });
 </script>
 </body>
 </html>
