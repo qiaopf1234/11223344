@@ -2,659 +2,342 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>赛博紫蓝 · 重工控制台</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>SQL 重工控制台 · 毛玻璃粒子版</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: "Segoe UI", "Roboto Mono", monospace;
+            font-family: 'Segoe UI', 'Inter', system-ui, -apple-system, sans-serif;
         }
 
         :root {
-            --bg-main: #1e1f35;
-            --bg-panel: #2b2d42;
-            --primary: #7b68ee;
-            --secondary: #00d4ff;
-            --accent: #ff6ec7;
-            --text: #e0e0ff;
-            --text-light: #a0a0cc;
-            --border: rgba(123, 104, 238, 0.3);
-            --glow: 0 0 15px rgba(123,104,238,0.25);
-            --radius: 6px;
-            --transition: all 0.25s ease;
+            --glass-bg: rgba(30, 41, 59, 0.45);
+            --glass-border: rgba(123, 104, 238, 0.35);
+            --glass-highlight: rgba(255, 255, 255, 0.06);
+            --primary-glow: rgba(123, 104, 238, 0.35);
+            --primary: #8b5cf6;
+            --secondary: #06b6d4;
+            --accent: #f472b6;
+            --text-main: #f1f5f9;
+            --text-dim: #94a3b8;
+            --radius: 1rem;
         }
 
         body {
-            background: var(--bg-main);
-            color: var(--text);
+            background: #0a0c12;
             min-height: 100vh;
-            padding: 40px 20px;
-            position: relative;
             overflow-x: hidden;
         }
 
-        /* === 🌃 赛博动态背景 === */
-        .cyber-bg {
+        /* 🌌 Canvas 动态粒子背景层 */
+        #bg-canvas {
             position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: -3;
-            background: linear-gradient(135deg, #121428 0%, #1e1f35 50%, #121428 100%);
-        }
-
-        .neon-rail {
-            position: fixed;
-            width: 40%;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--secondary), var(--accent), transparent);
-            filter: blur(2px);
-            opacity: 0.6;
-            z-index: -2;
-        }
-        .rail-left {
-            top: 40%;
-            left: -30%;
-            animation: railMoveLeft 8s linear infinite;
-        }
-        .rail-right {
-            top: 60%;
-            right: -30%;
-            animation: railMoveRight 10s linear infinite;
-        }
-        @keyframes railMoveLeft {
-            0% { transform: translateX(0) scaleX(0.5); opacity: 0; }
-            10% { opacity: 0.6; }
-            90% { opacity: 0.6; }
-            100% { transform: translateX(200%) scaleX(2); opacity: 0; }
-        }
-        @keyframes railMoveRight {
-            0% { transform: translateX(0) scaleX(0.5); opacity: 0; }
-            10% { opacity: 0.6; }
-            90% { opacity: 0.6; }
-            100% { transform: translateX(-200%) scaleX(2); opacity: 0; }
-        }
-
-        .particle-rain {
-            position: fixed;
-            width: 100%; height: 100%;
-            top: 0; left: 0;
-            z-index: -1;
-            pointer-events: none;
-        }
-        .rain-drop {
-            position: absolute;
-            width: 1px;
-            height: 40px;
-            background: linear-gradient(to bottom, transparent, var(--primary), transparent);
-            opacity: 0.4;
-            animation: rainFall linear infinite;
-        }
-        @keyframes rainFall {
-            0% { transform: translateY(-100px); opacity: 0; }
-            10% { opacity: 0.4; }
-            90% { opacity: 0.4; }
-            100% { transform: translateY(100vh); opacity: 0; }
-        }
-
-        .grid-ground {
-            position: fixed;
-            bottom: 0; left: 0;
-            width: 100%; height: 40%;
-            background-image: 
-                linear-gradient(rgba(123,104,238,0.1) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(123,104,238,0.1) 1px, transparent 1px);
-            background-size: 60px 60px;
-            transform: perspective(500px) rotateX(60deg);
-            transform-origin: bottom center;
-            opacity: 0.3;
-            z-index: -2;
-        }
-
-        .scan-line {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(transparent 90%, rgba(0,212,255,0.05) 100%);
-            background-size: 100% 8px;
-            animation: scan 6s linear infinite;
-            pointer-events: none;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             z-index: 0;
-        }
-        @keyframes scan {
-            0% { transform: translateY(-100%); }
-            100% { transform: translateY(100%); }
+            background: radial-gradient(circle at 10% 20%, #0f1222, #05070c);
         }
 
-        .mouse-light {
-            position: fixed;
-            width: 300px; height: 300px;
-            background: radial-gradient(circle, rgba(123,104,238,0.08) 0%, transparent 65%);
-            pointer-events: none;
-            transform: translate(-50%, -50%);
-            z-index: -1;
-            transition: transform 0.08s ease;
-        }
-
+        /* 📦 主容器 - 毛玻璃面板层叠 */
         .container {
+            position: relative;
+            z-index: 10;
             max-width: 1100px;
-            margin: 0 auto;
-            position: relative;
-            z-index: 2;
+            margin: 40px auto;
+            padding: 0 20px;
         }
 
-        /* 标题 */
-        .main-title {
-            text-align: center;
-            font-size: 36px;
-            font-weight: 700;
-            color: var(--primary);
-            text-shadow: 0 0 15px rgba(123,104,238,0.4);
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            margin-bottom: 50px;
-            position: relative;
-        }
-        .main-title::after {
-            content: '';
-            width: 90px; height: 2px;
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            position: absolute;
-            bottom: -12px; left: 50%;
-            transform: translateX(-50%);
-            box-shadow: 0 0 10px rgba(123,104,238,0.3);
-        }
-
-        /* 面板 */
-        .cyber-panel {
-            background: var(--bg-panel);
-            border: 1px solid var(--border);
+        /* 🪟 毛玻璃卡片通用样式 */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid var(--glass-border);
             border-radius: var(--radius);
-            padding: 36px 40px;
-            margin-bottom: 30px;
-            box-shadow: var(--glow);
-            position: relative;
-            overflow: hidden;
-            transition: var(--transition);
+            padding: 32px 36px;
+            margin-bottom: 28px;
+            transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+            box-shadow: 0 8px 20px -8px rgba(0, 0, 0, 0.3);
         }
-        .cyber-panel::before {
-            content: '';
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 1px;
-            background: linear-gradient(90deg, transparent, var(--primary), transparent);
-        }
-        .cyber-panel:hover {
+
+        .glass-card:hover {
+            border-color: rgba(139, 92, 246, 0.6);
+            box-shadow: 0 12px 28px -12px var(--primary-glow);
             transform: translateY(-2px);
-            box-shadow: 0 0 22px rgba(123,104,238,0.25);
-            border-color: rgba(123,104,238,0.5);
         }
 
-        /* HUD 标签 */
-        .hud-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: rgba(123,104,238,0.1);
-            border: 1px solid var(--primary);
-            color: var(--primary);
-            font-size: 12px;
-            padding: 4px 10px;
-            border-radius: 4px;
-            margin-right: 8px;
-            letter-spacing: 0.5px;
+        /* 📛 标题区域 */
+        .header-title {
+            text-align: center;
+            margin-bottom: 40px;
         }
 
+        .header-title h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #e0e7ff, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 10px rgba(139, 92, 246, 0.2);
+        }
+
+        .sub-glow {
+            color: var(--text-dim);
+            font-size: 0.85rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            border-bottom: 1px dashed rgba(139, 92, 246, 0.4);
+            display: inline-block;
+            padding-bottom: 6px;
+        }
+
+        /* 🧩 面板头部 */
         .panel-header {
             display: flex;
             align-items: center;
             gap: 14px;
-            margin-bottom: 26px;
+            margin-bottom: 28px;
         }
-        .panel-header h2 {
-            font-size: 20px;
-            color: var(--secondary);
-            text-shadow: 0 0 8px rgba(0,212,255,0.35);
-            letter-spacing: 1px;
-        }
+
         .panel-icon {
-            width: 36px; height: 36px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border-radius: var(--radius);
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, rgba(139, 92, 246, 0.25), rgba(6, 182, 212, 0.2));
+            border-radius: 14px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #fff;
-            font-size: 18px;
-            box-shadow: 0 0 10px rgba(123,104,238,0.4);
+            font-size: 1.4rem;
+            border: 1px solid rgba(139, 92, 246, 0.4);
         }
 
-        .tip {
-            font-size: 14px;
-            color: var(--text-light);
-            margin: 14px 0;
-            line-height: 1.6;
+        .panel-header h2 {
+            font-size: 1.5rem;
+            font-weight: 500;
+            background: linear-gradient(120deg, #f1f5f9, #a78bfa);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
         }
 
-        /* 表单控件 */
-        .form-group { margin: 26px 0; }
+        /* 📝 表单控件 - 玻璃质感增强 */
+        .form-group {
+            margin-bottom: 28px;
+        }
+
         .form-label {
-            font-size: 14px;
-            color: var(--secondary);
-            margin-bottom: 10px;
             display: block;
-            letter-spacing: 0.5px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--secondary);
+            margin-bottom: 12px;
+        }
+
+        .cyber-select, .cyber-textarea {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            padding: 12px 18px;
+            color: var(--text-main);
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.2s;
+            backdrop-filter: blur(4px);
         }
 
         .cyber-select {
-            width: 100%; max-width: 380px;
-            padding: 12px 16px;
-            background: var(--bg-main);
-            border: 1px solid var(--border);
-            color: var(--text);
-            outline: none;
-            font-size: 14px;
-            border-radius: var(--radius);
-            transition: var(--transition);
+            max-width: 380px;
+            cursor: pointer;
             appearance: none;
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%237b68ee' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%238b5cf6' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
             background-repeat: no-repeat;
-            background-position: right 12px center;
-            background-size: 14px;
-        }
-        .cyber-select:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(123,104,238,0.15);
+            background-position: right 16px center;
+            background-size: 16px;
         }
 
         .cyber-textarea {
-            width: 100%; height: 260px;
-            padding: 18px;
-            background: var(--bg-main);
-            border: 1px solid var(--border);
-            color: var(--text);
-            font-family: monospace;
-            font-size: 14px;
-            line-height: 1.6;
-            border-radius: var(--radius);
             resize: vertical;
-            outline: none;
-            transition: var(--transition);
-        }
-        .cyber-textarea:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(123,104,238,0.15);
-        }
-        .cyber-textarea::placeholder { color: rgba(224,224,255,0.3); }
-
-        /* 🔥 霓虹流光按钮 */
-        .btn-group {
-            display: flex; gap: 18px; flex-wrap: wrap;
-            margin-top: 26px;
-        }
-        .cyber-btn {
-            position: relative;
-            padding: 0;
-            border: none;
-            background: transparent;
-            cursor: pointer;
-            border-radius: var(--radius);
-            transition: all 0.4s ease;
-            font-size: 14px;
-            font-weight: 600;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-        .cyber-btn::after {
-            content: attr(data-text);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 12px 28px;
-            background-color: var(--bg-main);
-            color: var(--primary);
-            border-radius: var(--radius);
-            transition: all 0.3s ease;
-            white-space: nowrap;
-        }
-        .cyber-btn::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(90deg, #7b68ee, #00d4ff);
-            border-radius: var(--radius);
-            z-index: -1;
-            filter: blur(0);
-            transition: filter 0.4s ease;
-        }
-        .cyber-btn:hover::before {
-            filter: blur(1.2em);
-        }
-        .cyber-btn:active::before {
-            filter: blur(0.2em);
-        }
-        .cyber-btn:hover::after {
-            background-color: transparent;
-            color: #fff;
-        }
-        .cyber-btn.btn-purple::before {
-            background: linear-gradient(90deg, #ff6ec7, #7b68ee);
-        }
-        .cyber-btn.btn-purple::after {
-            color: var(--accent);
-        }
-        .cyber-btn.btn-purple:hover::after {
-            color: #fff;
-        }
-        .cyber-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            pointer-events: none;
-        }
-
-        /* 结果终端 */
-        .sql-console {
-            background: var(--bg-main);
-            color: var(--secondary);
-            padding: 24px;
-            border-radius: var(--radius);
             font-family: monospace;
+            line-height: 1.6;
+        }
+
+        .cyber-select:focus, .cyber-textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary-glow);
+        }
+
+        .tip {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            margin: 12px 0 8px;
+            letter-spacing: 0.3px;
+        }
+
+        .tip .hud-badge {
+            background: rgba(139, 92, 246, 0.2);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            border-left: 2px solid var(--primary);
+            margin-right: 10px;
+        }
+
+        /* 🎛️ 按钮组 - 流光霓虹 */
+        .btn-group {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin: 28px 0 12px;
+        }
+
+        .glass-btn {
+            position: relative;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(139, 92, 246, 0.5);
+            padding: 10px 28px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(8px);
+            overflow: hidden;
+        }
+
+        .glass-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.4), transparent);
+            transition: left 0.5s;
+        }
+
+        .glass-btn:hover::before {
+            left: 100%;
+        }
+
+        .glass-btn:hover {
+            border-color: var(--primary);
+            box-shadow: 0 0 12px var(--primary-glow);
+            transform: translateY(-2px);
+        }
+
+        .btn-purple {
+            background: linear-gradient(95deg, rgba(139, 92, 246, 0.2), rgba(236, 72, 153, 0.2));
+            border-color: rgba(236, 72, 153, 0.6);
+        }
+
+        /* 📄 SQL 终端输出 */
+        .sql-console {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 16px;
+            padding: 20px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.8rem;
+            line-height: 1.6;
+            color: #a5f3c3;
             white-space: pre-wrap;
-            max-height: 500px;
-            overflow: auto;
+            word-break: break-all;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid var(--glass-border);
             margin-top: 20px;
-            line-height: 1.7;
-            font-size: 13px;
-            border: 1px solid var(--border);
-            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
         }
 
         .copy-tip {
-            color: var(--secondary);
-            font-size: 14px;
-            font-weight: 500;
-            margin-top: 14px;
-            display: none;
+            display: inline-flex;
             align-items: center;
-            gap: 6px;
-            text-shadow: 0 0 6px rgba(0,212,255,0.35);
-            animation: fadeIn 0.3s ease forwards;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(4px); }
-            to { opacity: 1; transform: translateY(0px); }
+            gap: 8px;
+            background: rgba(6, 182, 212, 0.2);
+            padding: 6px 14px;
+            border-radius: 30px;
+            font-size: 0.75rem;
+            color: var(--secondary);
+            margin-top: 12px;
+            backdrop-filter: blur(4px);
+            opacity: 0;
+            transition: opacity 0.2s;
         }
 
-        .particle {
+        .copy-tip.show {
+            opacity: 1;
+        }
+
+        /* 🧊 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 6px;
+        }
+
+        /* 📱 响应式微调 */
+        @media (max-width: 680px) {
+            .glass-card {
+                padding: 24px 20px;
+            }
+            .btn-group {
+                gap: 12px;
+            }
+            .glass-btn {
+                padding: 8px 20px;
+                font-size: 0.75rem;
+            }
+        }
+
+        /* ✨ 额外点缀：鼠标跟随光晕 */
+        .mouse-blur {
             position: fixed;
-            width: 2px; height: 2px;
-            background: var(--secondary);
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.12) 0%, rgba(6, 182, 212, 0) 70%);
             border-radius: 50%;
             pointer-events: none;
-            z-index: -1;
-            opacity: 0.4;
-        }
-
-        /* 滚动条 */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: var(--bg-main); }
-        ::-webkit-scrollbar-thumb { background: var(--primary); }
-
-        /* ====================================== */
-        /* ✅ 3D 霓虹旋转立方体加载组件（完整样式） */
-        /* ====================================== */
-        .scene {
-            --cube-size: 120px;
-            --inner-multiplier: 0.5;
-            --color-inner: hsla(170, 100%, 60%, 0.85);
-            --color-outer: hsla(260, 70%, 60%, 0.2);
-            --blur: 2px;
-            --angle: -10deg;
-            --duration: 7s;
-
-            position: fixed;
-            left: 30px;
-            bottom: 30px;
-            width: var(--cube-size);
-            height: var(--cube-size);
-            perspective: 750px;
-            z-index: 999;
-            transform: scale(0.8);
-        }
-
-        .cube-outer,
-        .cube-inner {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            transform-style: preserve-3d;
-        }
-
-        .cube-inner {
-            --inner-scale: clamp(0.1, var(--inner-multiplier), 0.6);
-            scale: var(--inner-scale);
-            top: calc((1 - var(--inner-scale)) * var(--cube-size) / 2);
-        }
-
-        .face {
-            user-select: none;
-            display: grid;
-            place-items: center;
-            position: absolute;
-            width: var(--cube-size);
-            height: var(--cube-size);
-            box-shadow:
-                inset 0 0 2px 0 #fff5,
-                inset 0 0 12px -8px #fff1,
-                inset 0 0 32px -10px #fff1,
-                inset 0 0 64px -8px #fff1,
-                inset 0 0 32px 16px #00000015;
-            overflow: clip;
-            font:
-                500 1em "Inter",
-                sans-serif;
-            letter-spacing: -0.01em;
-            color: #ffffff;
-            text-shadow:
-                0 3px 4px #0008,
-                0 -6px 6px #0005;
-            animation: blur var(--duration, 10s) linear infinite reverse;
-        }
-
-        .face.face-front {
-            transform: rotateY(0deg) translateZ(calc(var(--cube-size) / 2));
-            animation-delay: 0s;
-        }
-        .face.face-right {
-            transform: rotateY(90deg) translateZ(calc(var(--cube-size) / 2));
-            animation-delay: calc(var(--duration, 10s) * -0.75);
-        }
-        .face.face-back {
-            transform: rotateY(180deg) translateZ(calc(var(--cube-size) / 2));
-            animation-delay: calc(var(--duration, 10s) * -0.5);
-        }
-        .face.face-left {
-            transform: rotateY(-90deg) translateZ(calc(var(--cube-size) / 2));
-            animation-delay: calc(var(--duration, 10s) * -0.25);
-        }
-        .face.face-top {
-            transform: rotateX(90deg) translateZ(calc(var(--cube-size) / 2));
-            animation: none;
-        }
-        .face.face-bottom {
-            transform: rotateX(-90deg) translateZ(calc(var(--cube-size) / 2));
-            filter: blur(20px);
-            animation: none;
-        }
-
-        .cube-inner .face {
-            animation: none;
-            box-shadow:
-                inset 0 0 1px 0px #000e,
-                inset 0 0 12px -2px #0005,
-                inset 0 0 32px 0px #0001,
-                inset 0 0 64px 8px #0001;
-        }
-
-        @keyframes blur {
-            0%,9% { filter: blur(0px); }
-            10%,64% { filter: blur(10px); }
-            65%,100% { filter: blur(0px); }
-        }
-
-        .bg-color-in {
-            background: var(--color-inner);
-        }
-
-        .bg-color-out {
-            background-color: var(--color-outer);
-            background: linear-gradient(to bottom, #fff5, #0000),
-                radial-gradient(
-                    circle at 50% -50%,
-                    var(--color-inner) -20%,
-                    #fff0 30%,
-                    var(--color-outer)
-                );
-        }
-
-        .cube-outer,.cube-inner {
-            transform: rotateX(-20deg) rotateY(45deg);
-        }
-
-        .cube-inner {
-            position: absolute;
-            transform-origin: center;
-            scale: clamp(0.1, var(--inner-multiplier), 0.6);
-            animation: rotate var(--duration, 10s) linear infinite;
-        }
-
-        .cube-outer {
-            animation: rotate var(--duration, 10s) linear infinite reverse;
-        }
-
-        @keyframes rotate {
-            from { transform: rotateX(clamp(-40deg, var(--angle), 40deg)) rotateY(45deg); }
-            to { transform: rotateX(clamp(-40deg, var(--angle), 40deg)) rotateY(405deg); }
-        }
-
-        .blur {
-            filter: blur(clamp(1px, var(--blur, 7px), 20px));
-        }
-
-        .cube-shadow {
-            inset: 25%;
-            transform-style: preserve-3d;
-            position: absolute;
-            background-color: #00000015;
-            filter: blur(5px);
-            animation: rotate-shadow var(--duration, 10s) linear infinite;
-            z-index: 1;
-            mix-blend-mode: multiply;
-        }
-
-        .cube-shadow:nth-child(2) {
-            inset: 0%;
-            transform-style: preserve-3d;
-            position: absolute;
-            background-color: #00000015;
-            filter: blur(5px);
-            animation: rotate-shadow var(--duration, 10s) linear infinite reverse;
-            z-index: 0;
-        }
-
-        @keyframes rotate-shadow {
-            from {
-                transform: rotateX(calc(-100deg + clamp(-40deg, var(--angle), 40deg))) rotateZ(45deg) translateZ(calc(var(--cube-size) / 1.5));
-            }
-            to {
-                transform: rotateX(calc(-100deg + clamp(-40deg, var(--angle), 40deg))) rotateZ(405deg) translateZ(calc(var(--cube-size) / 1.5));
-            }
-        }
-
-        .scene .shadow {
-            position: absolute;
-            top: 45%;
-            left: 35%;
-            width: 50%;
-            aspect-ratio: 1 / 1.5;
-            background-color: #999;
-            border-radius: 50%;
-            transform: rotate(45deg);
-            filter: blur(24px);
-            mix-blend-mode: color-burn;
-        }
-
-        .scene .light {
-            position: absolute;
-            background-color: #555b;
-            filter: blur(30px);
-            mix-blend-mode: color-dodge;
-            inset: 22%;
-        }
-
-        .scene::before {
-            content: "";
-            position: absolute;
-            inset: -100%;
-            top: 50%;
-            background-color: #0002;
-            filter: blur(70px);
+            transform: translate(-50%, -50%);
+            z-index: 5;
+            transition: transform 0.05s linear;
         }
     </style>
 </head>
 <body>
-    <!-- 赛博动态背景 -->
-    <div class="cyber-bg"></div>
-    <div class="grid-ground"></div>
-    <div class="neon-rail rail-left"></div>
-    <div class="neon-rail rail-right"></div>
-    <div class="particle-rain" id="rainContainer"></div>
 
-    <!-- ✅ 3D 旋转立方体组件（固定左下角） -->
-    <div class="scene">
-        <div class="cube-shadow">
-            <div class="face face-bottom"></div>
-        </div>
-        <div class="cube-shadow">
-            <div class="face face-bottom"></div>
-        </div>
-        <div class="blur">
-            <div class="cube-inner">
-                <div class="face face-front bg-color-in"></div>
-                <div class="face face-back bg-color-in"></div>
-                <div class="face face-right bg-color-in"></div>
-                <div class="face face-left bg-color-in"></div>
-                <div class="face face-top bg-color-in"></div>
-                <div class="face face-bottom bg-color-in"></div>
-            </div>
-        </div>
-        <div class="cube-outer">
-            <div class="face face-front bg-color-out">money</div>
-            <div class="face face-back bg-color-out">money</div>
-            <div class="face face-right bg-color-out">money</div>
-            <div class="face face-left bg-color-out">money</div>
-            <div class="face face-top bg-color-out"></div>
-            <div class="face face-bottom bg-color-out"></div>
-        </div>
-        <div class="light"></div>
-        <div class="shadow"></div>
-    </div>
-
-    <div class="mouse-light" id="mouseLight"></div>
-    <div class="scan-line"></div>
+    <!-- 3D 粒子画布背景 -->
+    <canvas id="bg-canvas"></canvas>
+    <!-- 动态光晕 -->
+    <div class="mouse-blur" id="mouseLight"></div>
 
     <div class="container">
-        <h1 class="main-title">SQL 重工控制台</h1>
+        <div class="header-title">
+            <h1>SQL 重工控制台</h1>
+            <div class="sub-glow">GLASS · PARTICLES · PRECISION</div>
+        </div>
 
-        <div class="cyber-panel">
+        <!-- 配置与录入面板 -->
+        <div class="glass-card">
             <div class="panel-header">
-                <div class="panel-icon">📝</div>
+                <div class="panel-icon">⚙️</div>
                 <h2>数据配置与录入</h2>
             </div>
-
-            <p class="tip">
-                <span class="hud-badge">EXCEL 快捷粘贴</span>
-               自动兼容空格、制表符、逗号分隔格式
-            </p>
+            <p class="tip"><span class="hud-badge">EXCEL 快捷粘贴</span>自动兼容空格、制表符、逗号分隔格式</p>
 
             <div class="form-group">
                 <label class="form-label">选择使用版本</label>
@@ -667,177 +350,252 @@
 
             <div class="form-group">
                 <label class="form-label">选择需要更新的字段</label>
-                <select class="cyber-select" id="fieldSelect">
-                    <option value="bj">班级名称</option>
-                    <option value="mz">民族</option>
-                    <option value="xm">姓名</option>
-                    <option value="xxmc">学校名称</option>
-                    <option value="csrq">出生日期</option>
-                    <option value="rxny">入学年月</option>
-                    <option value="byny">毕业年月</option>
-                    <option value="sfzjh">修改身份证号</option>
-                    <option value="zsxsxxmc">证书上显示的学校名称</option>
-                    <option value="byzsh">毕业证书号</option>
-                </select>
+                <select class="cyber-select" id="fieldSelect"></select>
             </div>
 
             <p class="tip" id="tipText">格式：身份证 + 内容</p>
-            <textarea id="dataInput" class="cyber-textarea" placeholder="粘贴 Excel 两列数据..."></textarea>
+            <textarea id="dataInput" class="cyber-textarea" rows="6" placeholder="粘贴 Excel 两列数据..."></textarea>
 
             <div class="btn-group">
-                <button class="cyber-btn" data-text="🔄 生成 SQL" onclick="generateSql()"></button>
-                <button class="cyber-btn btn-purple" data-text="📋 复制结果" onclick="copySql()" id="copyBtn" disabled></button>
+                <button class="glass-btn" id="generateBtn">⟳ 生成 SQL</button>
+                <button class="glass-btn btn-purple" id="copyBtn">📋 复制结果</button>
             </div>
-            <div class="copy-tip" id="copyTip">✅ 复制成功</div>
+            <div id="copyTip" class="copy-tip">✅ SQL 已复制到剪贴板</div>
         </div>
 
-        <div class="cyber-panel">
+        <!-- SQL 结果面板 -->
+        <div class="glass-card">
             <div class="panel-header">
-                <div class="panel-icon">📤</div>
-                <h2>SQL 生成结果</h2>
+                <div class="panel-icon">💾</div>
+                <h2>生成结果流</h2>
             </div>
             <div id="sqlResult" class="sql-console">等待生成数据...</div>
         </div>
     </div>
 
-<script>
-// 鼠标光影追随
-const light = document.getElementById('mouseLight');
-document.addEventListener('mousemove', e => {
-    light.style.left = e.clientX + 'px';
-    light.style.top = e.clientY + 'px';
-});
+    <!-- Three.js 粒子背景模块 (动态物理感粒子) -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
+            }
+        }
+    </script>
 
-// 生成粒子雨
-function createRainDrops() {
-    const container = document.getElementById('rainContainer');
-    for (let i = 0; i < 60; i++) {
-        const drop = document.createElement('div');
-        drop.className = 'rain-drop';
-        drop.style.left = Math.random() * 100 + '%';
-        drop.style.animationDuration = (Math.random() * 3 + 3) + 's';
-        drop.style.animationDelay = Math.random() * 5 + 's';
-        container.appendChild(drop);
-    }
-}
+    <script type="module">
+        import * as THREE from 'three';
 
-// 初始化静态粒子
-function createParticles() {
-    for(let i=0; i<40; i++) {
-        const p = document.createElement('div');
-        p.className = 'particle';
-        p.style.left = Math.random() * 100 + '%';
-        p.style.top = Math.random() * 100 + '%';
-        p.style.opacity = Math.random() * 0.4 + 0.2;
-        document.body.appendChild(p);
-    }
-}
-
-// 版本切换字段
-document.getElementById('versionSelect').addEventListener('change', updateFieldOptions);
-document.getElementById('fieldSelect').addEventListener('change', updateTip);
-
-window.onload = function() {
-    updateFieldOptions();
-    updateTip();
-    createParticles();
-    createRainDrops();
-};
-
-function updateFieldOptions() {
-    const v = document.getElementById('versionSelect').value;
-    const sel = document.getElementById('fieldSelect');
-
-    document.querySelectorAll('#fieldSelect option.dynamic').forEach(o => o.remove());
-    document.querySelectorAll('#fieldSelect option').forEach(opt => {
-        if(opt.value === 'zsxsxxmc') opt.style.display = (v === 'C') ? 'none' : 'block';
-    });
-
-    if (v === 'B') {
-        const o1 = document.createElement('option');
-        o1.value = 'xb'; o1.textContent = '性别'; o1.className = 'dynamic';
-        sel.appendChild(o1);
-        const o2 = document.createElement('option');
-        o2.value = 'hkszd'; o2.textContent = '户口所在地'; o1.className = 'dynamic';
-        sel.appendChild(o2);
-    }
-
-    if (v === 'C') {
-        const list = [
-            {v:'xb', l:'性别'},
-            {v:'zymc', l:'专业名称'},
-            {v:'xz', l:'学制'}
-        ];
-        list.forEach(item => {
-            const o = document.createElement('option');
-            o.value = item.v; o.textContent = item.l; o.className = 'dynamic';
-            sel.appendChild(o);
+        const canvas = document.getElementById('bg-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, alpha: false });
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x05070c);
+        
+        // 透视相机
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 2, 14);
+        camera.lookAt(0, 0, 0);
+        
+        // ---- 动态粒子系统 (流光星云) ----
+        const particleCount = 1800;
+        const geometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        for (let i = 0; i < particleCount; i++) {
+            // 分布在椭圆球状区域
+            positions[i*3] = (Math.random() - 0.5) * 28;
+            positions[i*3+1] = (Math.random() - 0.5) * 16;
+            positions[i*3+2] = (Math.random() - 0.5) * 20 - 6;
+        }
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        
+        const particleMaterial = new THREE.PointsMaterial({
+            color: 0x8b5cf6,
+            size: 0.09,
+            transparent: true,
+            opacity: 0.65,
+            blending: THREE.AdditiveBlending
         });
-    }
-}
-
-function updateTip() {
-    const val = document.getElementById('fieldSelect').value;
-    const tip = document.getElementById('tipText');
-    if (val === 'sfzjh') tip.innerText = '格式：旧身份证号 + 新身份证号';
-    else if (val === 'xxmc') tip.innerText = '格式：旧学校名 | 新学校名';
-    else tip.innerText = '格式：身份证 + 内容';
-}
-
-function generateSql() {
-    const input = document.getElementById('dataInput').value.trim();
-    const res = document.getElementById('sqlResult');
-    const copyBtn = document.getElementById('copyBtn');
-    const v = document.getElementById('versionSelect').value;
-    const f = document.getElementById('fieldSelect').value;
-
-    if (!input) { res.innerText = '❌ 请先粘贴数据'; copyBtn.disabled = true; return; }
-
-    let table, idField;
-    if (v === 'A') { table = 'certificate_meta_message'; idField = 'sfzh'; }
-    else if (v === 'B') { table = 'kdsj_zxxs_by'; idField = 'sfzjh'; }
-    else { table = 'kdsj_zzxs_zhizheng'; idField = 'sfzjh'; }
-
-    const lines = input.split('\n').filter(l => l.trim());
-    let sql = '';
-
-    lines.forEach(line => {
-        const parts = line.trim().split(/[\s,]+/).filter(p => p);
-        if (parts.length < 2) return;
-        const key = parts[0].replace(/'/g, "''");
-        const val = parts.slice(1).join(' ').replace(/'/g, "''");
-
-        let field = f;
-        if (v === 'B' && field === 'bj') field = 'bjmc';
-
-        let sqlValue;
-        if (field === 'byzsh' && val.toLowerCase() === 'null') {
-            sqlValue = 'NULL';
-        } else {
-            sqlValue = `'${val}'`;
+        const particleSystem = new THREE.Points(geometry, particleMaterial);
+        scene.add(particleSystem);
+        
+        // 第二层 青色粒子
+        const geom2 = new THREE.BufferGeometry();
+        const pos2 = new Float32Array(1000 * 3);
+        for (let i = 0; i < 1000; i++) {
+            pos2[i*3] = (Math.random() - 0.5) * 32;
+            pos2[i*3+1] = (Math.random() - 0.5) * 20;
+            pos2[i*3+2] = (Math.random() - 0.5) * 18 - 7;
         }
-
-        if (field === 'xxmc') {
-            sql += `UPDATE ${table} SET xxmc = '${val}' WHERE xxmc = '${key}';\n`;
-        } else if (field === 'sfzjh') {
-            sql += `UPDATE ${table} SET ${idField} = '${val}' WHERE ${idField} = '${key}';\n`;
-        } else {
-            sql += `UPDATE ${table} SET ${field} = ${sqlValue} WHERE ${idField} = '${key}';\n`;
+        geom2.setAttribute('position', new THREE.BufferAttribute(pos2, 3));
+        const mat2 = new THREE.PointsMaterial({
+            color: 0x06b6d4,
+            size: 0.07,
+            transparent: true,
+            opacity: 0.5,
+            blending: THREE.AdditiveBlending
+        });
+        const particleSys2 = new THREE.Points(geom2, mat2);
+        scene.add(particleSys2);
+        
+        // 漂浮旋转环装饰
+        const ringCount = 300;
+        const ringGeo = new THREE.BufferGeometry();
+        const ringPos = new Float32Array(ringCount * 3);
+        for (let i = 0; i < ringCount; i++) {
+            const angle = (i / ringCount) * Math.PI * 2;
+            const radius = 4.2;
+            ringPos[i*3] = Math.cos(angle) * radius;
+            ringPos[i*3+1] = Math.sin(angle) * radius * 0.4;
+            ringPos[i*3+2] = -2.2;
         }
-    });
+        ringGeo.setAttribute('position', new THREE.BufferAttribute(ringPos, 3));
+        const ringPoints = new THREE.Points(ringGeo, new THREE.PointsMaterial({ color: 0xf472b6, size: 0.06, blending: THREE.AdditiveBlending }));
+        scene.add(ringPoints);
+        
+        // 轻微雾效增强景深感
+        scene.fog = new THREE.FogExp2(0x05070c, 0.012);
+        
+        // 鼠标视差控制相机
+        let mouseX = 0, mouseY = 0;
+        let targetX = 0, targetY = 0;
+        window.addEventListener('mousemove', (e) => {
+            mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+            mouseY = (e.clientY / window.innerHeight) * 2 - 1;
+            targetX = mouseX * 1.2;
+            targetY = mouseY * 0.8;
+        });
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            // 粒子缓慢自转
+            particleSystem.rotation.y += 0.0008;
+            particleSystem.rotation.x += 0.0004;
+            particleSys2.rotation.y -= 0.0005;
+            ringPoints.rotation.z += 0.005;
+            ringPoints.rotation.x = Math.sin(Date.now() * 0.0005) * 0.2;
+            
+            // 相机平滑跟随鼠标（极轻微，增强沉浸感）
+            camera.position.x += (targetX * 0.5 - camera.position.x) * 0.04;
+            camera.position.y += (targetY * 0.3 - camera.position.y) * 0.04;
+            camera.lookAt(0, 0, 0);
+            
+            renderer.render(scene, camera);
+        }
+        
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        window.addEventListener('resize', onResize);
+        animate();
+        
+        // 鼠标光晕动态跟随
+        const lightBlur = document.getElementById('mouseLight');
+        document.addEventListener('mousemove', (e) => {
+            lightBlur.style.left = e.clientX + 'px';
+            lightBlur.style.top = e.clientY + 'px';
+        });
+    </script>
 
-    res.innerText = sql || '⚠️ 未识别到有效数据';
-    copyBtn.disabled = !sql;
-}
-
-function copySql() {
-    const txt = document.getElementById('sqlResult').innerText;
-    navigator.clipboard.writeText(txt).then(() => {
-        const tip = document.getElementById('copyTip');
-        tip.style.display = 'flex';
-        setTimeout(() => tip.style.display = 'none', 2500);
-    });
-}
-</script>
+    <!-- 核心业务脚本 (SQL 逻辑完整保留，只升级视觉) -->
+    <script>
+        // ---------- 业务数据表 ----------
+        const TABLES = {
+            A: 'certificate_meta_message',
+            B: 'kdsj_zxxs_by',
+            C: 'kdsj_zzxs_zhizheng'
+        };
+        
+        // 动态字段映射 (保留之前所有字段)
+        const fieldOptions = {
+            A: ['bj', 'mz', 'xm', 'xxmc', 'csrq', 'rxny', 'byny', 'sfzjh', 'zsxsxxmc', 'byzsh'],
+            B: ['bj', 'mz', 'xm', 'xxmc', 'csrq', 'rxny', 'byny', 'sfzjh', 'zsxsxxmc', 'byzsh', 'xb', 'hkszd'],
+            C: ['bj', 'mz', 'xm', 'xxmc', 'csrq', 'rxny', 'byny', 'sfzjh', 'zsxsxxmc', 'byzsh', 'xb', 'zymc', 'xz']
+        };
+        
+        const fieldNames = {
+            'bj': '班级名称', 'mz': '民族', 'xm': '姓名', 'xxmc': '学校名称', 'csrq': '出生日期',
+            'rxny': '入学年月', 'byny': '毕业年月', 'sfzjh': '修改身份证号', 'zsxsxxmc': '证书上显示的学校名称',
+            'byzsh': '毕业证书号', 'xb': '性别', 'hkszd': '户口所在地', 'zymc': '专业名称', 'xz': '学制'
+        };
+        
+        let currentVersion = 'A';
+        
+        function renderFieldSelect() {
+            const select = document.getElementById('fieldSelect');
+            const fields = fieldOptions[currentVersion];
+            select.innerHTML = '';
+            fields.forEach(f => {
+                const option = document.createElement('option');
+                option.value = f;
+                option.textContent = fieldNames[f] || f;
+                select.appendChild(option);
+            });
+            updateTipText();
+        }
+        
+        function updateTipText() {
+            const field = document.getElementById('fieldSelect').value;
+            const tip = document.getElementById('tipText');
+            if (field === 'sfzjh') tip.innerText = '格式：旧身份证号 + 新身份证号';
+            else if (field === 'xxmc') tip.innerText = '格式：旧学校名 | 新学校名';
+            else tip.innerText = '格式：身份证 + 内容';
+        }
+        
+        document.getElementById('versionSelect').addEventListener('change', (e) => {
+            currentVersion = e.target.value;
+            renderFieldSelect();
+        });
+        document.getElementById('fieldSelect').addEventListener('change', updateTipText);
+        
+        function generateSql() {
+            const input = document.getElementById('dataInput').value.trim();
+            const resultArea = document.getElementById('sqlResult');
+            if (!input) {
+                resultArea.innerText = '❌ 请先粘贴数据';
+                return;
+            }
+            const table = TABLES[currentVersion];
+            let idField = 'sfzh';
+            if (currentVersion !== 'A') idField = 'sfzjh';
+            const field = document.getElementById('fieldSelect').value;
+            
+            const lines = input.split('\n').filter(l => l.trim());
+            let sql = '';
+            for (let line of lines) {
+                let parts = line.trim().split(/[\s,]+/).filter(p => p);
+                if (parts.length < 2) continue;
+                const key = parts[0].replace(/'/g, "''");
+                const val = parts.slice(1).join(' ').replace(/'/g, "''");
+                let sqlValue = (field === 'byzsh' && val.toLowerCase() === 'null') ? 'NULL' : `'${val}'`;
+                if (field === 'xxmc') {
+                    sql += `UPDATE ${table} SET xxmc = '${val}' WHERE xxmc = '${key}';\n`;
+                } else if (field === 'sfzjh') {
+                    sql += `UPDATE ${table} SET ${idField} = '${val}' WHERE ${idField} = '${key}';\n`;
+                } else {
+                    let realField = (field === 'bj' && currentVersion === 'B') ? 'bjmc' : field;
+                    sql += `UPDATE ${table} SET ${realField} = ${sqlValue} WHERE ${idField} = '${key}';\n`;
+                }
+            }
+            resultArea.innerText = sql || '⚠️ 未识别到有效数据';
+        }
+        
+        async function copySql() {
+            const text = document.getElementById('sqlResult').innerText;
+            if (!text || text.includes('等待生成') || text.includes('未识别')) return;
+            await navigator.clipboard.writeText(text);
+            const tipDiv = document.getElementById('copyTip');
+            tipDiv.classList.add('show');
+            setTimeout(() => tipDiv.classList.remove('show'), 2000);
+        }
+        
+        // 初始渲染字段并绑定事件
+        renderFieldSelect();
+        document.getElementById('generateBtn').addEventListener('click', generateSql);
+        document.getElementById('copyBtn').addEventListener('click', copySql);
+    </script>
 </body>
 </html>
