@@ -4,117 +4,214 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>教育装备 - 学校填报状态查询工具</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        neon: '#39FF14',
-                        dark: '#121212',
-                        'dark-card': '#1E1E1E',
-                        'dark-input': '#2A2A2A',
-                        'text-primary': '#FFFFFF',
-                        'text-secondary': '#B0B0B0',
-                    },
-                    boxShadow: {
-                        'neon': '0 0 10px rgba(57, 255, 20, 0.3)',
-                        'neon-hover': '0 0 20px rgba(57, 255, 20, 0.5)',
-                    }
-                }
-            }
-        }
-    </script>
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .card-hover {
-                transition: all 0.3s ease;
-            }
-            .card-hover:hover {
-                transform: translateY(-2px);
-                box-shadow: var(--tw-shadow-neon-hover);
-            }
-            .input-focus {
-                transition: all 0.3s ease;
-            }
-            .input-focus:focus {
-                border-color: #39FF14;
-                box-shadow: 0 0 0 3px rgba(57, 255, 20, 0.2);
-            }
-            .btn-hover {
-                transition: all 0.3s ease;
-            }
-            .btn-hover:hover {
-                transform: translateY(-2px);
-                box-shadow: var(--tw-shadow-neon);
-            }
-        }
-    </style>
     <style>
-        /* 文本域渲染优化 */
-        #result, #multiSchool {
-            resize: none !important;
-            will-change: auto;
-            backface-visibility: hidden;
-            -webkit-font-smoothing: antialiased;
-            font-variant-ligatures: none;
-            transform: translateZ(0);
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Microsoft YaHei', 'Segoe UI', sans-serif;
         }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(-45deg, #3a1c71, #d76d77, #ffaf7b, #2c3e99);
+            background-size: 400% 400%;
+            animation: bgAnim 15s ease infinite;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+        @keyframes bgAnim {
+            0% {background-position: 0% 50%;}
+            50% {background-position: 100% 50%;}
+            100% {background-position: 0% 50%;}
+        }
+        /*粒子画布铺满全屏*/
+        #particles {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top:0;left:0;
+            z-index:1;
+            pointer-events:none;
+        }
+        /*全局玻璃容器*/
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background: rgba(255,255,255,0.12);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 26px;
+            box-shadow: 0 8px 32px rgba(31,38,135,0.2);
+            padding: 42px;
+            z-index:2;
+            position:relative;
+            animation: fadeIn 0.6s ease-out;
+        }
+        @keyframes fadeIn {
+            from { opacity:0; transform: translateY(25px); }
+            to { opacity:1; transform: translateY(0); }
+        }
+        h1 {
+            text-align: center;
+            color:#ffffff;
+            margin-bottom:8px;
+            font-size:25px;
+        }
+        .desc {
+            text-align:center;
+            color:rgba(255,255,255,0.75);
+            margin-bottom:32px;
+            font-size:14px;
+        }
+        .box {margin-bottom:22px;}
+        label {
+            display:block;
+            margin-bottom:8px;
+            color:#fff;
+            font-weight:500;
+        }
+        /*输入框玻璃样式*/
+        input, textarea {
+            width:100%;
+            padding:15px;
+            background:rgba(255,255,255,0.1);
+            border:1px solid rgba(255,255,255,0.2);
+            border-radius:14px;
+            color:#fff;
+            font-size:15px;
+            backdrop-filter: blur(6px);
+            transition:0.3s;
+        }
+        input::placeholder,textarea::placeholder {
+            color:rgba(255,255,255,0.55);
+        }
+        input:focus,textarea:focus {
+            outline:none;
+            border-color:rgba(255,255,255,0.6);
+            background:rgba(255,255,255,0.18);
+            box-shadow:0 0 12px rgba(255,255,255,0.15);
+        }
+        .btn-group {
+            display:flex;
+            gap:14px;
+            margin:28px 0;
+        }
+        /*按钮玻璃特效*/
+        button {
+            flex:1;
+            padding:16px;
+            border:none;
+            border-radius:14px;
+            font-weight:600;
+            color:#fff;
+            cursor:pointer;
+            backdrop-filter: blur(8px);
+            border:1px solid rgba(255,255,255,0.2);
+            transition:0.3s;
+            position:relative;
+            overflow:hidden;
+        }
+        button::after {
+            content:"";
+            position:absolute;
+            left:-100%;top:0;
+            width:100%;height:100%;
+            background:linear-gradient(90deg,transparent,rgba(255,255,255,0.22),transparent);
+            transition:left 0.5s;
+        }
+        button:hover::after {left:100%;}
+        button:nth-child(1){background:rgba(255,180,30,0.25);}
+        button:nth-child(2){background:rgba(60,160,255,0.25);}
+        button:nth-child(3){background:rgba(30,220,130,0.25);}
+        button:hover {
+            transform:translateY(-3px);
+            box-shadow:0 8px 24px rgba(0,0,0,0.15);
+            background:rgba(255,255,255,0.18);
+        }
+        #result {height:380px;resize:none;font-family:Consolas;line-height:1.7;}
+        .tip {font-size:12px;color:rgba(255,255,255,0.6);margin-top:5px;}
     </style>
 </head>
-<body class="bg-dark min-h-screen font-sans text-text-primary flex justify-center items-center p-4">
-    <div class="w-full max-w-3xl bg-dark-card rounded-2xl shadow-card p-8 card-hover border border-dark-input">
-        <!-- 标题区域 -->
-        <header class="mb-8 text-center">
-            <h1 class="text-2xl md:text-3xl font-bold mb-2 text-text-primary">
-                <i class="fa fa-building text-neon mr-2"></i>教育装备 - 学校填报状态查询工具
-            </h1>
-            <p class="text-text-secondary text-sm">功能：查询学校各表填报状态（纯查询，不修改任何数据）</p>
-        </header>
 
-        <!-- 表单区域 -->
-        <div class="space-y-6 mb-8">
-            <div>
-                <label class="block mb-2 text-text-secondary text-sm font-medium">📅 年度版本（可直接修改）</label>
-                <input type="text" id="year" value="2026" placeholder="请输入年份" class="w-full bg-dark-input border border-dark-input rounded-lg p-3 text-text-primary input-focus">
-            </div>
+<body>
+<canvas id="particles"></canvas>
+<div class="container">
+    <h1>🏫 教育装备 - 学校填报状态查询工具</h1>
+    <p class="desc">功能：查询学校各表填报状态（纯查询，不修改任何数据）</p>
 
-            <div>
-                <label class="block mb-2 text-text-secondary text-sm font-medium">🏫 单学校名称</label>
-                <input type="text" id="singleSchool" placeholder="请输入学校全称，例如：准格尔旗大路第一小学" class="w-full bg-dark-input border border-dark-input rounded-lg p-3 text-text-primary input-focus">
-                <p class="text-text-secondary text-xs mt-1">生成单学校查询SQL</p>
-            </div>
-
-            <div>
-                <label class="block mb-2 text-text-secondary text-sm font-medium">🏫🏫 多学校名称（一行一个）</label>
-                <textarea id="multiSchool" placeholder="请输入多个学校名称，一行一个" class="w-full h-32 bg-dark-input border border-dark-input rounded-lg p-3 text-text-primary input-focus"></textarea>
-                <p class="text-text-secondary text-xs mt-1">生成多学校查询SQL</p>
-            </div>
-        </div>
-
-        <!-- 按钮组 -->
-        <div class="flex gap-4 mb-8">
-            <button onclick="genSingleQuery()" class="flex-1 bg-yellow-500 text-black font-bold py-3 rounded-lg btn-hover flex items-center justify-center">
-                <i class="fa fa-building mr-2"></i>生成【单学校查询】
-            </button>
-            <button onclick="genMultiQuery()" class="flex-1 bg-primary text-white font-bold py-3 rounded-lg btn-hover flex items-center justify-center">
-                <i class="fa fa-building-o mr-2"></i>生成【多学校查询】
-            </button>
-            <button onclick="copyResult()" class="flex-1 bg-neon text-dark font-bold py-3 rounded-lg btn-hover flex items-center justify-center">
-                <i class="fa fa-copy mr-2"></i>一键复制
-            </button>
-        </div>
-
-        <!-- 结果区域 -->
-        <div>
-            <label class="block mb-2 text-text-secondary text-sm font-medium">📄 查询SQL结果（只读，安全）</label>
-            <textarea id="result" class="w-full h-80 bg-dark-input border border-dark-input rounded-lg p-4 text-text-primary font-mono text-sm input-focus" placeholder="生成的SQL语句将显示在这里..."></textarea>
-        </div>
+    <div class="box">
+        <label>📅 年度版本（可直接修改）</label>
+        <input type="text" id="year" value="2026" placeholder="请输入年份">
     </div>
 
+    <div class="box">
+        <label>🏫 单学校名称</label>
+        <input type="text" id="singleSchool" placeholder="请输入学校全称，例如：准格尔旗大路第一小学">
+        <div class="tip">生成单学校查询SQL</div>
+    </div>
+
+    <div class="box">
+        <label>🏫🏫 多学校名称（一行一个）</label>
+        <textarea id="multiSchool" placeholder="请输入多个学校名称，一行一个"></textarea>
+        <div class="tip">生成多学校查询SQL</div>
+    </div>
+
+    <div class="btn-group">
+        <button onclick="genSingleQuery()">🏫 生成【单学校查询】</button>
+        <button onclick="genMultiQuery()">🏫🏫 生成【多学校查询】</button>
+        <button onclick="copyResult()">📋 一键复制</button>
+    </div>
+
+    <div class="box">
+        <label>📄 查询SQL结果（只读，安全）</label>
+        <textarea id="result" placeholder="生成的SQL语句将显示在这里..."></textarea>
+    </div>
+</div>
+
 <script>
-// 9张表名（你提供的正确顺序）
+//粒子动画
+const canvas = document.getElementById('particles');
+const ctx = canvas.getContext('2d');
+let w,h,particles=[];
+function resize(){
+    w=canvas.width=innerWidth;
+    h=canvas.height=innerHeight;
+}
+window.onresize=resize;resize();
+class P{
+    constructor(){
+        this.x=Math.random()*w;
+        this.y=Math.random()*h;
+        this.r=Math.random()*2+0.5;
+        this.sx=(Math.random()-0.5)*0.6;
+        this.sy=(Math.random()-0.5)*0.6;
+    }
+    update(){
+        this.x+=this.sx;this.y+=this.sy;
+        if(this.x<0||this.x>w)this.sx*=-1;
+        if(this.y<0||this.y>h)this.sy*=-1;
+    }
+    draw(){
+        ctx.beginPath();
+        ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+        ctx.fillStyle='rgba(255,255,255,0.35)';
+        ctx.fill();
+    }
+}
+for(let i=0;i<90;i++) particles.push(new P());
+function loop(){
+    ctx.clearRect(0,0,w,h);
+    particles.forEach(p=>{p.update();p.draw();})
+    requestAnimationFrame(loop);
+}
+loop();
+
+//原有业务JS不变
 const tables = [
     "tbl_equ_two_ptjslbsb",
     "tbl_equ_two_ptjsjrcs",
@@ -131,14 +228,12 @@ function getYear() {
     return document.getElementById('year').value || '2026';
 }
 
-// 单学校查询 SQL
 function genSingleQuery() {
     const school = document.getElementById('singleSchool').value.trim();
     if (!school) { alert('请输入学校名称！'); return; }
     const year = getYear();
     const escSchool = school.replace(/'/g, "''");
     let sql = '';
-
     tables.forEach((t, i) => {
         sql += `-- 表${i+1} 查询 ${school} 填报状态
 SELECT e.state, d.name AS 学校名称
@@ -149,11 +244,9 @@ WHERE d.name = '${escSchool}' AND e.version = '${year}';
 
 `;
     });
-
     document.getElementById('result').value = sql.trim();
 }
 
-// 多学校查询 SQL
 function genMultiQuery() {
     const text = document.getElementById('multiSchool').value.trim();
     if (!text) { alert('请输入学校名称！'); return; }
@@ -161,7 +254,6 @@ function genMultiQuery() {
     const year = getYear();
     const inStr = schools.map(s => `'${s.replace(/'/g, "''")}'`).join(',');
     let sql = '';
-
     tables.forEach((t, i) => {
         sql += `-- 表${i+1} 批量查询学校状态
 SELECT e.state, d.name AS 学校名称
@@ -172,11 +264,9 @@ WHERE d.name IN (${inStr}) AND e.version = '${year}';
 
 `;
     });
-
     document.getElementById('result').value = sql.trim();
 }
 
-// 复制
 function copyResult() {
     const res = document.getElementById('result');
     if (!res.value) { alert('无内容'); return; }
