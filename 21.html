@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>盟市账号启停运维 · 赛博毛玻璃版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Inter', 'Microsoft YaHei', system-ui, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: #0a0c12;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+            position: relative;
+            overflow-x: auto;
+        }
+
+        /* === Three.js 粒子画布 === */
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            background: radial-gradient(circle at 20% 30%, #0a0a1a, #020308);
+            pointer-events: none;
+        }
+
+        /* === 鼠标跟随光晕 === */
+        .mouse-glow {
+            position: fixed;
+            width: 520px;
+            height: 520px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, rgba(6, 182, 212, 0) 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+            transition: transform 0.05s linear;
+            will-change: transform;
+        }
+
+        /* === 毛玻璃主容器 === */
+        .glass-container {
+            position: relative;
+            z-index: 20;
+            width: 100%;
+            max-width: 1400px;
+            background: rgba(15, 25, 45, 0.45);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 2rem;
+            border: 1px solid rgba(139, 92, 246, 0.35);
+            box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(139, 92, 246, 0.1) inset;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            padding: 2rem 2rem 2.2rem;
+        }
+
+        .glass-container:hover {
+            transform: translateY(-3px);
+            border-color: rgba(139, 92, 246, 0.65);
+            box-shadow: 0 28px 44px -12px rgba(139, 92, 246, 0.25), 0 0 0 1px rgba(139, 92, 246, 0.25) inset;
+        }
+
+        /* 标题区 */
+        .title-section {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #f0f3ff, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -0.3px;
+            margin-bottom: 0.5rem;
+        }
+
+        .sub {
+            color: #94a3b8;
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+            border-bottom: 1px dashed rgba(139, 92, 246, 0.5);
+            display: inline-block;
+            padding-bottom: 0.4rem;
+        }
+
+        /* 毛玻璃卡片 */
+        .glass-card {
+            background: rgba(20, 30, 50, 0.5);
+            backdrop-filter: blur(8px);
+            border-radius: 1.5rem;
+            border: 1px solid rgba(139, 92, 246, 0.25);
+            padding: 1.5rem;
+            margin-bottom: 1.8rem;
+            transition: all 0.25s ease;
+        }
+
+        .glass-card:hover {
+            border-color: rgba(6, 182, 212, 0.5);
+            background: rgba(25, 38, 60, 0.55);
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.08);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 1.2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #a78bfa;
+            border-left: 3px solid #06b6d4;
+            padding-left: 14px;
+        }
+
+        /* 表单控件 */
+        .glass-input, .glass-select, textarea.glass-input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            background: rgba(10, 18, 30, 0.7);
+            border: 1.5px solid rgba(139, 92, 246, 0.35);
+            border-radius: 1rem;
+            font-size: 0.9rem;
+            color: #e2e8f0;
+            transition: all 0.25s ease;
+            outline: none;
+        }
+
+        select.glass-select {
+            cursor: pointer;
+        }
+
+        .glass-input:focus, .glass-select:focus, textarea.glass-input:focus {
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25);
+            background: rgba(20, 32, 50, 0.8);
+        }
+
+        textarea.glass-input {
+            font-family: 'Fira Code', 'JetBrains Mono', monospace;
+            resize: vertical;
+            line-height: 1.5;
+        }
+
+        /* 单选组美化 */
+        .radio-group {
+            display: flex;
+            gap: 1.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-top: 0.3rem;
+        }
+        .radio-group label {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            color: #cbd5e6;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        .radio-group input[type="radio"] {
+            accent-color: #8b5cf6;
+            width: 1rem;
+            height: 1rem;
+        }
+
+        /* 顶部双栏布局 */
+        .row-two {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+        .row-two .form-item {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        /* 角色网格区域 */
+        .role-grid {
+            max-height: 320px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0.8rem;
+            padding: 0.5rem;
+            margin: 1rem 0;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 1rem;
+        }
+        .role-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: #e2e8f0;
+            cursor: pointer;
+            padding: 0.2rem 0;
+        }
+        .role-item input {
+            accent-color: #8b5cf6;
+            width: 1rem;
+            height: 1rem;
+            cursor: pointer;
+        }
+
+        /* 霓虹按钮 */
+        .btn-neon {
+            position: relative;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(139, 92, 246, 0.5);
+            padding: 0.6rem 1.4rem;
+            border-radius: 2rem;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: #e0e7ff;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+            overflow: hidden;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-neon::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.4), transparent);
+            transition: left 0.5s ease;
+        }
+        .btn-neon:hover::before {
+            left: 100%;
+        }
+        .btn-neon:hover {
+            transform: translateY(-2px);
+            border-color: #a78bfa;
+            box-shadow: 0 5px 15px rgba(139, 92, 246, 0.3);
+            color: white;
+        }
+        .btn-primary {
+            background: linear-gradient(95deg, rgba(139, 92, 246, 0.3), rgba(6, 182, 212, 0.2));
+            border-color: #a78bfa;
+        }
+        .btn-success {
+            background: linear-gradient(95deg, rgba(34, 197, 94, 0.3), rgba(16, 185, 129, 0.2));
+            border-color: #10b981;
+        }
+        .btn-danger {
+            background: linear-gradient(95deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.2));
+            border-color: #ef4444;
+        }
+        .btn-warning {
+            background: linear-gradient(95deg, rgba(245, 158, 11, 0.3), rgba(249, 115, 22, 0.2));
+            border-color: #f59e0b;
+        }
+
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        /* SQL 分段展示区块 */
+        .sql-split-area {
+            margin-top: 1rem;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 1.2rem;
+            padding: 1rem;
+        }
+        .sql-block {
+            background: rgba(10, 20, 30, 0.6);
+            border-radius: 1rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-left: 3px solid #8b5cf6;
+        }
+        .sql-block-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.8rem;
+            margin-bottom: 0.8rem;
+            font-weight: 600;
+            color: #c084fc;
+        }
+        .sql-pre {
+            background: #0a0f1c;
+            padding: 1rem;
+            border-radius: 0.8rem;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.75rem;
+            line-height: 1.5;
+            color: #b9e6f3;
+            white-space: pre-wrap;
+            word-break: break-all;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .micro-btn {
+            font-size: 0.7rem;
+            padding: 0.3rem 0.9rem;
+        }
+
+        .tip {
+            font-size: 0.7rem;
+            color: #7e8ba0;
+            margin-top: 0.8rem;
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+            border-radius: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #8b5cf6;
+            border-radius: 6px;
+        }
+        @media (max-width: 800px) {
+            body { padding: 1rem; }
+            .glass-container { padding: 1.2rem; }
+            .role-grid { grid-template-columns: 1fr; }
+            .row-two { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="bg-canvas"></canvas>
+    <div class="mouse-glow" id="mouseGlow"></div>
+
+    <div class="glass-container">
+        <div class="title-section">
+            <h1>⚙️ 多角色盟市账号启停</h1>
+            <div class="sub">全盟市 · 本级直属 + 下级全囊括 · 赛博控制台</div>
+        </div>
+
+        <!-- 模式切换卡片 -->
+        <div class="glass-card">
+            <div class="card-header">🔍 筛选模式</div>
+            <div class="radio-group">
+                <label><input type="radio" name="searchMode" id="modeDept" value="dept" checked onchange="changeMode()"> 按部门行政层级筛选 (日常正式操作)</label>
+                <label><input type="radio" name="searchMode" id="modeAll" value="all" onchange="changeMode()"> 全库兜底查询 (异常缺层级数据，仅查询/不可批量启停)</label>
+            </div>
+        </div>
+
+        <!-- 单位 + SQL类型 -->
+        <div class="glass-card">
+            <div class="card-header">📌 核心参数</div>
+            <div class="row-two">
+                <div class="form-item">
+                    <label style="color:#a78bfa;">🏛️ 选择单位 (教育厅 + 12盟市)</label>
+                    <select id="citySelect" class="glass-select">
+                        <option value="1">内蒙古自治区教育厅</option>
+                        <option value="2">内蒙古自治区呼和浩特市教育局</option>
+                        <option value="13">内蒙古自治区包头市教育局</option>
+                        <option value="25">内蒙古自治区乌海市教育局</option>
+                        <option value="30">内蒙古自治区赤峰市教育局</option>
+                        <option value="44">内蒙古自治区通辽市教育局</option>
+                        <option value="55">内蒙古自治区鄂尔多斯市教育局</option>
+                        <option value="67">内蒙古自治区呼伦贝尔市教育局</option>
+                        <option value="84">内蒙古自治区巴彦淖尔市教育局</option>
+                        <option value="93">内蒙古自治区乌兰察布市教育局</option>
+                        <option value="106">内蒙古自治区兴安盟教育局</option>
+                        <option value="113">内蒙古自治区锡林郭勒盟教育局</option>
+                        <option value="127">内蒙古自治区阿拉善盟教育局</option>
+                    </select>
+                </div>
+                <div class="form-item">
+                    <label style="color:#a78bfa;">📄 SQL生成类型</label>
+                    <select id="sqlType" class="glass-select">
+                        <option value="query">1、预览查询清单SQL</option>
+                        <option value="update">2、事务启停SQL(选中单位Y，其余N)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- 角色多选区域 -->
+        <div class="glass-card">
+            <div class="card-header">🎭 目标角色 (可多选)</div>
+            <div class="button-group">
+                <button class="btn-neon btn-primary" onclick="checkAll()">✅ 全选角色</button>
+                <button class="btn-neon btn-warning" onclick="unCheckAll()">❌ 取消全选</button>
+            </div>
+            <div class="role-grid" id="roleBox">
+                <!-- 由js动态生成，保证完整角色列表且方便维护，但也可直接写静态，为了整洁使用js注入 -->
+            </div>
+        </div>
+
+        <!-- 操作按钮组 -->
+        <div class="button-group">
+            <button class="btn-neon btn-primary" id="genSqlBtn">⚡ 生成SQL语句</button>
+            <button class="btn-neon btn-success" id="copyFullBtn">📋 一键复制完整SQL</button>
+            <button class="btn-neon btn-danger" id="clearBtn">🗑️ 清空文本框</button>
+        </div>
+
+        <!-- 完整SQL展示区 (原始样式保留) -->
+        <div class="glass-card">
+            <div class="card-header">📜 完整MySQL语句 (可复制全部)</div>
+            <textarea id="sqlResult" class="glass-input" readonly rows="8" placeholder="勾选角色+选择筛选范围后生成完整SQL..."></textarea>
+        </div>
+
+        <!-- 优化显示: 结构化分段展示 (避免复制错) -->
+        <div class="glass-card" id="splitSqlPanel" style="display: none;">
+            <div class="card-header">🔧 分段语句 (精准复制)</div>
+            <div id="splitSqlContainer"></div>
+        </div>
+        <div class="tip">💡 提示：全盟市规则 <span style="color:#f472b6;">AND (sd.id='选中ID' OR sd.ancestors LIKE '%选中ID%')</span> 涵盖本级+下级。生成事务更新时会自动拆分启用/停用/校验片段，支持独立复制。</div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
+            }
+        }
+    </script>
+    <script type="module">
+        import * as THREE from 'three';
+        const canvas = document.getElementById('bg-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, alpha: false });
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x03050b);
+        const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 1.5, 14);
+        camera.lookAt(0, 0, 0);
+        
+        // 粒子层1 紫罗兰
+        const particleCount = 2100;
+        const geom = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        for (let i = 0; i < particleCount; i++) {
+            positions[i*3] = (Math.random() - 0.5) * 38;
+            positions[i*3+1] = (Math.random() - 0.5) * 24;
+            positions[i*3+2] = (Math.random() - 0.5) * 30 - 8;
+        }
+        geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const particleMat = new THREE.PointsMaterial({ color: 0x8b5cf6, size: 0.09, transparent: true, opacity: 0.65, blending: THREE.AdditiveBlending });
+        const particleSys = new THREE.Points(geom, particleMat);
+        scene.add(particleSys);
+        
+        // 粒子层2 青色
+        const geom2 = new THREE.BufferGeometry();
+        const pos2 = new Float32Array(1400 * 3);
+        for (let i = 0; i < 1400; i++) {
+            pos2[i*3] = (Math.random() - 0.5) * 44;
+            pos2[i*3+1] = (Math.random() - 0.5) * 28;
+            pos2[i*3+2] = (Math.random() - 0.5) * 34 - 10;
+        }
+        geom2.setAttribute('position', new THREE.BufferAttribute(pos2, 3));
+        const mat2 = new THREE.PointsMaterial({ color: 0x06b6d4, size: 0.08, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending });
+        const particleSys2 = new THREE.Points(geom2, mat2);
+        scene.add(particleSys2);
+        
+        // 粒子层3 粉色
+        const geom3 = new THREE.BufferGeometry();
+        const pos3 = new Float32Array(900 * 3);
+        for (let i = 0; i < 900; i++) {
+            pos3[i*3] = (Math.random() - 0.5) * 48;
+            pos3[i*3+1] = (Math.random() - 0.5) * 30;
+            pos3[i*3+2] = (Math.random() - 0.5) * 38 - 12;
+        }
+        geom3.setAttribute('position', new THREE.BufferAttribute(pos3, 3));
+        const mat3 = new THREE.PointsMaterial({ color: 0xf472b6, size: 0.1, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending });
+        const particleSys3 = new THREE.Points(geom3, mat3);
+        scene.add(particleSys3);
+        
+        const ringCount = 380;
+        const ringGeo = new THREE.BufferGeometry();
+        const ringPositions = new Float32Array(ringCount * 3);
+        for (let i = 0; i < ringCount; i++) {
+            const angle = (i / ringCount) * Math.PI * 2;
+            const r = 5.2;
+            ringPositions[i*3] = Math.cos(angle) * r;
+            ringPositions[i*3+1] = Math.sin(angle) * r * 0.4;
+            ringPositions[i*3+2] = -1.8;
+        }
+        ringGeo.setAttribute('position', new THREE.BufferAttribute(ringPositions, 3));
+        const ringPoints = new THREE.Points(ringGeo, new THREE.PointsMaterial({ color: 0xa78bfa, size: 0.09, blending: THREE.AdditiveBlending }));
+        scene.add(ringPoints);
+        scene.fog = new THREE.FogExp2(0x03050b, 0.008);
+        
+        let targetCamX = 0, targetCamY = 0;
+        window.addEventListener('mousemove', (e) => {
+            let mx = (e.clientX / window.innerWidth) * 2 - 1;
+            let my = (e.clientY / window.innerHeight) * 2 - 1;
+            targetCamX = mx * 0.9;
+            targetCamY = my * 0.6;
+        });
+        let time = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.007;
+            particleSys.rotation.y = time * 0.06;
+            particleSys.rotation.x = Math.sin(time * 0.18) * 0.08;
+            particleSys2.rotation.y = time * 0.04;
+            particleSys3.rotation.x = time * 0.03;
+            ringPoints.rotation.z = time * 0.12;
+            camera.position.x += (targetCamX * 0.5 - camera.position.x) * 0.04;
+            camera.position.y += (targetCamY * 0.4 - camera.position.y) * 0.04;
+            camera.lookAt(0, 0, 0);
+            renderer.render(scene, camera);
+        }
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        window.addEventListener('resize', onResize);
+        animate();
+    </script>
+
+    <script>
+        // 鼠标光晕跟随
+        const glow = document.getElementById('mouseGlow');
+        document.addEventListener('mousemove', (e) => {
+            glow.style.left = e.clientX + 'px';
+            glow.style.top = e.clientY + 'px';
+        });
+
+        // ========= 角色列表 (完整保留原所有角色) =========
+        const roleList = [
+            "校服系统管理员","超级管理员","特级管理员","重置密码","教育厅制证二级管理员","教育厅管理员",
+            "教育装备自治区管理人员","基教处证照设置人员","u-key登录","盟市管理员","普通角色","测试角色",
+            "二级管理员","购买校服举报","违规招生举报","违规征订教材","我和我的老师","老师，我想对您说",
+            "我心中的好老师","教育世家","随手拍","师德师风","举报反馈","校园餐","校外培训","校园餐投诉举报",
+            "教师减负","补课举报","职业技术学校批量编辑","义务教育和高中教育学校证照制作负责人",
+            "教育局证照签发确定人员","手动导入学号并制高中毕业证","校服管理","个人签名负责人","教育局数据审核人员",
+            "学校盖章负责人","批量编辑","教育局盖章人员","基教处数据审核","职业技术学校证照制作负责人",
+            "教师资格证审批","竞赛单位","教育局竞赛单位填报审核人员","教师资格证申请","报告学校角色",
+            "报告旗县角色","报告盟市角色","报平安发布统计","报平安人员","调查问卷","学校校服上报","教育局校服备案"
+        ];
+        
+        function buildRoleBox() {
+            const container = document.getElementById('roleBox');
+            if (!container) return;
+            container.innerHTML = '';
+            roleList.forEach(role => {
+                const div = document.createElement('div');
+                div.className = 'role-item';
+                div.innerHTML = `<input type="checkbox" class="roleck" value="${escapeHtml(role)}"> <span>${role}</span>`;
+                container.appendChild(div);
+            });
+        }
+        function escapeHtml(str) { return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;});}
+        
+        function checkAll() { document.querySelectorAll('.roleck').forEach(cb => cb.checked = true); }
+        function unCheckAll() { document.querySelectorAll('.roleck').forEach(cb => cb.checked = false); }
+        
+        function changeMode() {
+            const mode = document.querySelector('input[name="searchMode"]:checked').value;
+            const citySel = document.getElementById('citySelect');
+            const sqlTypeSel = document.getElementById('sqlType');
+            if (mode === 'all') {
+                citySel.disabled = true;
+                sqlTypeSel.value = 'query';
+                sqlTypeSel.options[1].disabled = true;
+            } else {
+                citySel.disabled = false;
+                sqlTypeSel.options[1].disabled = false;
+            }
+        }
+        
+        // 生成SQL核心逻辑 (保留原有业务)
+        function generateFullSql() {
+            const checked = Array.from(document.querySelectorAll('.roleck:checked')).map(cb => cb.value);
+            if (checked.length === 0) { alert("请至少勾选一个角色！"); return null; }
+            const roleStr = checked.map(v => `'${v.replace(/'/g, "''")}'`).join(',');
+            const cityId = document.getElementById('citySelect').value;
+            const type = document.getElementById('sqlType').value;
+            const mode = document.querySelector('input[name="searchMode"]:checked').value;
+            let deptCond = '';
+            if (mode === 'dept') {
+                deptCond = `AND (sd.id = '${cityId}' OR sd.ancestors LIKE '%${cityId}%')`;
+            }
+            if (type === 'query') {
+                return `-- 预览查询清单 (角色：${checked.join(',')})\nSELECT DISTINCT\nsu.id,\nsu.dept_name,\nsu.status\nFROM sys_user su\nINNER JOIN sys_dept sd ON su.dept_id = sd.id\nINNER JOIN sys_user_role sur ON su.id = sur.user_id\nINNER JOIN sys_role sr ON sur.role_id = sr.id\nWHERE sr.name IN(${roleStr})\n${deptCond};`;
+            } else {
+                const condY = `AND (sd.id = '${cityId}' OR sd.ancestors LIKE '%${cityId}%')`;
+                const condN = `AND NOT (sd.id = '${cityId}' OR sd.ancestors LIKE '%${cityId}%')`;
+                return `START TRANSACTION;\n-- 启用选中单位账号 (status='Y')\nUPDATE sys_user su\nINNER JOIN sys_dept sd ON su.dept_id = sd.id\nINNER JOIN sys_user_role sur ON su.id = sur.user_id\nINNER JOIN sys_role sr ON sur.role_id = sr.id\nSET su.status = 'Y'\nWHERE sr.name IN(${roleStr})\n${condY};\n\n-- 停用其他单位账号 (status='N')\nUPDATE sys_user su\nINNER JOIN sys_dept sd ON su.dept_id = sd.id\nINNER JOIN sys_user_role sur ON su.id = sur.user_id\nINNER JOIN sys_role sr ON sur.role_id = sr.id\nSET su.status = 'N'\nWHERE sr.name IN(${roleStr})\n${condN};\n\n-- 全量校验查询\nSELECT DISTINCT su.dept_name, su.status FROM sys_user su\nINNER JOIN sys_dept sd ON su.dept_id = sd.id\nINNER JOIN sys_user_role sur ON su.id = sur.user_id\nINNER JOIN sys_role sr ON sur.role_id = sr.id\nWHERE sr.name IN(${roleStr});\n\n-- 无误提交：COMMIT;  出错回滚：ROLLBACK;`;
+            }
+        }
+        
+        // 更新界面: 完整SQL + 分段展示
+        function updateSqlDisplay() {
+            const sql = generateFullSql();
+            if (!sql) return;
+            const sqlResultArea = document.getElementById('sqlResult');
+            sqlResultArea.value = sql;
+            
+            const splitPanel = document.getElementById('splitSqlPanel');
+            const container = document.getElementById('splitSqlContainer');
+            if (!splitPanel || !container) return;
+            const sqlType = document.getElementById('sqlType').value;
+            if (sqlType === 'query') {
+                splitPanel.style.display = 'block';
+                container.innerHTML = `
+                    <div class="sql-block">
+                        <div class="sql-block-title">📋 预览查询SQL <button class="btn-neon micro-btn" onclick="copySpecificText(\`${escapeJs(sql)}\`)">复制本段</button></div>
+                        <pre class="sql-pre">${escapeHtml(sql)}</pre>
+                    </div>`;
+            } else {
+                // 事务更新: 拆分启用、停用、校验三个部分
+                const lines = sql.split('\n');
+                let enablePart = '', disablePart = '', verifyPart = '';
+                let section = '';
+                for (let line of lines) {
+                    if (line.includes('-- 启用选中单位账号')) section = 'enable';
+                    else if (line.includes('-- 停用其他单位账号')) section = 'disable';
+                    else if (line.includes('-- 全量校验查询')) section = 'verify';
+                    if (section === 'enable') enablePart += line + '\n';
+                    else if (section === 'disable') disablePart += line + '\n';
+                    else if (section === 'verify') verifyPart += line + '\n';
+                }
+                // 再加上前后事务声明部分
+                const transactionStart = "START TRANSACTION;\n";
+                const commitNote = "\n-- 无误提交：COMMIT;  出错回滚：ROLLBACK;";
+                container.innerHTML = `
+                    <div class="sql-block"><div class="sql-block-title">🚀 启用更新 (status='Y') <button class="btn-neon micro-btn" onclick="copySpecificText('${escapeJs(enablePart)}')">复制本段</button></div><pre class="sql-pre">${escapeHtml(enablePart)}</pre></div>
+                    <div class="sql-block"><div class="sql-block-title">⛔ 停用更新 (status='N') <button class="btn-neon micro-btn" onclick="copySpecificText('${escapeJs(disablePart)}')">复制本段</button></div><pre class="sql-pre">${escapeHtml(disablePart)}</pre></div>
+                    <div class="sql-block"><div class="sql-block-title">🔎 校验查询 <button class="btn-neon micro-btn" onclick="copySpecificText('${escapeJs(verifyPart)}')">复制本段</button></div><pre class="sql-pre">${escapeHtml(verifyPart)}</pre></div>
+                    <div class="sql-block"><div class="sql-block-title">📦 事务头+尾 <button class="btn-neon micro-btn" onclick="copySpecificText('${escapeJs(transactionStart + commitNote)}')">复制头尾</button></div><pre class="sql-pre">${escapeHtml(transactionStart + commitNote)}</pre></div>
+                `;
+                splitPanel.style.display = 'block';
+            }
+        }
+        
+        function escapeHtml(str) { return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+        function escapeJs(str) { return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/`/g, '\\`').replace(/\n/g, '\\n'); }
+        window.copySpecificText = function(text) {
+            navigator.clipboard.writeText(text).then(() => alert("✅ 已复制片段")).catch(() => alert("复制失败"));
+        };
+        
+        function copyFullSql() {
+            const t = document.getElementById('sqlResult');
+            if (!t.value) { alert("请先生成SQL"); return; }
+            t.select();
+            navigator.clipboard.writeText(t.value).then(() => alert("完整SQL已复制"));
+        }
+        function clearSql() { document.getElementById('sqlResult').value = ''; document.getElementById('splitSqlPanel').style.display = 'none'; }
+        
+        // 事件绑定
+        document.getElementById('genSqlBtn').addEventListener('click', updateSqlDisplay);
+        document.getElementById('copyFullBtn').addEventListener('click', copyFullSql);
+        document.getElementById('clearBtn').addEventListener('click', clearSql);
+        window.changeMode = changeMode;
+        window.checkAll = checkAll;
+        window.unCheckAll = unCheckAll;
+        
+        buildRoleBox();
+        changeMode();  // 初始化禁用状态
+    </script>
+</body>
+</html>
