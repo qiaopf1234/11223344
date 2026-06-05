@@ -12,8 +12,8 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: '#00D4FF',
-                        secondary: '#00FFA3',
+                        primary: '#00D8FF',
+                        secondary: '#00FFA1',
                     }
                 }
             }
@@ -38,13 +38,13 @@
                 box-shadow: 0 8px 32px rgba(0, 212, 255, 0.2);
             }
             .btn-primary {
-                background: linear-gradient(135deg, #00D4FF, #00FFA3);
+                background: linear-gradient(135deg, #00D8FF, #00FFA1);
             }
             .sql-keyword { color: #0066CC; font-weight: 600; }
             .dark .sql-keyword { color: #5CC8FF; }
             .sql-function { color: #008000; font-weight: 600; }
             .dark .sql-function { color: #9ECDCA; }
-            .sql-string { color: #A31515; }
+            .sql-string { color: #A35100; }
             .dark .sql-string { color: #CE9178; }
             .sql-comment { color: #008000; font-style: italic; }
             .dark .sql-comment { color: #6A9955; }
@@ -488,14 +488,23 @@ function renderAll(){
 }
 
 // ==============================================
-// 🔥 GIST 云端同步（使用你提供的信息）
+// 🔥 GIST 云端同步 —— 已修改：代码不写死Token
 // ==============================================
 const GIST_ID = "2f909bff31687c96094eef5006bc09d4";
-const GIT_TOKEN = "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";
 const FILE_NAME = "sql_db.json";
+
+// 从本地获取Token，没有就弹窗输入
+let GIT_TOKEN = localStorage.getItem("github_gist_token");
+if (!GIT_TOKEN) {
+    GIT_TOKEN = prompt("请输入你的 GitHub Gist 令牌：\n（只需输入一次，后续自动保存）", "");
+    if (GIT_TOKEN) {
+        localStorage.setItem("github_gist_token", GIT_TOKEN);
+    }
+}
 
 // 备份到云端
 async function backupToCloud() {
+    if (!GIT_TOKEN) { alert("请先设置令牌再备份！"); return; }
     const localData = localStorage.getItem('sqlTool');
     if (!localData) { alert("暂无数据可备份"); return; }
     const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
@@ -508,24 +517,25 @@ async function backupToCloud() {
             files: { [FILE_NAME]: { content: localData } }
         })
     });
-    res.ok ? alert("✅ 备份成功！所有SQL已存云端") : alert("❌ 备份失败");
+    res.ok ? alert("✅ 备份成功！所有SQL已存云端") : alert("❌ 备份失败，请检查令牌");
 }
 
 // 从云端恢复
 async function restoreFromCloud() {
+    if (!GIT_TOKEN) { alert("请先设置令牌再恢复！"); return; }
     if (!confirm("恢复会覆盖本地分类和SQL，确定继续吗？")) return;
-    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-        headers: { 'Authorization': `Bearer ${GIT_TOKEN}` }
-    });
-    const json = await res.json();
-    const cloudData = JSON.parse(json.files[FILE_NAME].content);
-    
-    // 忽略密码字段
-    if(cloudData.config) delete cloudData.config.password;
-    
-    localStorage.setItem('sqlTool', JSON.stringify(cloudData));
-    location.reload();
-    alert("✅ 恢复成功！页面已刷新");
+    try {
+        const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+            headers: { 'Authorization': `Bearer ${GIT_TOKEN}` }
+        });
+        const json = await res.json();
+        const cloudData = JSON.parse(json.files[FILE_NAME].content);
+        localStorage.setItem('sqlTool', JSON.stringify(cloudData));
+        location.reload();
+        alert("✅ 恢复成功！");
+    } catch (e) {
+        alert("❌ 恢复失败：" + e.message);
+    }
 }
 
 // 初始化直接进入
