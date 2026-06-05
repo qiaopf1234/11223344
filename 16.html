@@ -103,30 +103,22 @@
             border-radius: 3px;
             margin: 4px 0;
         }
-        #passwordMask {
-            background: rgba(0,0,0,0.7);
-        }
     </style>
 </head>
 <body class="text-gray-800 dark:text-gray-200 p-4 md:p-8">
 <canvas id="particles"></canvas>
 
-<!-- 密码弹窗 -->
-<div id="passwordMask" class="fixed inset-0 z-50 flex items-center justify-center">
-    <div class="glass w-full max-w-sm p-8 rounded-2xl">
-        <h2 class="text-2xl font-bold text-center mb-2 flex items-center justify-center gap-2 text-primary">
-            <i class="fa fa-lock"></i> 工具密码验证
-        </h2>
-        <p class="text-center text-gray-300 text-sm mb-6">首次使用请设置密码，后续输入密码登录</p>
-        <input id="pwdInput" type="password" placeholder="请输入密码" class="w-full bg-gray-700/50 border border-gray-600 rounded-lg p-3 mb-4 text-white">
-        <button id="loginBtn" class="btn-primary w-full text-white p-3 rounded-lg font-medium">解锁进入</button>
-    </div>
-</div>
-
-<!-- 主内容区 默认隐藏 -->
-<div class="max-w-6xl mx-auto relative z-10 hidden" id="mainContent">
+<!-- 主内容区 默认显示 -->
+<div class="max-w-6xl mx-auto relative z-10" id="mainContent">
     <div class="flex justify-between items-center mb-4">
-        <div></div>
+        <div class="flex gap-2">
+            <button onclick="backupToCloud()" class="px-3 py-1 rounded bg-green-500 text-white text-sm">
+                <i class="fa fa-cloud-upload"></i> 云端备份
+            </button>
+            <button onclick="restoreFromCloud()" class="px-3 py-1 rounded bg-blue-500 text-white text-sm">
+                <i class="fa fa-cloud-download"></i> 云端恢复
+            </button>
+        </div>
         <div class="flex gap-3">
             <button onclick="setCollapseHeight()" class="px-3 py-1 rounded bg-white/50 dark:bg-gray-700/50 text-sm">
                 <i class="fa fa-arrows-v mr-1"></i> 折叠高度
@@ -144,7 +136,7 @@
         <h1 class="text-4xl md:text-5xl font-bold mb-3 flex items-center justify-center gap-3">
             <i class="fa fa-database text-primary"></i> SQL语句保存工具
         </h1>
-        <p class="text-gray-600 dark:text-gray-400">分业务管理SQL | 折叠展开 | 语法高亮 | 密码保护</p>
+        <p class="text-gray-600 dark:text-gray-400">分业务管理SQL | 折叠展开 | 语法高亮</p>
     </header>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -243,56 +235,12 @@ let data = JSON.parse(localStorage.getItem('sqlTool')) || {
     sqlList: [],
     currentCate: '用户数据',
     config: {
-        password: "",
         collapseHeight: 120,
         sortBy: "time",
         sortOrder: "desc",
         darkMode: false
     }
 };
-
-// ========== 密码登录核心逻辑（重写，稳定版） ==========
-const pwdMask = document.getElementById('passwordMask');
-const mainContent = document.getElementById('mainContent');
-const pwdInput = document.getElementById('pwdInput');
-const loginBtn = document.getElementById('loginBtn');
-
-// 登录函数
-function doLogin(){
-    const inputPwd = pwdInput.value.trim();
-    // 首次设置密码
-    if(!data.config.password){
-        if(!inputPwd){
-            alert("请设置登录密码！");
-            return;
-        }
-        data.config.password = inputPwd;
-        localStorage.setItem('sqlTool', JSON.stringify(data));
-        alert("密码设置成功，已进入系统！");
-        pwdMask.classList.add('hidden');
-        mainContent.classList.remove('hidden');
-        initTheme();
-        renderAll();
-        return;
-    }
-    // 密码校验
-    if(inputPwd === data.config.password){
-        pwdMask.classList.add('hidden');
-        mainContent.classList.remove('hidden');
-        initTheme();
-        renderAll();
-    }else{
-        alert("密码错误，请重新输入！");
-        pwdInput.value = "";
-        pwdInput.focus();
-    }
-}
-
-// 绑定点击 + 回车事件
-loginBtn.addEventListener('click', doLogin);
-pwdInput.addEventListener('keydown', function(e){
-    if(e.key === 'Enter') doLogin();
-});
 
 // ========== 主题 ==========
 function initTheme(){
@@ -538,6 +486,51 @@ function renderAll(){
     renderCate();
     renderSql();
 }
+
+// ==============================================
+// 🔥 GIST 云端同步（使用你提供的信息）
+// ==============================================
+const GIST_ID = "2f909bff31687c96094eef5006bc09d4";
+const GIT_TOKEN = "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";
+const FILE_NAME = "sql_db.json";
+
+// 备份到云端
+async function backupToCloud() {
+    const localData = localStorage.getItem('sqlTool');
+    if (!localData) { alert("暂无数据可备份"); return; }
+    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+        method: 'PATCH',
+        headers: {
+            'Authorization': `Bearer ${GIT_TOKEN}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            files: { [FILE_NAME]: { content: localData } }
+        })
+    });
+    res.ok ? alert("✅ 备份成功！所有SQL已存云端") : alert("❌ 备份失败");
+}
+
+// 从云端恢复
+async function restoreFromCloud() {
+    if (!confirm("恢复会覆盖本地分类和SQL，确定继续吗？")) return;
+    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+        headers: { 'Authorization': `Bearer ${GIT_TOKEN}` }
+    });
+    const json = await res.json();
+    const cloudData = JSON.parse(json.files[FILE_NAME].content);
+    
+    // 忽略密码字段
+    if(cloudData.config) delete cloudData.config.password;
+    
+    localStorage.setItem('sqlTool', JSON.stringify(cloudData));
+    location.reload();
+    alert("✅ 恢复成功！页面已刷新");
+}
+
+// 初始化直接进入
+initTheme();
+renderAll();
 </script>
 </body>
 </html>
