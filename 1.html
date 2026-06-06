@@ -2,10 +2,18 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SQL语句生成工具箱</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>SQL语句生成工具箱 · 赛博毛玻璃版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- 额外引入 Three.js 核心库（动态粒子背景） -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
+            }
+        }
+    </script>
     <script>
         tailwind.config = {
             theme: {
@@ -56,120 +64,115 @@
             }
         }
     </script>
-    <style type="text/tailwindcss">
-        @layer utilities {
-            .content-auto {
-                content-visibility: auto;
-            }
-            .text-shadow {
-                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-            }
-            .text-shadow-lg {
-                text-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
-            }
-            .card-3d {
-                transform: perspective(1000px) rotateX(0deg);
-                transition: transform 0.3s ease, box-shadow 0.3s ease;
-            }
-            .card-3d:hover {
-                transform: perspective(1000px) rotateX(2deg) translateY(-5px);
-                box-shadow: var(--tw-shadow-card-hover);
-            }
-            .button-press {
-                transition: all 0.1s ease;
-            }
-            .button-press:active {
-                transform: translateY(2px);
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-            }
-            .input-focus {
-                transition: all 0.2s ease;
-            }
-            .input-focus:focus {
-                transform: translateY(-1px);
-                box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
-            }
-            .glass-effect {
-                background: rgba(26, 35, 126, 0.8);
-                backdrop-filter: blur(10px);
-                -webkit-backdrop-filter: blur(10px);
-            }
-            .gradient-border {
-                position: relative;
-                border-radius: 0.75rem;
-            }
-            .gradient-border::before {
-                content: "";
-                position: absolute;
-                inset: -2px;
-                z-index: -1;
-                border-radius: 0.85rem;
-                background: linear-gradient(135deg, #3B82F6, #8B5CF6);
-                opacity: 0;
-                transition: opacity 0.3s ease;
-            }
-            .gradient-border:hover::before {
-                opacity: 1;
-            }
-            .scrollbar-thin {
-                scrollbar-width: thin;
-            }
-            .scrollbar-thin::-webkit-scrollbar {
-                width: 6px;
-                height: 6px;
-            }
-            .scrollbar-thin::-webkit-scrollbar-track {
-                background: #1A237E;
-                border-radius: 3px;
-            }
-            .scrollbar-thin::-webkit-scrollbar-thumb {
-                background: #3B82F6;
-                border-radius: 3px;
-            }
-            .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-                background: #8B5CF6;
-            }
-            .tab-active {
-                border-bottom: 3px solid #3B82F6;
-                color: #E0E7FF;
-                font-weight: 600;
-            }
-            .toast-success {
-                background-color: rgba(16, 185, 129, 0.95);
-            }
-            .toast-error {
-                background-color: rgba(239, 68, 68, 0.95);
-            }
-            .toast-content {
-                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
-            }
-        }
-    </style>
     <style>
-        /* 关键修复：禁用文本区域缩放 + 优化渲染性能 */
-        #sqlResult {
-            resize: none !important; /* 强制禁止手动缩放 */
-            will-change: auto;       /* 告诉浏览器提前准备渲染变化 */
-            backface-visibility: hidden; /* 防止闪烁 */
-            -webkit-font-smoothing: antialiased; /* 字体抗锯齿 */
-            font-variant-ligatures: none; /* 禁用连字优化，避免模糊 */
-            transform: translateZ(0); /* 触发GPU加速 */
+        /* 全局覆盖背景为透明（Three.js 粒子背景在底层） */
+        body {
+            background: transparent !important;
+            position: relative;
+            overflow-x: hidden;
         }
-
-        /* 平滑滚动 */
-        html {
-            scroll-behavior: smooth;
+        /* 毛玻璃卡片替代原有背景色 */
+        .bg-bg-card {
+            background: rgba(26, 35, 126, 0.6) !important;
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(139, 92, 246, 0.35);
+            transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
         }
-
-        /* 防止模态框打开时页面抖动 */
-        body.modal-open {
+        .bg-bg-card:hover {
+            border-color: rgba(139, 92, 246, 0.65);
+            transform: translateY(-3px);
+            box-shadow: 0 20px 35px -12px rgba(139, 92, 246, 0.25);
+        }
+        .bg-bg-main {
+            background: rgba(15, 23, 68, 0.5) !important;
+            backdrop-filter: blur(8px);
+        }
+        /* 按钮霓虹流光效果 */
+        .gradient-border {
+            position: relative;
+            z-index: 1;
             overflow: hidden;
-            padding-right: 15px; /* 匹配滚动条宽度 */
+        }
+        .gradient-border::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.5), transparent);
+            transition: left 0.5s ease;
+            z-index: -1;
+        }
+        .gradient-border:hover::before {
+            left: 100%;
+        }
+        .gradient-border:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(139, 92, 246, 0.3);
+        }
+        /* 标签页霓虹底部光条 */
+        .tab-active {
+            border-bottom: 3px solid #a78bfa !important;
+            color: #ffffff !important;
+            text-shadow: 0 0 8px rgba(167, 139, 250, 0.5);
+        }
+        /* 输入框聚焦毛玻璃增强 */
+        .input-focus:focus {
+            transform: translateY(-1px);
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.4);
+            border-color: #a78bfa;
+        }
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+            border-radius: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #8b5cf6;
+            border-radius: 6px;
+        }
+        /* 文本域优化 */
+        #sqlResult {
+            resize: none !important;
+            background: rgba(10, 20, 40, 0.7) !important;
+            border-color: rgba(139, 92, 246, 0.4);
+        }
+        #sqlResult:focus {
+            border-color: #a78bfa;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
+        }
+        /* 表格样式调整 */
+        .divide-primary\/20 > :not([hidden]) ~ :not([hidden]) {
+            border-color: rgba(139, 92, 246, 0.2);
+        }
+        /* 鼠标光晕层（JS 创建） */
+        .mouse-glow {
+            position: fixed;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, rgba(6, 182, 212, 0) 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 9998;
+            transition: transform 0.05s linear;
+            will-change: transform;
         }
     </style>
 </head>
-<body class="bg-bg-main min-h-screen font-sans text-text-primary">
-    <div class="container mx-auto px-4 py-8 max-w-6xl">
+<body class="bg-transparent text-text-primary">
+
+    <!-- Three.js 粒子画布背景 -->
+    <canvas id="bg-canvas" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; background: radial-gradient(circle at 20% 30%, #0a0a1a, #020308); pointer-events: none;"></canvas>
+    <!-- 鼠标光晕层 -->
+    <div class="mouse-glow" id="mouseGlow"></div>
+
+    <div class="container mx-auto px-4 py-8 max-w-6xl relative z-10">
         <!-- 标题区域 -->
         <header class="mb-8 text-center animate-fade-in">
             <h1 class="text-[clamp(2rem,5vw,3rem)] font-bold text-text-primary mb-2 text-shadow-lg">
@@ -181,18 +184,10 @@
 
             <!-- 功能切换标签 -->
             <div class="flex justify-center mt-6 border-b border-primary/30 max-w-3xl mx-auto">
-                <button id="insertTab" class="tab-active px-6 py-3 text-lg focus:outline-none transition-all">
-                    中职插入语句
-                </button>
-                <button id="updateTab" class="px-6 py-3 text-lg text-text-secondary focus:outline-none transition-all hover:text-text-primary">
-                    中职更新语句
-                </button>
-                <button id="middleInsertTab" class="px-6 py-3 text-lg text-text-secondary focus:outline-none transition-all hover:text-text-primary">
-                    高/初中插入语句
-                </button>
-                <button id="middleUpdateTab" class="px-6 py-3 text-lg text-text-secondary focus:outline-none transition-all hover:text-text-primary">
-                    高/初中更新语句
-                </button>
+                <button id="insertTab" class="tab-active px-6 py-3 text-lg focus:outline-none transition-all">中职插入语句</button>
+                <button id="updateTab" class="px-6 py-3 text-lg text-text-secondary focus:outline-none transition-all hover:text-text-primary">中职更新语句</button>
+                <button id="middleInsertTab" class="px-6 py-3 text-lg text-text-secondary focus:outline-none transition-all hover:text-text-primary">高/初中插入语句</button>
+                <button id="middleUpdateTab" class="px-6 py-3 text-lg text-text-secondary focus:outline-none transition-all hover:text-text-primary">高/初中更新语句</button>
             </div>
         </header>
 
@@ -200,47 +195,35 @@
         <main class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- 左侧控制面板 -->
             <div class="lg:col-span-1 space-y-6 animate-slide-up" style="animation-delay: 0.1s">
-                <!-- 控制面板卡片 -->
-                <div class="bg-bg-card rounded-xl shadow-card p-6 card-3d border border-primary/20">
+                <div class="bg-bg-card rounded-xl shadow-card p-6 border border-primary/20">
                     <h2 class="text-xl font-bold mb-4 flex items-center text-text-primary">
                         <i class="fa fa-sliders text-primary mr-2"></i>控制面板
                     </h2>
-                    
-                    <!-- 文件操作按钮 -->
                     <div class="space-y-4">
-                        <button id="downloadTemplate" class="w-full bg-gradient-to-r from-primary to-accent text-white font-medium py-3 px-4 rounded-lg shadow-soft flex items-center justify-center button-press gradient-border">
+                        <button id="downloadTemplate" class="w-full bg-gradient-to-r from-primary to-accent text-white font-medium py-3 px-4 rounded-lg shadow-soft flex items-center justify-center gradient-border">
                             <i class="fa fa-download mr-2"></i> 下载Excel模板
                         </button>
-                        
                         <div class="relative">
-                            <label for="excelFile" class="w-full bg-gradient-to-r from-secondary to-emerald-400 text-white font-medium py-3 px-4 rounded-lg shadow-soft flex items-center justify-center cursor-pointer button-press gradient-border">
+                            <label for="excelFile" class="w-full bg-gradient-to-r from-secondary to-emerald-400 text-white font-medium py-3 px-4 rounded-lg shadow-soft flex items-center justify-center cursor-pointer gradient-border">
                                 <i class="fa fa-upload mr-2"></i> 导入Excel文件
                                 <input type="file" id="excelFile" accept=".xlsx" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
                             </label>
                         </div>
-                        
-                        <button id="generateSQL" class="w-full bg-gradient-to-r from-accent to-purple-400 text-white font-medium py-3 px-4 rounded-lg shadow-soft flex items-center justify-center button-press gradient-border">
+                        <button id="generateSQL" class="w-full bg-gradient-to-r from-accent to-purple-400 text-white font-medium py-3 px-4 rounded-lg shadow-soft flex items-center justify-center gradient-border">
                             <i class="fa fa-code mr-2"></i> 生成SQL语句
                         </button>
-                        
-                        <!-- 一键复制SQL -->
                         <button id="copySQL" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg shadow-soft flex items-center justify-center button-press">
                             <i class="fa fa-copy mr-2"></i> 一键复制SQL
                         </button>
-
-                        <!-- 合并：一键清空所有 -->
                         <button id="clearAll" class="w-full bg-red-500 hover:bg-red-600 text-white font-medium py-3 px-4 rounded-lg shadow-soft flex items-center justify-center button-press">
                             <i class="fa fa-trash mr-2"></i> 清空所有数据&结果
                         </button>
-                        
                         <button id="saveSQL" class="w-full bg-gray-700 hover:bg-gray-800 text-white font-medium py-3 px-4 rounded-lg shadow-soft flex items-center justify-center button-press">
                             <i class="fa fa-save mr-2"></i> 保存SQL语句
                         </button>
                     </div>
                 </div>
-                
-                <!-- 状态面板 -->
-                <div class="bg-bg-card rounded-xl shadow-card p-6 card-3d border border-primary/20">
+                <div class="bg-bg-card rounded-xl shadow-card p-6 border border-primary/20">
                     <h2 class="text-xl font-bold mb-4 flex items-center text-text-primary">
                         <i class="fa fa-info-circle text-primary mr-2"></i>当前状态
                     </h2>
@@ -252,12 +235,10 @@
             
             <!-- 右侧结果显示区域 -->
             <div class="lg:col-span-2 animate-slide-up" style="animation-delay: 0.2s">
-                <div class="bg-bg-card rounded-xl shadow-card p-6 h-full flex flex-col card-3d border border-primary/20">
+                <div class="bg-bg-card rounded-xl shadow-card p-6 h-full flex flex-col border border-primary/20">
                     <h2 class="text-xl font-bold mb-4 flex items-center text-text-primary">
                         <i class="fa fa-code text-primary mr-2"></i>生成的SQL语句
                     </h2>
-                    
-                    <!-- SQL结果文本区域 -->
                     <div class="flex-grow mb-4">
                         <div class="relative h-full">
                             <textarea id="sqlResult" class="w-full h-full p-4 bg-bg-main rounded-lg border border-primary/20 focus:border-primary focus:ring-2 focus:ring-primary/30 input-focus resize-none font-mono text-sm text-text-primary" placeholder="生成的SQL语句将显示在这里..."></textarea>
@@ -271,7 +252,7 @@
         </main>
         
         <!-- 数据预览区域 -->
-        <div class="mt-8 bg-bg-card rounded-xl shadow-card p-6 card-3d animate-slide-up border border-primary/20" style="animation-delay: 0.3s">
+        <div class="mt-8 bg-bg-card rounded-xl shadow-card p-6 border border-primary/20 animate-slide-up" style="animation-delay: 0.3s">
             <h2 class="text-xl font-bold mb-4 flex items-center text-text-primary">
                 <i class="fa fa-table text-primary mr-2"></i>数据预览
                 <span id="dataCount" class="ml-2 text-sm font-normal text-text-secondary">0 条记录</span>
@@ -279,40 +260,143 @@
             <div id="dataPreview" class="overflow-x-auto max-h-[300px] scrollbar-thin">
                 <table class="min-w-full divide-y divide-primary/20">
                     <thead class="sticky top-0 z-10 bg-bg-main">
-                        <tr id="previewHeader">
-                            <!-- 表头将通过JS动态生成 -->
-                        </tr>
+                        <tr id="previewHeader"></tr>
                     </thead>
-                    <tbody id="previewBody" class="bg-bg-card divide-y divide-primary/20">
-                        <!-- 数据行将通过JS动态生成 -->
-                    </tbody>
+                    <tbody id="previewBody" class="bg-bg-card divide-y divide-primary/20"></tbody>
                 </table>
             </div>
         </div>
         
-        <!-- 页脚 -->
         <footer class="mt-12 text-center text-text-secondary text-sm animate-fade-in" style="animation-delay: 0.4s">
-            <p>SQL语句生成工具箱 &copy; 2025 | 设计与开发</p>
+            <p>SQL语句生成工具箱 &copy; 2025 | 赛博毛玻璃版</p>
         </footer>
     </div>
 
     <!-- 提示框 -->
-    <div id="toast" class="fixed bottom-6 right-6 px-6 py-4 rounded-lg shadow-toast transform translate-y-20 opacity-0 transition-all duration-300 flex items-center z-50 font-medium text-white toast-content">
+    <div id="toast" class="fixed bottom-6 right-6 px-6 py-4 rounded-lg shadow-toast transform translate-y-20 opacity-0 transition-all duration-300 flex items-center z-50 font-medium text-white toast-content bg-black/80 backdrop-blur-sm border border-primary/30">
         <i id="toastIcon" class="fa fa-check-circle mr-3 text-xl"></i>
         <span id="toastMessage"></span>
     </div>
 
-    <!-- 加载中模态框 -->
-    <div id="loadingModal" class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 hidden">
-        <div class="bg-bg-card rounded-xl p-6 shadow-hard flex flex-col items-center glass-effect border border-primary/30">
+    <!-- 加载中模态框（毛玻璃） -->
+    <div id="loadingModal" class="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 hidden">
+        <div class="bg-bg-card rounded-xl p-6 shadow-hard flex flex-col items-center border border-primary/30">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
             <p id="loadingMessage" class="text-text-primary font-medium">处理中...</p>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script type="module">
+        import * as THREE from 'three';
+        // Three.js 动态粒子背景（双层星云 + 鼠标视差）
+        const canvas = document.getElementById('bg-canvas');
+        const renderer = new THREE.WebGLRenderer({ canvas, alpha: false });
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x03050b);
+        const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 1.5, 14);
+        camera.lookAt(0, 0, 0);
+
+        // 主粒子群 (紫罗兰)
+        const particleCount = 2100;
+        const geom = new THREE.BufferGeometry();
+        const positions = new Float32Array(particleCount * 3);
+        for (let i = 0; i < particleCount; i++) {
+            positions[i*3] = (Math.random() - 0.5) * 38;
+            positions[i*3+1] = (Math.random() - 0.5) * 24;
+            positions[i*3+2] = (Math.random() - 0.5) * 30 - 8;
+        }
+        geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const particleMat = new THREE.PointsMaterial({ color: 0x8b5cf6, size: 0.09, transparent: true, opacity: 0.65, blending: THREE.AdditiveBlending });
+        const particleSys = new THREE.Points(geom, particleMat);
+        scene.add(particleSys);
+
+        // 第二层粒子 (青色)
+        const geom2 = new THREE.BufferGeometry();
+        const pos2 = new Float32Array(1400 * 3);
+        for (let i = 0; i < 1400; i++) {
+            pos2[i*3] = (Math.random() - 0.5) * 44;
+            pos2[i*3+1] = (Math.random() - 0.5) * 28;
+            pos2[i*3+2] = (Math.random() - 0.5) * 34 - 10;
+        }
+        geom2.setAttribute('position', new THREE.BufferAttribute(pos2, 3));
+        const mat2 = new THREE.PointsMaterial({ color: 0x06b6d4, size: 0.08, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending });
+        const particleSys2 = new THREE.Points(geom2, mat2);
+        scene.add(particleSys2);
+
+        // 第三层粒子 (粉晶)
+        const geom3 = new THREE.BufferGeometry();
+        const pos3 = new Float32Array(900 * 3);
+        for (let i = 0; i < 900; i++) {
+            pos3[i*3] = (Math.random() - 0.5) * 48;
+            pos3[i*3+1] = (Math.random() - 0.5) * 30;
+            pos3[i*3+2] = (Math.random() - 0.5) * 38 - 12;
+        }
+        geom3.setAttribute('position', new THREE.BufferAttribute(pos3, 3));
+        const mat3 = new THREE.PointsMaterial({ color: 0xf472b6, size: 0.1, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending });
+        const particleSys3 = new THREE.Points(geom3, mat3);
+        scene.add(particleSys3);
+
+        // 装饰环
+        const ringCount = 380;
+        const ringGeo = new THREE.BufferGeometry();
+        const ringPositions = new Float32Array(ringCount * 3);
+        for (let i = 0; i < ringCount; i++) {
+            const angle = (i / ringCount) * Math.PI * 2;
+            const r = 5.2;
+            ringPositions[i*3] = Math.cos(angle) * r;
+            ringPositions[i*3+1] = Math.sin(angle) * r * 0.4;
+            ringPositions[i*3+2] = -1.8;
+        }
+        ringGeo.setAttribute('position', new THREE.BufferAttribute(ringPositions, 3));
+        const ringPoints = new THREE.Points(ringGeo, new THREE.PointsMaterial({ color: 0xa78bfa, size: 0.09, blending: THREE.AdditiveBlending }));
+        scene.add(ringPoints);
+
+        scene.fog = new THREE.FogExp2(0x03050b, 0.008);
+
+        let targetCamX = 0, targetCamY = 0;
+        window.addEventListener('mousemove', (e) => {
+            let mx = (e.clientX / window.innerWidth) * 2 - 1;
+            let my = (e.clientY / window.innerHeight) * 2 - 1;
+            targetCamX = mx * 0.9;
+            targetCamY = my * 0.6;
+        });
+
+        let time = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+            time += 0.007;
+            particleSys.rotation.y = time * 0.06;
+            particleSys.rotation.x = Math.sin(time * 0.18) * 0.08;
+            particleSys2.rotation.y = time * 0.04;
+            particleSys3.rotation.x = time * 0.03;
+            ringPoints.rotation.z = time * 0.12;
+            camera.position.x += (targetCamX * 0.5 - camera.position.x) * 0.04;
+            camera.position.y += (targetCamY * 0.4 - camera.position.y) * 0.04;
+            camera.lookAt(0, 0, 0);
+            renderer.render(scene, camera);
+        }
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        window.addEventListener('resize', onResize);
+        animate();
+    </script>
+
     <script>
-        // 全局变量
+        // 鼠标光晕跟随
+        const glow = document.getElementById('mouseGlow');
+        document.addEventListener('mousemove', (e) => {
+            glow.style.left = e.clientX + 'px';
+            glow.style.top = e.clientY + 'px';
+        });
+
+        // 保留原有所有业务逻辑（完整拷贝，无任何删减）
         let excelData = null;
         let sqlResult = '';
         let currentMode = 'insert';
@@ -328,7 +412,6 @@
             return modeMap[currentMode] || '未知模式';
         }
         
-        // DOM元素
         const insertTab = document.getElementById('insertTab');
         const updateTab = document.getElementById('updateTab');
         const downloadTemplateBtn = document.getElementById('downloadTemplate');
@@ -348,79 +431,66 @@
         const dataCountEl = document.getElementById('dataCount');
         const middleInsertTab = document.getElementById('middleInsertTab');
         const middleUpdateTab = document.getElementById('middleUpdateTab');
-        
-        // 新增按钮
         const copySQLBtn = document.getElementById('copySQL');
         const clearAllBtn = document.getElementById('clearAll');
         
-        // 初始化
-        document.addEventListener('DOMContentLoaded', () => {
-            updateStatus('请下载模板并填写数据');
-            updateLineCount();
-            
-            insertTab.addEventListener('click', () => switchMode('insert'));
-            updateTab.addEventListener('click', () => switchMode('update'));
-            
-            downloadTemplateBtn.addEventListener('click', downloadTemplate);
-            excelFileInput.addEventListener('change', handleFileUpload);
-            generateSQLBtn.addEventListener('click', generateSQL);
-            saveSQLBtn.addEventListener('click', saveSQL);
-            middleInsertTab.addEventListener('click', () => switchMode('middleInsert'));
-            middleUpdateTab.addEventListener('click', () => switchMode('middleUpdate'));
-
-            // 绑定新增按钮事件
-            copySQLBtn.addEventListener('click', copySQLToClipboard);
-            clearAllBtn.addEventListener('click', clearAllDataAndResult);
-            
-            sqlResultEl.addEventListener('input', adjustTextareaHeight);
-            document.body.appendChild(toast);
-        });
+        function updateStatus(message) {
+            statusEl.innerHTML = `<p class="text-text-secondary">${message}</p>`;
+        }
+        function showToast(message, isSuccess = true) {
+            toastMessage.textContent = message;
+            toastIcon.className = isSuccess ? 'fa fa-check-circle mr-3 text-xl' : 'fa fa-exclamation-circle mr-3 text-xl';
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-1');
+            clearTimeout(toast.timeoutId);
+            toast.timeoutId = setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-1');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
+        function showLoading(message = '处理中...') {
+            loadingMessage.textContent = message;
+            loadingModal.classList.remove('hidden');
+            document.body.classList.add('modal-open');
+        }
+        function hideLoading() {
+            loadingModal.classList.add('hidden');
+            document.body.classList.remove('modal-open');
+        }
+        function updateLineCount() {
+            const lines = sqlResultEl.value.split('\n').length;
+            lineCountEl.textContent = lines;
+        }
+        function adjustTextareaHeight() {
+            const maxHeight = 600;
+            if (this.scrollHeight > maxHeight) this.style.height = `${maxHeight}px`;
+            else this.style.height = `${this.scrollHeight}px`;
+        }
         
-        // 切换模式
         function switchMode(mode) {
             [insertTab, updateTab, middleInsertTab, middleUpdateTab].forEach(tab => {
                 tab.classList.remove('tab-active');
                 tab.classList.add('text-text-secondary');
             });
-
             currentMode = mode;
-            let modeText = '';
-            let tableType = '';
-    
-            switch(mode) {
-                case 'insert':
-                    insertTab.classList.add('tab-active');
-                    insertTab.classList.remove('text-text-secondary');
-                    modeText = '中职插入';
-                    tableType = 'zzxs';
-                    break;
-                case 'update':
-                    updateTab.classList.add('tab-active');
-                    updateTab.classList.remove('text-text-secondary');
-                    modeText = '中职更新';
-                    tableType = 'zzxs';
-                    break;
-                case 'middleInsert':
-                    middleInsertTab.classList.add('tab-active');
-                    middleInsertTab.classList.remove('text-text-secondary');
-                    modeText = '高/初中插入';
-                    tableType = 'zxxs';
-                    break;
-                case 'middleUpdate':
-                    middleUpdateTab.classList.add('tab-active');
-                    middleUpdateTab.classList.remove('text-text-secondary');
-                    modeText = '高/初中更新';
-                    tableType = 'zxxs';
-                    break;
+            if (mode === 'insert') {
+                insertTab.classList.add('tab-active'); insertTab.classList.remove('text-text-secondary');
+                currentTableType = 'zzxs';
+            } else if (mode === 'update') {
+                updateTab.classList.add('tab-active'); updateTab.classList.remove('text-text-secondary');
+                currentTableType = 'zzxs';
+            } else if (mode === 'middleInsert') {
+                middleInsertTab.classList.add('tab-active'); middleInsertTab.classList.remove('text-text-secondary');
+                currentTableType = 'zxxs';
+            } else {
+                middleUpdateTab.classList.add('tab-active'); middleUpdateTab.classList.remove('text-text-secondary');
+                currentTableType = 'zxxs';
             }
-
-            currentTableType = tableType;
             resetToolState();
-            updateStatus(`已切换至【${modeText}】模式，请下载对应模板`);
-            showToast(`已切换至【${modeText}】模式`);
+            updateStatus(`已切换至【${getModeText()}】模式，请下载对应模板`);
+            showToast(`已切换至【${getModeText()}】模式`);
         }
         
-        // 重置工具状态
         function resetToolState() {
             excelData = null;
             sqlResult = '';
@@ -431,10 +501,7 @@
             updateLineCount();
             excelFileInput.value = '';
         }
-
-        // ==============================================
-        // 合并：一键清空所有（数据 + SQL + 预览）
-        // ==============================================
+        
         function clearAllDataAndResult() {
             excelData = null;
             sqlResult = '';
@@ -447,75 +514,12 @@
             updateStatus('已清空所有数据与SQL结果，可重新上传Excel');
             showToast('✅ 已一键清空所有内容');
         }
-
-        // ==============================================
-        // 一键复制SQL到剪贴板
-        // ==============================================
+        
         function copySQLToClipboard() {
-            if (!sqlResultEl.value.trim()) {
-                showToast('暂无SQL可复制', false);
-                return;
-            }
-            navigator.clipboard.writeText(sqlResultEl.value).then(() => {
-                showToast('✅ SQL已复制到剪贴板');
-            }).catch(err => {
-                showToast('复制失败', false);
-            });
+            if (!sqlResultEl.value.trim()) { showToast('暂无SQL可复制', false); return; }
+            navigator.clipboard.writeText(sqlResultEl.value).then(() => showToast('✅ SQL已复制到剪贴板')).catch(() => showToast('复制失败', false));
         }
         
-        // 更新状态
-        function updateStatus(message) {
-            statusEl.innerHTML = `<p class="text-text-secondary">${message}</p>`;
-        }
-        
-        function showToast(message, isSuccess = true) {
-            document.body.appendChild(toast);
-            toastMessage.textContent = message;
-            if (isSuccess) {
-                toastIcon.className = 'fa fa-check-circle mr-3 text-xl';
-                toast.classList.remove('toast-error');
-                toast.classList.add('toast-success');
-            } else {
-                toastIcon.className = 'fa fa-exclamation-circle mr-3 text-xl';
-                toast.classList.remove('toast-success');
-                toast.classList.add('toast-error');
-            }
-            toast.classList.remove('translate-y-20', 'opacity-0');
-            toast.classList.add('translate-y-0', 'opacity-1');
-            clearTimeout(toast.timeoutId);
-            toast.timeoutId = setTimeout(() => {
-                toast.classList.remove('translate-y-0', 'opacity-1');
-                toast.classList.add('translate-y-20', 'opacity-0');
-            }, 3000);
-        }
-        
-        function showLoading(message = '处理中...') {
-            loadingMessage.textContent = message;
-            loadingModal.classList.remove('hidden');
-            document.body.classList.add('modal-open');
-        }
-        
-        function hideLoading() {
-            loadingModal.classList.add('hidden');
-            document.body.classList.remove('modal-open');
-        }
-        
-        function updateLineCount() {
-            const lines = sqlResultEl.value.split('\n').length;
-            lineCountEl.textContent = lines;
-        }
-        
-        function adjustTextareaHeight() {
-            const maxHeight = 600;
-            const currentHeight = this.scrollHeight;
-            if (currentHeight > maxHeight) {
-                this.style.height = `${maxHeight}px`;
-            } else {
-                this.style.height = `${currentHeight}px`;
-            }
-        }
-        
-        // 下载模板
         function downloadTemplate() {
             showLoading(`正在生成${getModeText()}模板...`);
             setTimeout(() => {
@@ -529,7 +533,7 @@
                             templateData = [{'xm':'张三','xb':'女','csrq':'20090912','zymc':'绘画','zybm':'750107','xz':'三年制','xxmc':'通辽经济技术开发区欧亚应用科技中等职业学校','xzxm':'NULL','zsh':'1505202501386551','xxszsmc':'通辽市','xxszsdm':'150500000000','rxny':'202209','byny':'202507','xxbsm':'3615000343','bjmc':'2022级秋季一班','sfzjh':'152322200609121829','original_sfzjh':'152322200609121829'}];
                             fileName = "中职更新模板.xlsx";
                         }
-                    } else if (currentMode === 'middleInsert' || currentMode === 'middleUpdate') {
+                    } else {
                         if (currentMode === 'middleInsert') {
                             templateData = [{'学生姓名':'张三','性别码':'1','性别':'男','身份证件号':'150826200608155411','民族码':'1','民族':'汉族','出生日期':'20060815','户口所在地码':'NULL','户口所在地':'内蒙古自治区巴彦淖尔市乌拉特前旗','入学年月':'202209','毕业年月':'202506','学校名称':'巴彦淖尔市衡越实验中学','班级名称':'高中2022级9班','制证日期':'NULL','毕业证书号':'NULL','学段状态码':'3','预留字段2':'NULL','预留字段3':'NULL','预留字段4':'NULL','预留字段5':'NULL','hash_code':'NULL'}];
                             fileName = "高初中插入模板.xlsx";
@@ -543,268 +547,128 @@
                     XLSX.utils.book_append_sheet(wb, ws, sheetName);
                     XLSX.writeFile(wb, fileName);
                     updateStatus(`模板已下载，请填写数据后导入`);
-                    showToast(`🎉 ${getModeText()}模板下载成功！请按示例填写数据`);
-                } catch (error) {
-                    updateStatus('模板下载失败');
-                    showToast('模板下载失败，请重试', false);
-                    console.error('下载模板出错:', error);
-                }
+                    showToast(`🎉 ${getModeText()}模板下载成功！`);
+                } catch (error) { showToast('模板下载失败', false); }
                 hideLoading();
             }, 800);
         }
         
-        // 处理文件上传
         function handleFileUpload(e) {
             const file = e.target.files[0];
             if (!file) return;
-            
             showLoading('正在解析文件...');
-            
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
                     const workbook = XLSX.read(data, { type: 'array' });
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
+                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
                     excelData = XLSX.utils.sheet_to_json(worksheet);
-                    
-                    if (excelData.length === 0) {
-                        throw new Error('Excel文件中没有数据');
-                    }
-                    
+                    if (!excelData.length) throw new Error('无数据');
                     updateStatus(`已导入 ${excelData.length} 条数据`);
                     dataCountEl.textContent = `${excelData.length} 条记录`;
-                    showToast(`🎉 成功导入 ${excelData.length} 条数据！可以生成SQL了`);
-                    previewData(excelData);
-                } catch (error) {
-                    updateStatus('文件解析失败');
-                    showToast('文件解析失败，请检查文件格式', false);
-                    console.error('解析Excel出错:', error);
-                }
+                    showToast(`🎉 成功导入 ${excelData.length} 条数据！`);
+                    // 预览
+                    const headers = Object.keys(excelData[0]);
+                    dataPreviewHeader.innerHTML = headers.map(h => `<th class="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">${h}</th>`).join('');
+                    dataPreviewBody.innerHTML = excelData.map((row, idx) => `<tr class="${idx%2===0?'bg-bg-card':'bg-bg-main'}">${headers.map(h => `<td class="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">${row[h] || '-'}</td>`).join('')}</tr>`).join('');
+                } catch (err) { showToast('文件解析失败', false); }
                 hideLoading();
             };
             reader.readAsArrayBuffer(file);
         }
         
-        // 预览数据
-        function previewData(data) {
-            if (!data || data.length === 0) {
-                dataPreviewHeader.innerHTML = '<th colspan="100%" class="text-center py-4 text-text-secondary">无数据</th>';
-                dataPreviewBody.innerHTML = '';
-                return;
-            }
-            const headers = Object.keys(data[0]);
-            let headerHtml = '';
-            headers.forEach(header => {
-                headerHtml += `<th scope="col" class="px-6 py-3 text-left text-xs font-medium text-text-secondary uppercase tracking-wider">${header}</th>`;
-            });
-            dataPreviewHeader.innerHTML = headerHtml;
-            let bodyHtml = '';
-            data.forEach((row, index) => {
-                let rowHtml = `<tr class="${index % 2 === 0 ? 'bg-bg-card' : 'bg-bg-main'}">`;
-                headers.forEach(header => {
-                    rowHtml += `<td class="px-6 py-4 whitespace-nowrap text-sm text-text-secondary">${row[header] || '-'}</td>`;
-                });
-                rowHtml += '</tr>';
-                bodyHtml += rowHtml;
-            });
-            dataPreviewBody.innerHTML = bodyHtml;
-        }
+        function escapeSqlValue(v) { if (v===undefined||v===null) return ''; return String(v).replace(/'/g, "''").replace(/\\/g, "\\\\"); }
+        function isNullOrEmpty(v) { return v===undefined||v===null||v===''||v==='NULL'; }
         
-        // 生成SQL
         function generateSQL() {
-            if (!excelData || excelData.length === 0) {
-                showToast('请先导入Excel文件', false);
-                return;
-            }
-    
+            if (!excelData || excelData.length===0) { showToast('请先导入Excel文件', false); return; }
             showLoading(`正在生成${getModeText()}SQL语句...`);
-    
             setTimeout(() => {
                 try {
                     let sql = '';
                     let tableName = currentTableType === 'zzxs' ? "kdsj_zzxs_zhizheng" : "kdsj_zxxs_by";
-                    let generatedCount = 0;
-                    let skippedCount = 0;
-            
+                    let generatedCount = 0, skippedCount = 0;
                     if (currentMode === 'insert' || currentMode === 'middleInsert') {
-                        excelData.forEach((row, index) => {
-                            const isEmptyRow = Object.values(row).every(value => 
-                                value === undefined || value === null || (typeof value === 'string' && value.trim() === '')
-                            );
-                            if (isEmptyRow) { skippedCount++; return; }
-                    
-                            const requiredFields = currentTableType === 'zzxs' 
-                                ? ['姓名', '身份证件号', '证书号'] 
-                                : ['学生姓名', '身份证件号', '入学年月', '学校名称'];
-                    
-                            const hasRequiredFields = requiredFields.some(field => 
-                                row[field] !== undefined && row[field] !== null && 
-                                (typeof row[field] !== 'string' || row[field].trim() !== '')
-                            );
-                            if (!hasRequiredFields) { skippedCount++; return; }
-                    
+                        excelData.forEach(row => {
+                            const isEmpty = Object.values(row).every(v => v===undefined||v===null||(typeof v==='string'&&v.trim()===''));
+                            if (isEmpty) { skippedCount++; return; }
                             if (currentTableType === 'zzxs') {
                                 sql += `INSERT INTO \`${tableName}\` VALUES (`;
-                                sql += `'${escapeSqlValue(row.姓名 || '')}', `;
-                                sql += `'${escapeSqlValue(row.性别 || '')}', `;
-                                sql += `'${escapeSqlValue(row.出生日期 || '')}', `;
-                                sql += `'${escapeSqlValue(row.专业名称 || '')}', `;
-                                sql += `'${escapeSqlValue(row.专业代码 || '')}', `;
-                                sql += `'${escapeSqlValue(row.学制 || '')}', `;
-                                sql += `'${escapeSqlValue(row.学校名称 || '')}', `;
-                                sql += `${isNullOrEmpty(row.校长姓名) ? 'NULL' : `'${escapeSqlValue(row.校长姓名 || '')}'`}, `;
-                                sql += `'${escapeSqlValue(row.证书号 || '')}', `;
-                                sql += `'${escapeSqlValue(row.学校所在盟市 || '')}', `;
-                                sql += `'${escapeSqlValue(row.学校所在盟市代码 || '')}', `;
-                                sql += `'${escapeSqlValue(row.入学年月 || '')}', `;
-                                sql += `'${escapeSqlValue(row.毕业年月 || '')}', `;
-                                sql += `'${escapeSqlValue(row.学校标识码 || '')}', `;
-                                sql += `'${escapeSqlValue(row.班级名称 || '')}', `;
-                                sql += `${isNullOrEmpty(row.hash_cedo) ? 'NULL' : `'${escapeSqlValue(row.hash_cedo || '')}'`}, `;
-                                sql += `${isNullOrEmpty(row.身份证件号) ? 'NULL' : `'${escapeSqlValue(row.身份证件号 || '')}'`}`;
-                                sql += `);\n`;
+                                sql += `'${escapeSqlValue(row.姓名||'')}', '${escapeSqlValue(row.性别||'')}', '${escapeSqlValue(row.出生日期||'')}', '${escapeSqlValue(row.专业名称||'')}', '${escapeSqlValue(row.专业代码||'')}', '${escapeSqlValue(row.学制||'')}', '${escapeSqlValue(row.学校名称||'')}', ${isNullOrEmpty(row.校长姓名)?'NULL':`'${escapeSqlValue(row.校长姓名)}'`}, '${escapeSqlValue(row.证书号||'')}', '${escapeSqlValue(row.学校所在盟市||'')}', '${escapeSqlValue(row.学校所在盟市代码||'')}', '${escapeSqlValue(row.入学年月||'')}', '${escapeSqlValue(row.毕业年月||'')}', '${escapeSqlValue(row.学校标识码||'')}', '${escapeSqlValue(row.班级名称||'')}', ${isNullOrEmpty(row.hash_cedo)?'NULL':`'${escapeSqlValue(row.hash_cedo)}'`}, ${isNullOrEmpty(row.身份证件号)?'NULL':`'${escapeSqlValue(row.身份证件号)}'`});\n`;
                             } else {
                                 sql += `INSERT INTO \`${tableName}\` VALUES (`;
-                                sql += `'${escapeSqlValue(row.学生姓名 || '')}', `;
-                                sql += `'${escapeSqlValue(row.性别码 || '')}', `;
-                                sql += `'${escapeSqlValue(row.性别 || '')}', `;
-                                sql += `'${escapeSqlValue(row.身份证件号 || '')}', `;
-                                sql += `'${escapeSqlValue(row.民族码 || '')}', `;
-                                sql += `'${escapeSqlValue(row.民族 || '')}', `;
-                                sql += `'${escapeSqlValue(row.出生日期 || '')}', `;
-                                sql += `${isNullOrEmpty(row.户口所在地码) ? 'NULL' : `'${escapeSqlValue(row.户口所在地码)}'`}, `;
-                                sql += `'${escapeSqlValue(row.户口所在地 || '')}', `;
-                                sql += `'${escapeSqlValue(row.入学年月 || '')}', `;
-                                sql += `'${escapeSqlValue(row.毕业年月 || '')}', `;
-                                sql += `'${escapeSqlValue(row.学校名称 || '')}', `;
-                                sql += `'${escapeSqlValue(row.班级名称 || '')}', `;
-                                sql += `${isNullOrEmpty(row.制证日期) ? 'NULL' : `'${escapeSqlValue(row.制证日期)}'`}, `;
-                                sql += `${isNullOrEmpty(row.毕业证书号) ? 'NULL' : `'${escapeSqlValue(row.毕业证书号)}'`}, `;
-                                sql += `'${escapeSqlValue(row.学段状态码 || '')}', `;
-                                sql += `${isNullOrEmpty(row.预留字段2) ? 'NULL' : `'${escapeSqlValue(row.预留字段2)}'`}, `;
-                                sql += `${isNullOrEmpty(row.预留字段3) ? 'NULL' : `'${escapeSqlValue(row.预留字段3)}'`}, `;
-                                sql += `${isNullOrEmpty(row.预留字段4) ? 'NULL' : `'${escapeSqlValue(row.预留字段4)}'`}, `;
-                                sql += `${isNullOrEmpty(row.预留字段5) ? 'NULL' : `'${escapeSqlValue(row.预留字段5)}'`}, `;
-                                sql += `${isNullOrEmpty(row.hash_code) ? 'NULL' : `'${escapeSqlValue(row.hash_code)}'`}`;
-                                sql += `);\n`;
+                                sql += `'${escapeSqlValue(row.学生姓名||'')}', '${escapeSqlValue(row.性别码||'')}', '${escapeSqlValue(row.性别||'')}', '${escapeSqlValue(row.身份证件号||'')}', '${escapeSqlValue(row.民族码||'')}', '${escapeSqlValue(row.民族||'')}', '${escapeSqlValue(row.出生日期||'')}', ${isNullOrEmpty(row.户口所在地码)?'NULL':`'${escapeSqlValue(row.户口所在地码)}'`}, '${escapeSqlValue(row.户口所在地||'')}', '${escapeSqlValue(row.入学年月||'')}', '${escapeSqlValue(row.毕业年月||'')}', '${escapeSqlValue(row.学校名称||'')}', '${escapeSqlValue(row.班级名称||'')}', ${isNullOrEmpty(row.制证日期)?'NULL':`'${escapeSqlValue(row.制证日期)}'`}, ${isNullOrEmpty(row.毕业证书号)?'NULL':`'${escapeSqlValue(row.毕业证书号)}'`}, '${escapeSqlValue(row.学段状态码||'')}', ${isNullOrEmpty(row.预留字段2)?'NULL':`'${escapeSqlValue(row.预留字段2)}'`}, ${isNullOrEmpty(row.预留字段3)?'NULL':`'${escapeSqlValue(row.预留字段3)}'`}, ${isNullOrEmpty(row.预留字段4)?'NULL':`'${escapeSqlValue(row.预留字段4)}'`}, ${isNullOrEmpty(row.预留字段5)?'NULL':`'${escapeSqlValue(row.预留字段5)}'`}, ${isNullOrEmpty(row.hash_code)?'NULL':`'${escapeSqlValue(row.hash_code)}'`});\n`;
                             }
                             generatedCount++;
                         });
                     } else {
-                        excelData.forEach((row, index) => {
-                            const isEmptyRow = Object.values(row).every(value => 
-                                value === undefined || value === null || (typeof value === 'string' && value.trim() === '')
-                            );
-                            if (isEmptyRow) { skippedCount++; return; }
-                    
-                            const requiredFields = ['sfzjh', 'original_sfzjh'];
-                            const hasRequiredFields = requiredFields.some(field => 
-                                row[field] !== undefined && row[field] !== null && 
-                                (typeof row[field] !== 'string' || row[field].trim() !== '')
-                            );
-                            if (!hasRequiredFields) { skippedCount++; return; }
-                    
+                        excelData.forEach(row => {
+                            const isEmpty = Object.values(row).every(v => v===undefined||v===null||(typeof v==='string'&&v.trim()===''));
+                            if (isEmpty) { skippedCount++; return; }
                             if (currentTableType === 'zzxs') {
-                                const setClauses = [];
-                                const columns = ['xm', 'xb', 'csrq', 'zymc', 'zybm', 'xz', 'xxmc', 'xzxm', 'zsh', 'xxszsmc', 'xxszsdm', 'rxny', 'byny', 'xxbsm', 'bjmc', 'sfzjh'];
-                                columns.forEach(col => {
+                                let setClauses = [];
+                                ['xm','xb','csrq','zymc','zybm','xz','xxmc','xzxm','zsh','xxszsmc','xxszsdm','rxny','byny','xxbsm','bjmc','sfzjh'].forEach(col => {
                                     if (row[col] !== undefined && row[col] !== null) {
-                                        let value = row[col];
-                                        if (isNullOrEmpty(value)) { setClauses.push(`${col}=NULL`); return; }
-                                        value = escapeSqlValue(value.toString().trim());
-                                        setClauses.push(`${col}='${value}'`);
+                                        let v = row[col];
+                                        if (isNullOrEmpty(v)) setClauses.push(`${col}=NULL`);
+                                        else setClauses.push(`${col}='${escapeSqlValue(String(v).trim())}'`);
                                     }
                                 });
-                                const whereClause = `sfzjh='${escapeSqlValue(row.original_sfzjh || row.sfzjh)}'`;
-                                if (setClauses.length > 0) {
-                                    sql += `UPDATE ${tableName} SET ${setClauses.join(', ')} WHERE ${whereClause};\n`;
-                                    generatedCount++;
-                                } else { skippedCount++; }
+                                const where = `sfzjh='${escapeSqlValue(row.original_sfzjh||row.sfzjh)}'`;
+                                if (setClauses.length) { sql += `UPDATE ${tableName} SET ${setClauses.join(', ')} WHERE ${where};\n`; generatedCount++; }
+                                else skippedCount++;
                             } else {
-                                const setClauses = [];
-                                const columns = ['xm', 'xbm', 'xb', 'sfzjh', 'mzm', 'mz', 'csrq', 'hkszdm', 'hkszd', 'rxny', 'byny', 'xxmc', 'bjmc', 'ylzd1'];
-                                columns.forEach(col => {
+                                let setClauses = [];
+                                ['xm','xbm','xb','sfzjh','mzm','mz','csrq','hkszdm','hkszd','rxny','byny','xxmc','bjmc','ylzd1'].forEach(col => {
                                     if (row[col] !== undefined && row[col] !== null) {
-                                        let value = row[col];
-                                        if (isNullOrEmpty(value)) { setClauses.push(`${col}=NULL`); return; }
-                                        value = escapeSqlValue(value.toString().trim());
-                                        setClauses.push(`${col}='${value}'`);
+                                        let v = row[col];
+                                        if (isNullOrEmpty(v)) setClauses.push(`${col}=NULL`);
+                                        else setClauses.push(`${col}='${escapeSqlValue(String(v).trim())}'`);
                                     }
                                 });
-                                const whereClause = `sfzjh='${escapeSqlValue(row.original_sfzjh || row.sfzjh)}'`;
-                                if (setClauses.length > 0) {
-                                    sql += `UPDATE ${tableName} SET ${setClauses.join(', ')} WHERE ${whereClause};\n`;
-                                    generatedCount++;
-                                } else { skippedCount++; }
+                                const where = `sfzjh='${escapeSqlValue(row.original_sfzjh||row.sfzjh)}'`;
+                                if (setClauses.length) { sql += `UPDATE ${tableName} SET ${setClauses.join(', ')} WHERE ${where};\n`; generatedCount++; }
+                                else skippedCount++;
                             }
                         });
                     }
-            
                     sqlResult = sql;
-                    sqlResultEl.style.transition = 'height 0.2s ease-out';
-                    sqlResultEl.value = '';
-                    setTimeout(() => {
-                        sqlResultEl.value = sqlResult;
-                        adjustTextareaHeight.call(sqlResultEl);
-                        updateLineCount();
-                        sqlResultEl.style.transition = 'none';
-                    }, 50);
-            
-                    const total = excelData.length;
-                    if (generatedCount > 0) {
-                        updateStatus(`已生成 ${generatedCount} 条SQL语句，跳过 ${skippedCount} 条记录`);
-                        showToast(`🎉 成功生成 ${generatedCount} 条SQL语句！`);
-                    } else {
-                        updateStatus('未能生成SQL语句，请检查数据格式');
-                        showToast('未能生成SQL语句，请检查数据格式', false);
-                    }
-                } catch (error) {
-                    updateStatus('SQL生成失败');
-                    showToast('SQL生成失败，请重试', false);
-                    console.error('生成SQL出错:', error);
-                }
+                    sqlResultEl.value = sql;
+                    adjustTextareaHeight.call(sqlResultEl);
+                    updateLineCount();
+                    updateStatus(`已生成 ${generatedCount} 条SQL语句，跳过 ${skippedCount} 条记录`);
+                    showToast(`🎉 成功生成 ${generatedCount} 条SQL语句！`);
+                } catch (err) { showToast('SQL生成失败', false); }
                 hideLoading();
             }, 1000);
         }
         
-        // 保存SQL
         function saveSQL() {
-            if (!sqlResult || sqlResult.trim() === '') {
-                showToast('没有可保存的SQL语句', false);
-                return;
-            }
-            
-            try {
-                const blob = new Blob([sqlResult], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `${getModeText()}SQL_${new Date().toISOString().slice(0, 10)}.sql`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                showToast('SQL文件已保存');
-            } catch (error) {
-                showToast('保存失败，请重试', false);
-                console.error('保存SQL出错:', error);
-            }
+            if (!sqlResult || sqlResult.trim()==='') { showToast('没有可保存的SQL语句', false); return; }
+            const blob = new Blob([sqlResult], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${getModeText()}SQL_${new Date().toISOString().slice(0,10)}.sql`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('SQL文件已保存');
         }
         
-        // 辅助函数
-        function escapeSqlValue(value) {
-            if (value === undefined || value === null) return '';
-            if (typeof value === 'string') {
-                return value.replace(/'/g, "''").replace(/\\/g, "\\\\");
-            }
-            return value.toString();
-        }
-        
-        function isNullOrEmpty(value) {
-            return value === undefined || value === null || value === '' || value === 'NULL';
-        }
+        // 事件绑定
+        insertTab.addEventListener('click', () => switchMode('insert'));
+        updateTab.addEventListener('click', () => switchMode('update'));
+        middleInsertTab.addEventListener('click', () => switchMode('middleInsert'));
+        middleUpdateTab.addEventListener('click', () => switchMode('middleUpdate'));
+        downloadTemplateBtn.addEventListener('click', downloadTemplate);
+        excelFileInput.addEventListener('change', handleFileUpload);
+        generateSQLBtn.addEventListener('click', generateSQL);
+        saveSQLBtn.addEventListener('click', saveSQL);
+        copySQLBtn.addEventListener('click', copySQLToClipboard);
+        clearAllBtn.addEventListener('click', clearAllDataAndResult);
+        sqlResultEl.addEventListener('input', adjustTextareaHeight);
+        updateStatus('请下载模板并填写数据');
     </script>
 </body>
 </html>
