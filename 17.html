@@ -73,7 +73,7 @@
         /* 标题区 */
         .title-section {
             text-align: center;
-            margin-bottom: 2rem;
+            margin-bottom: 1rem;
         }
 
         h1 {
@@ -94,6 +94,26 @@
             border-bottom: 1px dashed rgba(139, 92, 246, 0.5);
             display: inline-block;
             padding-bottom: 0.4rem;
+        }
+
+        /* 模式切换按钮 */
+        .mode-switch {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .mode-btn {
+            background: linear-gradient(95deg, #8b5cf655, #06b6d455);
+            border: 1px solid #8b5cf6;
+            color: #fff;
+            padding: 8px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .mode-btn:hover {
+            transform: scale(1.05);
+            border-color: #06b6d4;
         }
 
         /* 步骤卡片 — 毛玻璃子面板 */
@@ -285,9 +305,7 @@
 </head>
 <body>
 
-    <!-- Three.js 粒子画布 -->
     <canvas id="bg-canvas"></canvas>
-    <!-- 鼠标光晕层 -->
     <div class="mouse-glow" id="mouseGlow"></div>
 
     <div class="glass-container">
@@ -296,26 +314,31 @@
             <div class="sub">⚡ 两步法 · 毛玻璃粒子 · 精准SQL生成</div>
         </div>
 
-        <!-- ========= 第一步：部门查询 ========= -->
-        <div class="step-card">
-            <div class="step-title">第一步：部门名称 → 生成查ID的SQL</div>
-            <div class="input-group">
-                <input type="text" id="deptName" class="glass-input" placeholder="例如：大青山管理局本级" value="">
-                <div class="info-tip"><span>💡 支持模糊匹配</span> 输入部门名称关键字</div>
-            </div>
-            <div class="btn-group">
-                <button class="glass-btn" id="genStep1Btn">⚡ 生成SQL</button>
-                <button class="glass-btn btn-copy" id="copyStep1Btn">📋 复制SQL</button>
-            </div>
-            <textarea id="sql1" class="sql-output" readonly placeholder="第一步SQL将显示在这里..."></textarea>
+        <div class="mode-switch">
+            <button class="mode-btn" id="modeBtn">🔀 切换到两步模式</button>
         </div>
 
-        <!-- ========= 第二步：用户信息查询 ========= -->
-        <div class="step-card">
+        <!-- ========= 第一步 ========= -->
+        <div class="step-card" id="step1">
+            <div class="step-title" id="stepTitle">部门名称 → 一键生成最终SQL</div>
+            <div class="input-group">
+                <input type="text" id="deptName" class="glass-input" placeholder="" value="">
+                <div class="info-tip"><span>💡 支持模糊匹配</span> 大青山/呼和浩特/包头/乌兰察布分局</div>
+            </div>
+            <div class="btn-group" id="btnGroup1">
+                <button class="glass-btn" id="genStep1Btn">⚡ 生成查ID SQL</button>
+                <button class="glass-btn btn-copy" id="copyStep1Btn">📋 复制SQL</button>
+                <button class="glass-btn" id="genDirectBtn" style="background: linear-gradient(95deg, #06b6d433, #8b5cf633); border-color: #06b6d4;">🚀 一键生成最终SQL</button>
+            </div>
+            <textarea id="sql1" class="sql-output" readonly placeholder="SQL将显示在这里..."></textarea>
+        </div>
+
+        <!-- ========= 第二步 ========= -->
+        <div class="step-card" id="step2">
             <div class="step-title">第二步：部门ID → 生成查询用户的SQL</div>
             <div class="input-group">
-                <input type="text" id="deptId" class="glass-input" placeholder="例如：1501" value="">
-                <div class="info-tip"><span>🔑 从第一步结果获得ID</span> 支持多个ID组合 (使用 / 分隔)</div>
+                <input type="text" id="deptId" class="glass-input" placeholder="" value="">
+                <div class="info-tip"><span>🔑 自动去除数字逗号</span> 支持多个ID组合 (使用 / 分隔)</div>
             </div>
             <div class="btn-group">
                 <button class="glass-btn" id="genStep2Btn">⚡ 生成SQL</button>
@@ -325,7 +348,6 @@
         </div>
     </div>
 
-    <!-- Three.js 动态粒子系统 (三层流光粒子) -->
     <script type="importmap">
         {
             "imports": {
@@ -336,7 +358,6 @@
 
     <script type="module">
         import * as THREE from 'three';
-
         const canvas = document.getElementById('bg-canvas');
         const renderer = new THREE.WebGLRenderer({ canvas, alpha: false });
         const scene = new THREE.Scene();
@@ -346,7 +367,6 @@
         camera.position.set(0, 1.2, 14);
         camera.lookAt(0, 0, 0);
         
-        // 主粒子群 (紫罗兰色)
         const particleCount = 2100;
         const geom = new THREE.BufferGeometry();
         const positions = new Float32Array(particleCount * 3);
@@ -357,16 +377,11 @@
         }
         geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         const particleMat = new THREE.PointsMaterial({
-            color: 0x8b5cf6,
-            size: 0.09,
-            transparent: true,
-            opacity: 0.65,
-            blending: THREE.AdditiveBlending
+            color: 0x8b5cf6, size: 0.09, transparent: true, opacity: 0.65, blending: THREE.AdditiveBlending
         });
         const particleSys = new THREE.Points(geom, particleMat);
         scene.add(particleSys);
         
-        // 第二层粒子 (青色/蓝绿色)
         const geom2 = new THREE.BufferGeometry();
         const pos2 = new Float32Array(1400 * 3);
         for (let i = 0; i < 1400; i++) {
@@ -376,16 +391,11 @@
         }
         geom2.setAttribute('position', new THREE.BufferAttribute(pos2, 3));
         const mat2 = new THREE.PointsMaterial({
-            color: 0x06b6d4,
-            size: 0.08,
-            transparent: true,
-            opacity: 0.55,
-            blending: THREE.AdditiveBlending
+            color: 0x06b6d4, size: 0.08, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending
         });
         const particleSys2 = new THREE.Points(geom2, mat2);
         scene.add(particleSys2);
         
-        // 第三层暖色点缀 (粉晶)
         const geom3 = new THREE.BufferGeometry();
         const pos3 = new Float32Array(900 * 3);
         for (let i = 0; i < 900; i++) {
@@ -395,16 +405,11 @@
         }
         geom3.setAttribute('position', new THREE.BufferAttribute(pos3, 3));
         const mat3 = new THREE.PointsMaterial({
-            color: 0xf472b6,
-            size: 0.1,
-            transparent: true,
-            opacity: 0.5,
-            blending: THREE.AdditiveBlending
+            color: 0xf472b6, size: 0.1, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending
         });
         const particleSys3 = new THREE.Points(geom3, mat3);
         scene.add(particleSys3);
         
-        // 漂浮环 (科技装饰)
         const ringCount = 380;
         const ringGeo = new THREE.BufferGeometry();
         const ringPositions = new Float32Array(ringCount * 3);
@@ -419,10 +424,8 @@
         const ringPoints = new THREE.Points(ringGeo, new THREE.PointsMaterial({ color: 0xa78bfa, size: 0.09, blending: THREE.AdditiveBlending }));
         scene.add(ringPoints);
         
-        // 雾效增强景深
         scene.fog = new THREE.FogExp2(0x03050b, 0.008);
         
-        // 鼠标视差 (相机轻微跟随)
         let mouseX = 0, mouseY = 0;
         let targetCamX = 0, targetCamY = 0;
         window.addEventListener('mousemove', (e) => {
@@ -437,7 +440,6 @@
             requestAnimationFrame(animate);
             time += 0.007;
             
-            // 粒子系统缓慢旋转
             particleSys.rotation.y = time * 0.06;
             particleSys.rotation.x = Math.sin(time * 0.18) * 0.08;
             particleSys2.rotation.y = time * 0.04;
@@ -446,7 +448,6 @@
             ringPoints.rotation.z = time * 0.12;
             ringPoints.rotation.x = Math.sin(time * 0.25) * 0.1;
             
-            // 相机平滑跟随鼠标视差
             camera.position.x += (targetCamX * 0.5 - camera.position.x) * 0.04;
             camera.position.y += (targetCamY * 0.4 - camera.position.y) * 0.04;
             camera.lookAt(0, 0, 0);
@@ -466,35 +467,99 @@
         animate();
     </script>
 
-    <!-- 鼠标光晕跟随 & 核心业务逻辑（完整保留原功能，界面升级） -->
     <script>
-        // 鼠标光晕
         const glowDiv = document.getElementById('mouseGlow');
         document.addEventListener('mousemove', (e) => {
             glowDiv.style.left = e.clientX + 'px';
             glowDiv.style.top = e.clientY + 'px';
         });
-        
-        // ========= 第一步 SQL 生成（部门ID查询）=========
+
+        const DEPT_MAP = {
+            "大青山管理局本级": "1501",
+            "乌兰察布分局": "10056998",
+            "包头分局": "10056997",
+            "呼和浩特分局": "10056996"
+        };
+
+        let isSingleMode = true;
+
+        // 模式切换核心逻辑
+        document.getElementById('modeBtn').addEventListener('click', () => {
+            isSingleMode = !isSingleMode;
+            const step2 = document.getElementById('step2');
+            const title = document.getElementById('stepTitle');
+            const btn = document.getElementById('modeBtn');
+            const g1 = document.getElementById('genStep1Btn');
+            const g2 = document.getElementById('genDirectBtn');
+
+            if (isSingleMode) {
+                // 模式一：只显示一键最终SQL
+                step2.style.display = 'none';
+                title.innerText = '部门名称 → 一键生成最终SQL';
+                btn.innerText = '🔀 切换到两步模式';
+                g1.style.display = 'none';
+                g2.style.display = 'flex';
+            } else {
+                // 模式二：显示传统两步，隐藏一键按钮
+                step2.style.display = 'block';
+                title.innerText = '第一步：部门名称 → 生成查ID的SQL';
+                btn.innerText = '🔀 切换到一键模式';
+                g1.style.display = 'flex';
+                g2.style.display = 'none';
+            }
+        });
+
+        // 第一步SQL
         function generateStep1Sql() {
             let name = document.getElementById("deptName").value.trim();
             let sql = `SELECT ID, NAME, FULLPATH FROM BASE_ORG WHERE NAME LIKE '%${name}%';`;
             document.getElementById("sql1").value = sql;
         }
-        
+
         function copyStep1Sql() {
             let sqlArea = document.getElementById("sql1");
             sqlArea.select();
             navigator.clipboard.writeText(sqlArea.value).then(() => {
-                showTempTip("✅ 第一步SQL已复制", "sql1");
+                showTempTip("✅ SQL已复制", "sql1");
             }).catch(() => alert("复制失败"));
         }
-        
-        // ========= 第二步 SQL 生成（用户查询）=========
+
+        // 一键最终SQL
+        function generateDirectSql() {
+            let inputName = document.getElementById("deptName").value.trim();
+            let targetId = null;
+            for (let key in DEPT_MAP) {
+                if (inputName.includes(key) || key.includes(inputName)) {
+                    targetId = DEPT_MAP[key];
+                    break;
+                }
+            }
+            if (!targetId) {
+                document.getElementById("sql1").value = "-- 未匹配，请输入：大青山管理局本级/呼和浩特分局/包头分局/乌兰察布分局";
+                return;
+            }
+            let sql = `SELECT
+    u.NAME AS "姓名",
+    u.LOGIN_CODE AS "登录账号",
+    u.RANGE AS "权重",
+    o.NAME AS "部门"
+FROM
+    BASE_USER u
+LEFT JOIN
+    BASE_ORG o ON u.MEMBERSHIP_ORG_ID = o.ID
+WHERE
+    u.IS_DELETE = 0
+    AND o.FULLPATH LIKE '%/${targetId}/%'
+ORDER BY
+    o.NAME, u.NAME;`;
+            document.getElementById("sql1").value = sql;
+        }
+
+        // 第二步SQL
         function generateStep2Sql() {
-            let id = document.getElementById("deptId").value.trim();
+            let id = document.getElementById("deptId").value.trim().replace(/,/g, '');
             if (id === "") {
-                document.getElementById("sql2").value = "-- 请输入部门ID再生成";
+                document.getElementById("sql2").value = "-- 请输入部门ID";
                 return;
             }
             let sql = `SELECT
@@ -513,7 +578,7 @@ ORDER BY
     o.NAME, u.NAME;`;
             document.getElementById("sql2").value = sql;
         }
-        
+
         function copyStep2Sql() {
             let sqlArea = document.getElementById("sql2");
             sqlArea.select();
@@ -521,8 +586,7 @@ ORDER BY
                 showTempTip("✅ 第二步SQL已复制", "sql2");
             }).catch(() => alert("复制失败"));
         }
-        
-        // 临时提示小弹窗（优雅反馈）
+
         function showTempTip(msg, targetId) {
             const target = document.getElementById(targetId);
             if (!target) return;
@@ -545,16 +609,17 @@ ORDER BY
             document.body.appendChild(tipDiv);
             setTimeout(() => tipDiv.remove(), 1800);
         }
-        
-        // 绑定事件
+
         document.getElementById('genStep1Btn').addEventListener('click', generateStep1Sql);
         document.getElementById('copyStep1Btn').addEventListener('click', copyStep1Sql);
+        document.getElementById('genDirectBtn').addEventListener('click', generateDirectSql);
         document.getElementById('genStep2Btn').addEventListener('click', generateStep2Sql);
         document.getElementById('copyStep2Btn').addEventListener('click', copyStep2Sql);
-        
-        // 页面加载时默认显示占位提示（而不是自动生成SQL）
+
         window.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('sql1').value = '第一步SQL将显示在这里...';
+            document.getElementById('step2').style.display = 'none';
+            document.getElementById('genStep1Btn').style.display = 'none';
+            document.getElementById('sql1').value = 'SQL将显示在这里...';
             document.getElementById('sql2').value = '第二步SQL将显示在这里...';
         });
     </script>
