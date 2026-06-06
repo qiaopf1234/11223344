@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SQL语句保存工具 | 修复版</title>
+    <title>SQL语句保存工具 | Supabase云端自动备份版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script>
@@ -108,6 +108,7 @@
 <body class="text-gray-800 dark:text-gray-200 p-4 md:p-8">
 <canvas id="particles"></canvas>
 
+<!-- 主内容区 默认显示 -->
 <div class="max-w-6xl mx-auto relative z-10" id="mainContent">
     <div class="flex justify-between items-center mb-4">
         <div class="flex gap-2">
@@ -135,7 +136,7 @@
         <h1 class="text-4xl md:text-5xl font-bold mb-3 flex items-center justify-center gap-3">
             <i class="fa fa-database text-primary"></i> SQL语句保存工具
         </h1>
-        <p class="text-gray-600 dark:text-gray-400">分业务管理SQL | 折叠展开 | 语法高亮</p>
+        <p class="text-gray-600 dark:text-gray-400">分业务管理SQL | 折叠展开 | 语法高亮 | Supabase自动云备份</p>
     </header>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -185,6 +186,18 @@
 </div>
 
 <script>
+// ===== Supabase配置（已填你的项目信息）=====
+const SUPA_URL = "https://idmfuazwpzlkooohbxil.supabase.co";
+const SUPA_KEY = "sb_publishable_1MNTRsfYYf86DQ-hhppn9g_9-37yos7";
+// 生成唯一设备ID，同浏览器永久不变
+const DEVICE_ID = localStorage.getItem("dev_id") || (()=>{
+    let uid = Date.now() + "_" + Math.random().toString(32).slice(2);
+    localStorage.setItem("dev_id", uid);
+    return uid;
+})();
+let autoTimer = null; //自动备份计时器
+
+// 粒子背景
 const canvas = document.getElementById('particles');
 const ctx = canvas.getContext('2d');
 let particles = [];
@@ -227,6 +240,7 @@ function animate(){
 }
 animate();
 
+// 全局数据
 let data = JSON.parse(localStorage.getItem('sqlTool')) || {
     categories: ['用户数据','订单数据','商品数据'],
     sqlList: [],
@@ -239,6 +253,7 @@ let data = JSON.parse(localStorage.getItem('sqlTool')) || {
     }
 };
 
+// ========== 主题 ==========
 function initTheme(){
     if(data.config.darkMode){
         document.documentElement.classList.add('dark');
@@ -252,6 +267,7 @@ function toggleTheme(){
     saveData();
 }
 
+// ========== 编辑框拖拽调整高度 ==========
 let isResizing = false;
 const sqlArea = document.getElementById('sqlContent');
 document.querySelectorAll('.resize-handle').forEach(handle=>{
@@ -264,6 +280,7 @@ window.onmousemove = (e)=>{
     sqlArea.style.height = Math.max(80, h + e.movementY) + "px";
 };
 
+// ========== 折叠高度设置 ==========
 function setCollapseHeight(){
     let h = prompt("设置SQL默认折叠高度(px)", data.config.collapseHeight);
     if(h && !isNaN(h)){
@@ -273,6 +290,7 @@ function setCollapseHeight(){
     }
 }
 
+// ========== 排序 ==========
 function toggleSort(){
     const sortList = ['time','name'];
     let idx = sortList.indexOf(data.config.sortBy);
@@ -284,6 +302,7 @@ function toggleSort(){
     showToast(`已按${sortList[idx]==='time'?'时间':'名称'}${data.config.sortOrder==='desc'?'倒序':'正序'}`);
 }
 
+// ========== SQL语法高亮 ==========
 function highlightSql(sql){
     let ret = sql;
     const keywords = /\b(SELECT|FROM|WHERE|AND|OR|JOIN|LEFT|INNER|RIGHT|GROUP|ORDER|BY|LIMIT|INSERT|UPDATE|DELETE|CREATE|TABLE|ALTER|DROP|UNION|ALL|DISTINCT|AS|ON|IN|LIKE|BETWEEN|IS|NULL|NOT|CASE|WHEN|THEN|ELSE|END)\b/gi;
@@ -297,6 +316,7 @@ function highlightSql(sql){
     return ret;
 }
 
+// ========== 悬浮提示 ==========
 function showToast(msg){
     const div = document.createElement('div');
     div.className = 'toast bg-primary/90';
@@ -305,6 +325,7 @@ function showToast(msg){
     setTimeout(()=>div.remove(), 1800);
 }
 
+// ========== 分类管理 ==========
 function renderCate(){
     const list = document.getElementById('cateList');
     list.innerHTML = "";
@@ -358,6 +379,7 @@ function renameCategory(oldName){
     showToast("分类重命名成功");
 }
 
+// ========== SQL管理 ==========
 function saveSql(){
     const title = document.getElementById('sqlTitle').value.trim();
     const content = document.getElementById('sqlContent').value.trim();
@@ -386,6 +408,7 @@ function saveSql(){
 function renderSql(){
     const list = document.getElementById('sqlList');
     let items = data.sqlList.filter(item=>item.cate === data.currentCate);
+    // 排序
     if(data.config.sortBy === 'name'){
         items.sort((a,b)=>{
             return data.config.sortOrder === 'asc' ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title);
@@ -466,26 +489,20 @@ function delSql(id){
     renderAll();
 }
 
-// ==============================================
-// 🔥 自动备份 + 云端同步（Supabase 免费云数据库）
-// ==============================================
-const SUPA_URL = "https://idmfuazwpzlkooohbxil.supabase.co";
-const SUPA_KEY = "sb_publishable_1MNTRsfYYf86DQ-hhppn9g_9-37yos7";
-const PROXY = "https://corsproxy.io/?";
-const DEVICE_ID = localStorage.getItem("dev_id") || (()=>{
-    let uid=Date.now()+''; localStorage.setItem("dev_id",uid); return uid;
-})();
+// ========== 本地保存 + 3秒自动云端备份 ==========
+function saveData(){
+    localStorage.setItem('sqlTool', JSON.stringify(data));
+    autoSaveCloud();
+}
 
-let autoTimer = null;
-
-// 自动备份（修改数据 3 秒后自动上传云端）
+// 自动备份（修改数据3秒延迟上传Supabase）
 function autoSaveCloud(){
     clearTimeout(autoTimer);
     autoTimer = setTimeout(async()=>{
         const sql = localStorage.getItem("sqlTool");
         if(!sql) return;
         try{
-            await fetch(PROXY + encodeURIComponent(SUPA_URL + "/rest/v1/SqlBackup"),{
+            await fetch(`${SUPA_URL}/rest/v1/sqlbackup`,{
                 method:"POST",
                 headers:{
                     "apikey":SUPA_KEY,
@@ -497,49 +514,59 @@ function autoSaveCloud(){
                     sql_data:sql
                 })
             });
-        }catch(e){}
+            console.log("✅自动云端备份成功");
+        }catch(e){
+            console.log("❌自动备份异常",e)
+        }
     },3000);
 }
 
-// 手动云端备份
+// 手动一键云端备份
 async function backupToCloud(){
     const sql = localStorage.getItem("sqlTool");
     if(!sql) return alert("暂无SQL数据可备份");
     try{
-        await fetch(PROXY + encodeURIComponent(SUPA_URL + "/rest/v1/SqlBackup"),{
-            method:"POST", headers:{"apikey":SUPA_KEY,"Content-Type":"application/json"},
-            body:JSON.stringify({device_id:DEVICE_ID,backup_time:new Date().toLocaleString(),sql_data:sql})
+        await fetch(`${SUPA_URL}/rest/v1/sqlbackup`,{
+            method:"POST", 
+            headers:{
+                "apikey":SUPA_KEY,
+                "Content-Type":"application/json"
+            },
+            body:JSON.stringify({
+                device_id:DEVICE_ID,
+                backup_time:new Date().toLocaleString(),
+                sql_data:sql
+            })
         });
-        showToast("✅ 云端备份成功！");
+        showToast("✅ 云端备份成功！去Supabase后台查看数据表");
     }catch(e){
-        alert("❌ 备份失败");
+        alert("❌ 备份失败："+e.message);
     }
 }
 
-// 云端恢复
+// 云端恢复（拉取当前设备最新一条备份覆盖本地）
 async function restoreFromCloud(){
-    if(!confirm("恢复将覆盖本地全部数据，确定吗？")) return;
+    if(!confirm("恢复将覆盖本地全部现有数据，确定吗？")) return;
     try{
-        const res = await fetch(PROXY + encodeURIComponent(SUPA_URL+`/rest/v1/SqlBackup?device_id=eq.${DEVICE_ID}&order=created_at.desc&limit=1`),{
+        const res = await fetch(`${SUPA_URL}/rest/v1/sqlbackup?device_id=eq.${DEVICE_ID}&order=backup_time.desc&limit=1`,{
             headers:{"apikey":SUPA_KEY}
         });
         const arr = await res.json();
-        if(!arr || arr.length===0) return alert("暂无云端备份");
+        if(!arr || arr.length===0) return alert("暂无云端备份记录");
         localStorage.setItem("sqlTool",arr[0].sql_data);
         location.reload();
-        alert("✅ 云端恢复成功！");
+        alert("✅ 云端数据恢复成功！页面已刷新");
     }catch(e){
-        alert("❌ 恢复失败");
+        alert("❌ 恢复失败："+e.message);
     }
 }
 
-// 本地保存 + 自动触发云端备份
-function saveData(){
-    localStorage.setItem('sqlTool', JSON.stringify(data));
-    autoSaveCloud(); // 🔥 自动备份
+function renderAll(){
+    renderCate();
+    renderSql();
 }
 
-function renderAll(){ renderCate(); renderSql(); }
+// 初始化
 initTheme();
 renderAll();
 </script>
