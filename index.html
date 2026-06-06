@@ -284,7 +284,7 @@
 
     <!-- 左侧导航菜单 -->
     <div class="left-menu">
-        <!-- 替换后的毛玻璃麒麟踩字标题组件 -->
+        <!-- 标题组件 -->
         <div class="menu-title">
             <div class="glass-kirin-title">
                 <div class="title-stack">
@@ -316,21 +316,33 @@
             </div>
         </div>
 
-        <!-- 一级菜单（带 data-href 的直接跳转） -->
-        <div class="menu-item active" data-href="1.html">证照数据・学生信息批量录入</div>
-        <div class="menu-item" data-href="13.html">证照数据・学生信息批量更新</div>
-        <div class="menu-item" data-href="21.html">证照数据・盟市账号启停管控</div>
-        <div class="menu-item" data-href="10.html">装备填报・业务表填报状态查</div>
-        <div class="menu-item" data-href="11.html">装备填报・校名填报状态检索</div>
-        <div class="menu-item" data-href="12.html">装备填报・状态批量更新工具</div>
-        <div class="menu-item" data-href="14.html">运维辅助・周报一键生成工具</div>
-        <div class="menu-item" data-href="19.html">运维辅助・月报一键生成工具</div>
-        <div class="menu-item" data-href="20.html">运维辅助・季报一键生成工具</div>
-        <div class="menu-item" data-href="15.html">运维辅助・批量账号生成工具</div>
-        <div class="menu-item" data-href="16.html">运维辅助・SQL语句保存工具</div>
-		<div class="menu-item" data-href="22.html">运维辅助・W-E模版下载中心</div>
+        <!-- ========= 一级折叠菜单：教育厅 ========= -->
+        <div class="menu-item" onclick="toggleSubMenu(this)">
+            📋 教育厅 <span class="arrow">▶</span>
+        </div>
+        <div class="sub-menu">
+            <div class="menu-item" data-href="1.html">证照数据・学生信息批量录入</div>
+            <div class="menu-item" data-href="13.html">证照数据・学生信息批量更新</div>
+            <div class="menu-item" data-href="21.html">证照数据・盟市账号启停管控</div>
+            <div class="menu-item" data-href="10.html">装备填报・业务表填报状态查</div>
+            <div class="menu-item" data-href="11.html">装备填报・校名填报状态检索</div>
+            <div class="menu-item" data-href="12.html">装备填报・状态批量更新工具</div>
+        </div>
 
-        <!-- 折叠菜单：大青山管理局 -->
+        <!-- ========= 一级折叠菜单：运维辅助 ========= -->
+        <div class="menu-item" onclick="toggleSubMenu(this)">
+            📋 运维辅助 <span class="arrow">▶</span>
+        </div>
+        <div class="sub-menu">
+            <div class="menu-item" data-href="14.html">运维辅助・周报一键生成工具</div>
+            <div class="menu-item" data-href="19.html">运维辅助・月报一键生成工具</div>
+            <div class="menu-item" data-href="20.html">运维辅助・季报一键生成工具</div>
+            <div class="menu-item" data-href="15.html">运维辅助・批量账号生成工具</div>
+            <div class="menu-item" data-href="16.html">运维辅助・SQL语句保存工具</div>
+            <div class="menu-item" data-href="22.html">运维辅助・W-E模版下载中心</div>
+        </div>
+
+        <!-- ========= 原有折叠菜单：大青山管理局 ========= -->
         <div class="menu-item" onclick="toggleSubMenu(this)">
             📋 大青山管理局 <span class="arrow">▶</span>
         </div>
@@ -474,7 +486,7 @@
             glow.style.top = e.clientY + 'px';
         });
 
-        // 获取所有带 data-href 的菜单项
+        // 获取所有带 data-href 的菜单项 (包括二级菜单中的)
         const menuItems = document.querySelectorAll('.menu-item[data-href]');
         const iframe = document.getElementById('iframeBox');
         let currentUrl = "1.html";
@@ -494,7 +506,7 @@
             });
         });
 
-        // 折叠/展开二级菜单（大管局）
+        // 折叠/展开二级菜单（支持所有一级折叠项）
         window.toggleSubMenu = function(el) {
             el.classList.toggle('open');
             const subMenu = el.nextElementSibling;
@@ -517,7 +529,7 @@
             window.open(currentUrl, '_blank');
         });
 
-        // 初始化二级菜单隐藏（默认折叠）
+        // 初始化所有二级菜单隐藏（默认折叠）
         const subMenus = document.querySelectorAll('.sub-menu');
         subMenus.forEach(sub => {
             sub.style.display = 'none';
