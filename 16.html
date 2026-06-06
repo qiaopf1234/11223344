@@ -108,7 +108,6 @@
 <body class="text-gray-800 dark:text-gray-200 p-4 md:p-8">
 <canvas id="particles"></canvas>
 
-<!-- 主内容区 默认显示 -->
 <div class="max-w-6xl mx-auto relative z-10" id="mainContent">
     <div class="flex justify-between items-center mb-4">
         <div class="flex gap-2">
@@ -186,7 +185,6 @@
 </div>
 
 <script>
-// 粒子背景
 const canvas = document.getElementById('particles');
 const ctx = canvas.getContext('2d');
 let particles = [];
@@ -229,7 +227,6 @@ function animate(){
 }
 animate();
 
-// 全局数据
 let data = JSON.parse(localStorage.getItem('sqlTool')) || {
     categories: ['用户数据','订单数据','商品数据'],
     sqlList: [],
@@ -242,7 +239,6 @@ let data = JSON.parse(localStorage.getItem('sqlTool')) || {
     }
 };
 
-// ========== 主题 ==========
 function initTheme(){
     if(data.config.darkMode){
         document.documentElement.classList.add('dark');
@@ -256,7 +252,6 @@ function toggleTheme(){
     saveData();
 }
 
-// ========== 编辑框拖拽调整高度 ==========
 let isResizing = false;
 const sqlArea = document.getElementById('sqlContent');
 document.querySelectorAll('.resize-handle').forEach(handle=>{
@@ -269,7 +264,6 @@ window.onmousemove = (e)=>{
     sqlArea.style.height = Math.max(80, h + e.movementY) + "px";
 };
 
-// ========== 折叠高度设置 ==========
 function setCollapseHeight(){
     let h = prompt("设置SQL默认折叠高度(px)", data.config.collapseHeight);
     if(h && !isNaN(h)){
@@ -279,7 +273,6 @@ function setCollapseHeight(){
     }
 }
 
-// ========== 排序 ==========
 function toggleSort(){
     const sortList = ['time','name'];
     let idx = sortList.indexOf(data.config.sortBy);
@@ -291,7 +284,6 @@ function toggleSort(){
     showToast(`已按${sortList[idx]==='time'?'时间':'名称'}${data.config.sortOrder==='desc'?'倒序':'正序'}`);
 }
 
-// ========== SQL语法高亮 ==========
 function highlightSql(sql){
     let ret = sql;
     const keywords = /\b(SELECT|FROM|WHERE|AND|OR|JOIN|LEFT|INNER|RIGHT|GROUP|ORDER|BY|LIMIT|INSERT|UPDATE|DELETE|CREATE|TABLE|ALTER|DROP|UNION|ALL|DISTINCT|AS|ON|IN|LIKE|BETWEEN|IS|NULL|NOT|CASE|WHEN|THEN|ELSE|END)\b/gi;
@@ -305,7 +297,6 @@ function highlightSql(sql){
     return ret;
 }
 
-// ========== 悬浮提示 ==========
 function showToast(msg){
     const div = document.createElement('div');
     div.className = 'toast bg-primary/90';
@@ -314,7 +305,6 @@ function showToast(msg){
     setTimeout(()=>div.remove(), 1800);
 }
 
-// ========== 分类管理 ==========
 function renderCate(){
     const list = document.getElementById('cateList');
     list.innerHTML = "";
@@ -368,7 +358,6 @@ function renameCategory(oldName){
     showToast("分类重命名成功");
 }
 
-// ========== SQL管理 ==========
 function saveSql(){
     const title = document.getElementById('sqlTitle').value.trim();
     const content = document.getElementById('sqlContent').value.trim();
@@ -397,7 +386,6 @@ function saveSql(){
 function renderSql(){
     const list = document.getElementById('sqlList');
     let items = data.sqlList.filter(item=>item.cate === data.currentCate);
-    // 排序
     if(data.config.sortBy === 'name'){
         items.sort((a,b)=>{
             return data.config.sortOrder === 'asc' ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title);
@@ -478,67 +466,80 @@ function delSql(id){
     renderAll();
 }
 
-// 本地存储
+// ==============================================
+// 🔥 自动备份 + 云端同步（Supabase 免费云数据库）
+// ==============================================
+const SUPA_URL = "https://idmfuazwpzlkooohbxil.supabase.co";
+const SUPA_KEY = "sb_publishable_1MNTRsfYYf86DQ-hhppn9g_9-37yos7";
+const PROXY = "https://corsproxy.io/?";
+const DEVICE_ID = localStorage.getItem("dev_id") || (()=>{
+    let uid=Date.now()+''; localStorage.setItem("dev_id",uid); return uid;
+})();
+
+let autoTimer = null;
+
+// 自动备份（修改数据 3 秒后自动上传云端）
+function autoSaveCloud(){
+    clearTimeout(autoTimer);
+    autoTimer = setTimeout(async()=>{
+        const sql = localStorage.getItem("sqlTool");
+        if(!sql) return;
+        try{
+            await fetch(PROXY + encodeURIComponent(SUPA_URL + "/rest/v1/SqlBackup"),{
+                method:"POST",
+                headers:{
+                    "apikey":SUPA_KEY,
+                    "Content-Type":"application/json"
+                },
+                body:JSON.stringify({
+                    device_id:DEVICE_ID,
+                    backup_time:new Date().toLocaleString(),
+                    sql_data:sql
+                })
+            });
+        }catch(e){}
+    },3000);
+}
+
+// 手动云端备份
+async function backupToCloud(){
+    const sql = localStorage.getItem("sqlTool");
+    if(!sql) return alert("暂无SQL数据可备份");
+    try{
+        await fetch(PROXY + encodeURIComponent(SUPA_URL + "/rest/v1/SqlBackup"),{
+            method:"POST", headers:{"apikey":SUPA_KEY,"Content-Type":"application/json"},
+            body:JSON.stringify({device_id:DEVICE_ID,backup_time:new Date().toLocaleString(),sql_data:sql})
+        });
+        showToast("✅ 云端备份成功！");
+    }catch(e){
+        alert("❌ 备份失败");
+    }
+}
+
+// 云端恢复
+async function restoreFromCloud(){
+    if(!confirm("恢复将覆盖本地全部数据，确定吗？")) return;
+    try{
+        const res = await fetch(PROXY + encodeURIComponent(SUPA_URL+`/rest/v1/SqlBackup?device_id=eq.${DEVICE_ID}&order=created_at.desc&limit=1`),{
+            headers:{"apikey":SUPA_KEY}
+        });
+        const arr = await res.json();
+        if(!arr || arr.length===0) return alert("暂无云端备份");
+        localStorage.setItem("sqlTool",arr[0].sql_data);
+        location.reload();
+        alert("✅ 云端恢复成功！");
+    }catch(e){
+        alert("❌ 恢复失败");
+    }
+}
+
+// 本地保存 + 自动触发云端备份
 function saveData(){
     localStorage.setItem('sqlTool', JSON.stringify(data));
-}
-function renderAll(){
-    renderCate();
-    renderSql();
+    autoSaveCloud(); // 🔥 自动备份
 }
 
-// ==============================================
-// 🔥 GIST 云端同步 —— 已修改：代码不写死Token
-// ==============================================
-const GIST_ID = "2f909bff31687c96094eef5006bc09d4";
-const FILE_NAME = "sql_db.json";
-
-// 从本地获取Token，没有就弹窗输入
-let GIT_TOKEN = localStorage.getItem("github_gist_token");
-if (!GIT_TOKEN) {
-    GIT_TOKEN = prompt("请输入你的 GitHub Gist 令牌：\n（只需输入一次，后续自动保存）", "");
-    if (GIT_TOKEN) {
-        localStorage.setItem("github_gist_token", GIT_TOKEN);
-    }
-}
-
-// 备份到云端
-async function backupToCloud() {
-    if (!GIT_TOKEN) { alert("请先设置令牌再备份！"); return; }
-    const localData = localStorage.getItem('sqlTool');
-    if (!localData) { alert("暂无数据可备份"); return; }
-    const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-        method: 'PATCH',
-        headers: {
-            'Authorization': `Bearer ${GIT_TOKEN}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            files: { [FILE_NAME]: { content: localData } }
-        })
-    });
-    res.ok ? alert("✅ 备份成功！所有SQL已存云端") : alert("❌ 备份失败，请检查令牌");
-}
-
-// 从云端恢复
-async function restoreFromCloud() {
-    if (!GIT_TOKEN) { alert("请先设置令牌再恢复！"); return; }
-    if (!confirm("恢复会覆盖本地分类和SQL，确定继续吗？")) return;
-    try {
-        const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-            headers: { 'Authorization': `Bearer ${GIT_TOKEN}` }
-        });
-        const json = await res.json();
-        const cloudData = JSON.parse(json.files[FILE_NAME].content);
-        localStorage.setItem('sqlTool', JSON.stringify(cloudData));
-        location.reload();
-        alert("✅ 恢复成功！");
-    } catch (e) {
-        alert("❌ 恢复失败：" + e.message);
-    }
-}
-
-// 初始化直接进入
+function renderAll(){ renderCate(); renderSql(); }
 initTheme();
 renderAll();
 </script>
