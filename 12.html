@@ -3,20 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>教育装备 SQL 生成工具 - 3D 视觉增强版</title>
+    <title>教育装备 SQL 生成工具 · 赛博毛玻璃版</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: "Microsoft YaHei", "Inter", system-ui, -apple-system, sans-serif;
+            font-family: "Segoe UI", "Inter", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
         }
 
         /* 基础布局 */
         body {
-            background-color: #0f172a;
+            background-color: #0a0c12;
             overflow-x: hidden;
             min-height: 100vh;
+            position: relative;
         }
 
         /* Canvas 3D 背景层 */
@@ -30,25 +31,40 @@
             display: block;
         }
 
+        /* 鼠标跟随光晕 */
+        .mouse-glow {
+            position: fixed;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, rgba(6, 182, 212, 0) 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            z-index: 999;
+            transition: transform 0.05s linear;
+            will-change: transform;
+        }
+
         /* 主容器 - 毛玻璃悬浮效果 */
         .container {
             position: relative;
             z-index: 10;
             max-width: 1000px;
             margin: 40px auto;
-            background: rgba(15, 23, 42, 0.65);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-radius: 32px;
-            box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(59, 130, 246, 0.2);
+            background: rgba(15, 25, 45, 0.55);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 2rem;
+            box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(139, 92, 246, 0.2);
             padding: 30px;
-            transition: transform 0.3s ease;
-            border: 1px solid rgba(59, 130, 246, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s;
+            border: 1px solid rgba(139, 92, 246, 0.35);
         }
 
-        /* 轻微鼠标视差移动 */
         .container:hover {
-            transform: translateY(-2px);
+            transform: translateY(-3px);
+            border-color: rgba(139, 92, 246, 0.7);
+            box-shadow: 0 28px 44px -12px rgba(139, 92, 246, 0.25), 0 0 0 1px rgba(139, 92, 246, 0.25) inset;
         }
 
         /* 标题渐变 */
@@ -57,10 +73,10 @@
             margin-bottom: 30px;
             font-size: 28px;
             font-weight: 700;
-            background: linear-gradient(135deg, #e2e8f0 0%, #3b82f6 50%, #c084fc 100%);
+            background: linear-gradient(135deg, #f0f3ff, #a78bfa, #f472b6);
             -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
             background-clip: text;
+            color: transparent;
             letter-spacing: -0.3px;
         }
 
@@ -70,9 +86,9 @@
             gap: 20px;
             background: rgba(15, 23, 42, 0.6);
             padding: 20px;
-            border-radius: 24px;
+            border-radius: 1.5rem;
             margin-bottom: 24px;
-            border: 1px solid rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(139, 92, 246, 0.3);
             backdrop-filter: blur(4px);
         }
 
@@ -83,7 +99,7 @@
         label {
             display: block;
             margin-bottom: 8px;
-            color: #e2e8f0;
+            color: #cbd5e6;
             font-weight: 500;
             font-size: 14px;
             letter-spacing: 0.5px;
@@ -92,52 +108,81 @@
         input, select, textarea {
             width: 100%;
             padding: 12px 16px;
-            background: rgba(15, 23, 42, 0.8);
-            border: 1px solid rgba(59, 130, 246, 0.4);
-            border-radius: 16px;
-            color: #f1f5f9;
+            background: rgba(10, 18, 30, 0.8);
+            border: 1.5px solid rgba(139, 92, 246, 0.4);
+            border-radius: 1rem;
+            color: #e2e8f0;
             font-size: 14px;
             outline: none;
             transition: all 0.2s ease;
         }
 
         input:focus, select:focus, textarea:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
-            background: rgba(30, 41, 59, 0.9);
+            border-color: #a78bfa;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
+            background: rgba(20, 32, 50, 0.9);
         }
 
         textarea {
-            font-family: 'Courier New', 'Fira Code', monospace;
+            font-family: 'Fira Code', 'Courier New', monospace;
             line-height: 1.5;
             resize: vertical;
         }
 
+        /* 霓虹流光按钮组 */
         .btn {
-            background: linear-gradient(95deg, #3b82f6, #8b5cf6);
-            border: none;
+            position: relative;
+            background: rgba(15, 23, 42, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(139, 92, 246, 0.5);
             padding: 10px 24px;
             border-radius: 40px;
-            color: white;
+            color: #e0e7ff;
             font-weight: 600;
             font-size: 14px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
             margin-right: 12px;
             margin-bottom: 12px;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+            overflow: hidden;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.4), transparent);
+            transition: left 0.5s ease;
+        }
+
+        .btn:hover::before {
+            left: 100%;
         }
 
         .btn:hover {
             transform: translateY(-2px);
-            filter: brightness(1.05);
-            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.4);
+            border-color: #a78bfa;
+            box-shadow: 0 5px 15px rgba(139, 92, 246, 0.3);
+            color: white;
         }
 
         .btn-warning {
-            background: linear-gradient(95deg, #f59e0b, #d97706);
+            background: linear-gradient(95deg, rgba(245, 158, 11, 0.25), rgba(217, 119, 6, 0.2));
+            border-color: #f59e0b;
         }
 
+        .btn-warning:hover {
+            border-color: #fbbf24;
+            box-shadow: 0 5px 15px rgba(245, 158, 11, 0.3);
+        }
+
+        /* Tab 切换样式 */
         .tab-group {
             display: flex;
             gap: 8px;
@@ -161,9 +206,9 @@
         }
 
         .tab.active {
-            background: #3b82f6;
+            background: linear-gradient(95deg, #8b5cf6, #06b6d4);
             color: white;
-            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
+            box-shadow: 0 2px 8px rgba(139, 92, 246, 0.4);
         }
 
         .tab-content {
@@ -185,7 +230,20 @@
             font-size: 13px;
             margin: 12px 0 16px 0;
             padding-left: 8px;
-            border-left: 2px solid #3b82f6;
+            border-left: 2px solid #a78bfa;
+        }
+
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a;
+            border-radius: 6px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #8b5cf6;
+            border-radius: 6px;
         }
 
         /* 响应式适配 */
@@ -198,6 +256,10 @@
                 flex-direction: column;
                 gap: 12px;
             }
+            .btn {
+                padding: 8px 18px;
+                font-size: 12px;
+            }
         }
     </style>
 </head>
@@ -205,9 +267,11 @@
 
     <!-- 3D Canvas 背景层 -->
     <canvas id="bg-canvas"></canvas>
+    <!-- 鼠标光晕层 -->
+    <div class="mouse-glow" id="mouseGlow"></div>
 
     <div class="container">
-        <h1 class="title">✨ 教育装备 SQL 生成工具 · 光晕粒子版</h1>
+        <h1 class="title">✨ 教育装备 SQL 生成工具 · 赛博粒子版</h1>
 
         <!-- 配置行 -->
         <div class="inline-row">
@@ -254,7 +318,7 @@
             </div>
             <div style="margin-top: 20px;">
                 <label>📄 SQL 结果</label>
-                <textarea id="singleResult" rows="12"></textarea>
+                <textarea id="singleResult" rows="12" placeholder="生成的SQL语句将显示在这里..."></textarea>
             </div>
         </div>
 
@@ -271,7 +335,7 @@
             </div>
             <div style="margin-top: 20px;">
                 <label>📄 SQL 结果</label>
-                <textarea id="multiResult" rows="12"></textarea>
+                <textarea id="multiResult" rows="12" placeholder="生成的SQL语句将显示在这里..."></textarea>
             </div>
         </div>
         <div class="tip">
@@ -279,7 +343,7 @@
         </div>
     </div>
 
-    <!-- 引入 Three.js 核心库 -->
+    <!-- Three.js 增强粒子背景（双层星云 + 动态环） -->
     <script type="importmap">
         {
             "imports": {
@@ -291,125 +355,100 @@
     <script type="module">
         import * as THREE from 'three';
 
-        // --- 初始化 Three.js 场景 ---
         const canvas = document.getElementById('bg-canvas');
-        const renderer = new THREE.WebGLRenderer({ canvas, alpha: true });
+        const renderer = new THREE.WebGLRenderer({ canvas, alpha: false });
         const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x03050b);
         
-        // 相机: 透视相机，视野60，宽高比动态，近平面0.1，远平面1000
-        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 2, 12);
+        const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(0, 1.5, 14);
         camera.lookAt(0, 0, 0);
-
-        // --- 粒子系统: 科技感星云/浮点效果 ---
-        const particleCount = 1800;
-        const geometry = new THREE.BufferGeometry();
         
-        // 随机位置 (范围 -12 到 12 的空间)
+        // ---- 主粒子群 (紫罗兰) 2100颗 ----
+        const particleCount = 2100;
+        const geom = new THREE.BufferGeometry();
         const positions = new Float32Array(particleCount * 3);
         for (let i = 0; i < particleCount; i++) {
-            positions[i*3] = (Math.random() - 0.5) * 28;
-            positions[i*3+1] = (Math.random() - 0.5) * 18;
-            positions[i*3+2] = (Math.random() - 0.5) * 15 - 5;
+            positions[i*3] = (Math.random() - 0.5) * 38;
+            positions[i*3+1] = (Math.random() - 0.5) * 24;
+            positions[i*3+2] = (Math.random() - 0.5) * 30 - 8;
         }
-        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const particleMat = new THREE.PointsMaterial({ color: 0x8b5cf6, size: 0.09, transparent: true, opacity: 0.65, blending: THREE.AdditiveBlending });
+        const particleSys = new THREE.Points(geom, particleMat);
+        scene.add(particleSys);
         
-        // 粒子材质: 发光的蓝紫色渐变圆点
-        const material = new THREE.PointsMaterial({
-            color: 0x5b6cff,
-            size: 0.12,
-            transparent: true,
-            opacity: 0.65,
-            blending: THREE.AdditiveBlending
-        });
-        
-        const particles = new THREE.Points(geometry, material);
-        scene.add(particles);
-        
-        // 添加第二层粒子 (更稀疏、更大、不同颜色，增加层次感)
-        const geometry2 = new THREE.BufferGeometry();
-        const pos2 = new Float32Array(800 * 3);
-        for (let i = 0; i < 800; i++) {
-            pos2[i*3] = (Math.random() - 0.5) * 35;
-            pos2[i*3+1] = (Math.random() - 0.5) * 22;
-            pos2[i*3+2] = (Math.random() - 0.5) * 20 - 8;
+        // ---- 第二层粒子 (青色) 1400颗 ----
+        const geom2 = new THREE.BufferGeometry();
+        const pos2 = new Float32Array(1400 * 3);
+        for (let i = 0; i < 1400; i++) {
+            pos2[i*3] = (Math.random() - 0.5) * 44;
+            pos2[i*3+1] = (Math.random() - 0.5) * 28;
+            pos2[i*3+2] = (Math.random() - 0.5) * 34 - 10;
         }
-        geometry2.setAttribute('position', new THREE.BufferAttribute(pos2, 3));
-        const material2 = new THREE.PointsMaterial({
-            color: 0xb97eff,
-            size: 0.18,
-            transparent: true,
-            opacity: 0.45,
-            blending: THREE.AdditiveBlending
-        });
-        const particles2 = new THREE.Points(geometry2, material2);
-        scene.add(particles2);
+        geom2.setAttribute('position', new THREE.BufferAttribute(pos2, 3));
+        const mat2 = new THREE.PointsMaterial({ color: 0x06b6d4, size: 0.08, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending });
+        const particleSys2 = new THREE.Points(geom2, mat2);
+        scene.add(particleSys2);
         
-        // 柔和的雾气效果，增加深邃感
-        scene.fog = new THREE.FogExp2(0x0f172a, 0.012);
+        // ---- 第三层粒子 (粉晶) 900颗 ----
+        const geom3 = new THREE.BufferGeometry();
+        const pos3 = new Float32Array(900 * 3);
+        for (let i = 0; i < 900; i++) {
+            pos3[i*3] = (Math.random() - 0.5) * 48;
+            pos3[i*3+1] = (Math.random() - 0.5) * 30;
+            pos3[i*3+2] = (Math.random() - 0.5) * 38 - 12;
+        }
+        geom3.setAttribute('position', new THREE.BufferAttribute(pos3, 3));
+        const mat3 = new THREE.PointsMaterial({ color: 0xf472b6, size: 0.1, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending });
+        const particleSys3 = new THREE.Points(geom3, mat3);
+        scene.add(particleSys3);
         
-        // 简单的环境光让整个画面更柔和（虽然Points材质不受光影响，但背景光晕氛围需保留）
-        const ambientLight = new THREE.AmbientLight(0x111122);
-        scene.add(ambientLight);
-        
-        // 添加一个极简的环状粒子群（装饰）
-        const ringCount = 400;
+        // ---- 动态环装饰 ----
+        const ringCount = 380;
         const ringGeo = new THREE.BufferGeometry();
-        const ringPos = new Float32Array(ringCount * 3);
+        const ringPositions = new Float32Array(ringCount * 3);
         for (let i = 0; i < ringCount; i++) {
             const angle = (i / ringCount) * Math.PI * 2;
-            const radius = 5.2;
-            ringPos[i*3] = Math.cos(angle) * radius;
-            ringPos[i*3+1] = Math.sin(angle) * radius * 0.6;  // 略微压扁
-            ringPos[i*3+2] = -2 + Math.sin(angle * 2) * 0.8;
+            const r = 5.2;
+            ringPositions[i*3] = Math.cos(angle) * r;
+            ringPositions[i*3+1] = Math.sin(angle) * r * 0.4;
+            ringPositions[i*3+2] = -1.8;
         }
-        ringGeo.setAttribute('position', new THREE.BufferAttribute(ringPos, 3));
-        const ringPoints = new THREE.Points(ringGeo, new THREE.PointsMaterial({ color: 0x5b8cff, size: 0.09, transparent: true, blending: THREE.AdditiveBlending }));
+        ringGeo.setAttribute('position', new THREE.BufferAttribute(ringPositions, 3));
+        const ringPoints = new THREE.Points(ringGeo, new THREE.PointsMaterial({ color: 0xa78bfa, size: 0.09, blending: THREE.AdditiveBlending }));
         scene.add(ringPoints);
         
-        // --- 鼠标交互: 相机轻微跟随鼠标移动 (视差感，增强沉浸体验) ---
-        let mouseX = 0;
-        let mouseY = 0;
-        let targetX = 0;
-        let targetY = 0;
+        scene.fog = new THREE.FogExp2(0x03050b, 0.008);
         
-        window.addEventListener('mousemove', (event) => {
-            // 归一化坐标 -1 到 1
-            mouseX = (event.clientX / window.innerWidth) * 2 - 1;
-            mouseY = (event.clientY / window.innerHeight) * 2 - 1;
-            // 目标偏移量较小，保证不会让界面太晃
-            targetX = mouseX * 1.2;
-            targetY = mouseY * 0.8;
+        // ---- 鼠标视差 (相机轻微跟随) ----
+        let targetCamX = 0, targetCamY = 0;
+        window.addEventListener('mousemove', (e) => {
+            let mx = (e.clientX / window.innerWidth) * 2 - 1;
+            let my = (e.clientY / window.innerHeight) * 2 - 1;
+            targetCamX = mx * 0.9;
+            targetCamY = my * 0.6;
         });
         
-        // --- 动画循环: 粒子缓慢旋转 & 跟随鼠标平滑移动 ---
         let time = 0;
         function animate() {
             requestAnimationFrame(animate);
-            time += 0.002;
+            time += 0.007;
             
-            // 粒子自转特效 (极缓慢)
-            particles.rotation.y = time * 0.1;
-            particles.rotation.x = Math.sin(time * 0.2) * 0.1;
-            particles2.rotation.y = time * 0.08;
-            particles2.rotation.x = Math.cos(time * 0.15) * 0.05;
-            ringPoints.rotation.z = time * 0.2;
-            ringPoints.rotation.x = Math.sin(time * 0.3) * 0.1;
+            particleSys.rotation.y = time * 0.06;
+            particleSys.rotation.x = Math.sin(time * 0.18) * 0.08;
+            particleSys2.rotation.y = time * 0.04;
+            particleSys3.rotation.x = time * 0.03;
+            ringPoints.rotation.z = time * 0.12;
             
-            // 跟随鼠标平滑移动相机视角
-            const currentCamX = camera.position.x;
-            const currentCamY = camera.position.y;
-            const newX = currentCamX + (targetX * 0.5 - currentCamX) * 0.05;
-            const newY = currentCamY + (targetY * 0.3 - currentCamY) * 0.05;
-            camera.position.x = newX;
-            camera.position.y = newY;
+            camera.position.x += (targetCamX * 0.5 - camera.position.x) * 0.04;
+            camera.position.y += (targetCamY * 0.4 - camera.position.y) * 0.04;
             camera.lookAt(0, 0, 0);
             
             renderer.render(scene, camera);
         }
         
-        // 自适应窗口大小
-        function onWindowResize() {
+        function onResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
@@ -417,23 +456,20 @@
         
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
-        renderer.setClearColor(0x0f172a, 1); // 设置背景色与深色主题融合
-        
-        window.addEventListener('resize', onWindowResize);
+        window.addEventListener('resize', onResize);
         animate();
-        
-        // 可选：将 Canvas 层级确保在最底层但覆盖全屏
-        canvas.style.position = 'fixed';
-        canvas.style.top = '0';
-        canvas.style.left = '0';
-        canvas.style.width = '100%';
-        canvas.style.height = '100%';
-        canvas.style.zIndex = '0';
     </script>
-    
-    <!-- 核心业务逻辑 JS (保持不变，完美适配原有功能) -->
+
+    <!-- 鼠标光晕跟随 & 核心业务逻辑（完整保留） -->
     <script>
-        // ---------- 数据表定义 ----------
+        // 鼠标光晕
+        const glow = document.getElementById('mouseGlow');
+        document.addEventListener('mousemove', (e) => {
+            glow.style.left = e.clientX + 'px';
+            glow.style.top = e.clientY + 'px';
+        });
+
+        // ========== 原有业务逻辑（完全保留）==========
         const TABLES = [
             "tbl_equ_two_ptjslbsb",
             "tbl_equ_two_ptjsjrcs",
@@ -446,7 +482,7 @@
             "tbl_equ_two_laboratory_activity"
         ];
 
-        // ---------- 标签页切换 ----------
+        // 标签页切换
         document.querySelectorAll('.tab').forEach(tab => {
             tab.addEventListener('click', () => {
                 document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -456,7 +492,6 @@
             });
         });
 
-        // 获取当前配置参数
         function getBaseParam() {
             let year = document.getElementById('yearVal').value.trim();
             let oldS = document.getElementById('oldState').value;
@@ -465,7 +500,6 @@
             return { year, oldS, newS };
         }
 
-        // 单学校生成 SQL
         window.generateSingleSql = function() {
             let p = getBaseParam();
             if (!p) return;
@@ -484,7 +518,6 @@
             document.getElementById('singleResult').value = sql;
         };
 
-        // 多学校生成 SQL
         window.generateMultiSql = function() {
             let p = getBaseParam();
             if (!p) return;
@@ -504,18 +537,15 @@
             document.getElementById('multiResult').value = sql;
         };
 
-        // 复制与清空功能
         window.copySingleSql = () => {
             let area = document.getElementById('singleResult');
             area.select();
-            document.execCommand('copy');
-            alert("✅ 已复制到剪贴板");
+            navigator.clipboard.writeText(area.value).then(() => alert("✅ 已复制到剪贴板")).catch(() => alert("复制失败"));
         };
         window.copyMultiSql = () => {
             let area = document.getElementById('multiResult');
             area.select();
-            document.execCommand('copy');
-            alert("✅ 已复制到剪贴板");
+            navigator.clipboard.writeText(area.value).then(() => alert("✅ 已复制到剪贴板")).catch(() => alert("复制失败"));
         };
         window.clearSingleSql = () => {
             document.getElementById('singleSchool').value = "";
@@ -525,6 +555,12 @@
             document.getElementById('multiSchool').value = "";
             document.getElementById('multiResult').value = "";
         };
+        
+        // 可选：页面加载时不自动生成SQL，保留空白提示
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('singleResult').value = "";
+            document.getElementById('multiResult').value = "";
+        });
     </script>
 </body>
 </html>
