@@ -369,8 +369,8 @@
             <div class="card-header">📌 核心参数</div>
             <div class="row-two">
                 <div class="form-item">
-                    <label style="color:#a78bfa;">🏛️ 选择单位 (教育厅 + 12盟市)</label>
-                    <select id="citySelect" class="glass-select">
+                    <label style="color:#a78bfa;">🏛️ 选择单位（可多选）</label>
+                    <select id="citySelect" class="glass-select" multiple size="6">
                         <option value="1">内蒙古自治区教育厅</option>
                         <option value="2">内蒙古自治区呼和浩特市教育局</option>
                         <option value="13">内蒙古自治区包头市教育局</option>
@@ -404,7 +404,6 @@
                 <button class="btn-neon btn-warning" onclick="unCheckAll()">❌ 取消全选</button>
             </div>
             <div class="role-grid" id="roleBox">
-                <!-- 由js动态生成，保证完整角色列表且方便维护，但也可直接写静态，为了整洁使用js注入 -->
             </div>
         </div>
 
@@ -541,7 +540,7 @@
             glow.style.top = e.clientY + 'px';
         });
 
-        // ========= 角色列表 (完整保留原所有角色) =========
+        // ========= 角色列表 =========
         const roleList = [
             "校服系统管理员","超级管理员","特级管理员","重置密码","教育厅制证二级管理员","教育厅管理员",
             "教育装备自治区管理人员","基教处证照设置人员","u-key登录","盟市管理员","普通角色","测试角色",
@@ -583,25 +582,34 @@
                 sqlTypeSel.options[1].disabled = false;
             }
         }
+
+        // 获取多选单位ID
+        function getSelectedCityIds() {
+            const sel = document.getElementById('citySelect');
+            return Array.from(sel.selectedOptions).map(opt => opt.value);
+        }
         
-        // 生成SQL核心逻辑 (保留原有业务)
+        // 生成SQL核心逻辑（支持多选单位）
         function generateFullSql() {
             const checked = Array.from(document.querySelectorAll('.roleck:checked')).map(cb => cb.value);
             if (checked.length === 0) { alert("请至少勾选一个角色！"); return null; }
             const roleStr = checked.map(v => `'${v.replace(/'/g, "''")}'`).join(',');
-            const cityId = document.getElementById('citySelect').value;
+            const cityIds = getSelectedCityIds();
             const type = document.getElementById('sqlType').value;
             const mode = document.querySelector('input[name="searchMode"]:checked').value;
             let deptCond = '';
+
             if (mode === 'dept') {
-                deptCond = `AND (sd.id = '${cityId}' OR sd.ancestors LIKE '%${cityId}%')`;
+                const conds = cityIds.map(id => `(sd.id = '${id}' OR sd.ancestors LIKE '%${id}%')`);
+                deptCond = "AND (" + conds.join(" OR ") + ")";
             }
+
             if (type === 'query') {
                 return `-- 预览查询清单 (角色：${checked.join(',')})\nSELECT DISTINCT\nsu.id,\nsu.dept_name,\nsu.status\nFROM sys_user su\nINNER JOIN sys_dept sd ON su.dept_id = sd.id\nINNER JOIN sys_user_role sur ON su.id = sur.user_id\nINNER JOIN sys_role sr ON sur.role_id = sr.id\nWHERE sr.name IN(${roleStr})\n${deptCond};`;
             } else {
-                const condY = `AND (sd.id = '${cityId}' OR sd.ancestors LIKE '%${cityId}%')`;
-                const condN = `AND NOT (sd.id = '${cityId}' OR sd.ancestors LIKE '%${cityId}%')`;
-                return `START TRANSACTION;\n-- 启用选中单位账号 (status='Y')\nUPDATE sys_user su\nINNER JOIN sys_dept sd ON su.dept_id = sd.id\nINNER JOIN sys_user_role sur ON su.id = sur.user_id\nINNER JOIN sys_role sr ON sur.role_id = sr.id\nSET su.status = 'Y'\nWHERE sr.name IN(${roleStr})\n${condY};\n\n-- 停用其他单位账号 (status='N')\nUPDATE sys_user su\nINNER JOIN sys_dept sd ON su.dept_id = sd.id\nINNER JOIN sys_user_role sur ON su.id = sur.user_id\nINNER JOIN sys_role sr ON sur.role_id = sr.id\nSET su.status = 'N'\nWHERE sr.name IN(${roleStr})\n${condN};\n\n-- 全量校验查询\nSELECT DISTINCT su.dept_name, su.status FROM sys_user su\nINNER JOIN sys_dept sd ON su.dept_id = sd.id\nINNER JOIN sys_user_role sur ON su.id = sur.user_id\nINNER JOIN sys_role sr ON sur.role_id = sr.id\nWHERE sr.name IN(${roleStr});\n\n-- 无误提交：COMMIT;  出错回滚：ROLLBACK;`;
+                const condY = cityIds.map(id => `(sd.id = '${id}' OR sd.ancestors LIKE '%${id}%')`).join(" OR ");
+                const condN = "NOT (" + condY + ")";
+                return `START TRANSACTION;\n-- 启用选中单位账号 (status='Y')\nUPDATE sys_user su\nINNER JOIN sys_dept sd ON su.dept_id = sd.id\nINNER JOIN sys_user_role sur ON su.id = sur.user_id\nINNER JOIN sys_role sr ON sur.role_id = sr.id\nSET su.status = 'Y'\nWHERE sr.name IN(${roleStr})\nAND (${condY});\n\n-- 停用其他单位账号 (status='N')\nUPDATE sys_user su\nINNER JOIN sys_dept sd ON su.dept_id = sd.id\nINNER JOIN sys_user_role sur ON su.id = sur.user_id\nINNER JOIN sys_role sr ON sur.role_id = sr.id\nSET su.status = 'N'\nWHERE sr.name IN(${roleStr})\nAND ${condN};\n\n-- 全量校验查询\nSELECT DISTINCT su.dept_name, su.status FROM sys_user su\nINNER JOIN sys_dept sd ON su.dept_id = sd.id\nINNER JOIN sys_user_role sur ON su.id = sur.user_id\nINNER JOIN sys_role sr ON sur.role_id = sr.id\nWHERE sr.name IN(${roleStr});\n\n-- 无误提交：COMMIT;  出错回滚：ROLLBACK;`;
             }
         }
         
@@ -624,7 +632,6 @@
                         <pre class="sql-pre">${escapeHtml(sql)}</pre>
                     </div>`;
             } else {
-                // 事务更新: 拆分启用、停用、校验三个部分
                 const lines = sql.split('\n');
                 let enablePart = '', disablePart = '', verifyPart = '';
                 let section = '';
@@ -636,12 +643,11 @@
                     else if (section === 'disable') disablePart += line + '\n';
                     else if (section === 'verify') verifyPart += line + '\n';
                 }
-                // 再加上前后事务声明部分
                 const transactionStart = "START TRANSACTION;\n";
                 const commitNote = "\n-- 无误提交：COMMIT;  出错回滚：ROLLBACK;";
                 container.innerHTML = `
-                    <div class="sql-block"><div class="sql-block-title">🚀 启用更新 (status='Y') <button class="btn-neon micro-btn" onclick="copySpecificText('${escapeJs(enablePart)}')">复制本段</button></div><pre class="sql-pre">${escapeHtml(enablePart)}</pre></div>
-                    <div class="sql-block"><div class="sql-block-title">⛔ 停用更新 (status='N') <button class="btn-neon micro-btn" onclick="copySpecificText('${escapeJs(disablePart)}')">复制本段</button></div><pre class="sql-pre">${escapeHtml(disablePart)}</pre></div>
+                    <div class="sql-block"><div class="sql-block-title">🚀 启用账号 (status='Y') <button class="btn-neon micro-btn" onclick="copySpecificText('${escapeJs(enablePart)}')">复制本段</button></div><pre class="sql-pre">${escapeHtml(enablePart)}</pre></div>
+                    <div class="sql-block"><div class="sql-block-title">⛔ 停用账号 (status='N') <button class="btn-neon micro-btn" onclick="copySpecificText('${escapeJs(disablePart)}')">复制本段</button></div><pre class="sql-pre">${escapeHtml(disablePart)}</pre></div>
                     <div class="sql-block"><div class="sql-block-title">🔎 校验查询 <button class="btn-neon micro-btn" onclick="copySpecificText('${escapeJs(verifyPart)}')">复制本段</button></div><pre class="sql-pre">${escapeHtml(verifyPart)}</pre></div>
                     <div class="sql-block"><div class="sql-block-title">📦 事务头+尾 <button class="btn-neon micro-btn" onclick="copySpecificText('${escapeJs(transactionStart + commitNote)}')">复制头尾</button></div><pre class="sql-pre">${escapeHtml(transactionStart + commitNote)}</pre></div>
                 `;
@@ -672,7 +678,7 @@
         window.unCheckAll = unCheckAll;
         
         buildRoleBox();
-        changeMode();  // 初始化禁用状态
+        changeMode();
     </script>
 </body>
 </html>
