@@ -551,6 +551,9 @@
         });
         document.getElementById('fieldSelect').addEventListener('change', updateTipText);
         
+        // ————————————————————————————————
+        // 优化后：极速批量 SQL 生成函数
+        // ————————————————————————————————
         function generateSql() {
             const input = document.getElementById('dataInput').value.trim();
             const resultArea = document.getElementById('sqlResult');
@@ -562,24 +565,57 @@
             let idField = 'sfzh';
             if (currentVersion !== 'A') idField = 'sfzjh';
             const field = document.getElementById('fieldSelect').value;
-            
+
             const lines = input.split('\n').filter(l => l.trim());
             let sql = '';
-            for (let line of lines) {
-                let parts = line.trim().split(/[\s,]+/).filter(p => p);
-                if (parts.length < 2) continue;
-                const key = parts[0].replace(/'/g, "''");
-                const val = parts.slice(1).join(' ').replace(/'/g, "''");
-                let sqlValue = (field === 'byzsh' && val.toLowerCase() === 'null') ? 'NULL' : `'${val}'`;
-                if (field === 'xxmc') {
-                    sql += `UPDATE ${table} SET xxmc = '${val}' WHERE xxmc = '${key}';\n`;
-                } else if (field === 'sfzjh') {
-                    sql += `UPDATE ${table} SET ${idField} = '${val}' WHERE ${idField} = '${key}';\n`;
-                } else {
-                    let realField = (field === 'bj' && currentVersion === 'B') ? 'bjmc' : field;
-                    sql += `UPDATE ${table} SET ${realField} = ${sqlValue} WHERE ${idField} = '${key}';\n`;
+
+            if (field === 'xxmc') {
+                for (let line of lines) {
+                    let parts = line.trim().split(/[\s,|]+/).filter(p => p);
+                    if (parts.length < 2) continue;
+                    const oldName = parts[0].replace(/'/g, "''");
+                    const newName = parts.slice(1).join(' ').replace(/'/g, "''");
+                    sql += `UPDATE ${table} SET xxmc = '${newName}' WHERE xxmc = '${oldName}';\n`;
                 }
             }
+            else if (field === 'sfzjh') {
+                let sets = [];
+                for (let line of lines) {
+                    let parts = line.trim().split(/[\s,]+/).filter(p => p);
+                    if (parts.length < 2) continue;
+                    const oldId = parts[0].replace(/'/g, "''");
+                    const newId = parts[1].replace(/'/g, "''");
+                    sets.push(`WHEN '${oldId}' THEN '${newId}'`);
+                }
+                if (sets.length > 0) {
+                    sql += `UPDATE ${table} 
+SET ${idField} = CASE ${idField} 
+${sets.join('\n')} 
+END 
+WHERE ${idField} IN (${sets.map(i => `'${i.split("'")[1]}'`).join(',')});\n`;
+                }
+            }
+            else {
+                let sets = [];
+                for (let line of lines) {
+                    let parts = line.trim().split(/[\s,]+/).filter(p => p);
+                    if (parts.length < 2) continue;
+                    const key = parts[0].replace(/'/g, "''");
+                    const val = parts.slice(1).join(' ').replace(/'/g, "''");
+                    let sqlValue = (field === 'byzsh' && val.toLowerCase() === 'null') ? 'NULL' : `'${val}'`;
+                    sets.push(`WHEN '${key}' THEN ${sqlValue}`);
+                }
+                if (sets.length > 0) {
+                    let realField = (field === 'bj' && currentVersion === 'B') ? 'bjmc' : field;
+                    let idList = sets.map(i => `'${i.split("'")[1]}'`).join(',');
+                    sql += `UPDATE ${table} 
+SET ${realField} = CASE ${idField} 
+${sets.join('\n')} 
+END 
+WHERE ${idField} IN (${idList});\n`;
+                }
+            }
+
             resultArea.innerText = sql || '⚠️ 未识别到有效数据';
         }
         
