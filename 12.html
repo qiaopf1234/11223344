@@ -291,10 +291,10 @@
             <div class="form-item">
                 <label>🔼 目标状态</label>
                 <select id="newState">
-                    <option value="0">0 - 待编辑</option>
+                    <option value="0" selected>0 - 待编辑</option>
                     <option value="1">1 - 旗县待审核</option>
                     <option value="2">2 - 盟市待审核</option>
-                    <option value="3" selected>3 - 盟市已审核</option>
+                    <option value="3">3 - 盟市已审核</option>
                 </select>
             </div>
         </div>
@@ -309,7 +309,7 @@
         <div id="single" class="tab-content active">
             <div class="form-group" style="margin-bottom: 20px;">
                 <label>学校名称</label>
-                <input type="text" id="singleSchool" placeholder="例: 呼和浩特市第一中学">
+                <input type="text" id="singleSchool" placeholder="">
             </div>
             <div>
                 <button class="btn btn-warning" onclick="generateSingleSql()">⚡ 生成 SQL</button>
@@ -326,7 +326,7 @@
         <div id="multi" class="tab-content">
             <div class="form-group" style="margin-bottom: 20px;">
                 <label>学校列表 (一行一个)</label>
-                <textarea id="multiSchool" rows="6" placeholder="呼和浩特市第一中学&#10;呼和浩特市第二中学&#10;内蒙古师范大学附属中学"></textarea>
+                <textarea id="multiSchool" rows="6" placeholder=""></textarea>
             </div>
             <div>
                 <button class="btn btn-warning" onclick="generateMultiSql()">⚡ 生成 SQL</button>
