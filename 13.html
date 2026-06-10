@@ -509,14 +509,15 @@
             C: 'kdsj_zzxs_zhizheng'
         };
         
-        // 动态字段映射 (保留之前所有字段)
+        // 动态字段映射 (A版本已添加 xxmc_by_sfzh)
         const fieldOptions = {
-            A: ['bj', 'mz', 'xm', 'xxmc', 'csrq', 'rxny', 'byny', 'sfzjh', 'zsxsxxmc', 'byzsh'],
+            A: ['xxmc_by_sfzh', 'bj', 'mz', 'xm', 'xxmc', 'csrq', 'rxny', 'byny', 'sfzjh', 'zsxsxxmc', 'byzsh'],
             B: ['bj', 'mz', 'xm', 'xxmc', 'csrq', 'rxny', 'byny', 'sfzjh', 'zsxsxxmc', 'byzsh', 'xb', 'hkszd'],
             C: ['bj', 'mz', 'xm', 'xxmc', 'csrq', 'rxny', 'byny', 'sfzjh', 'zsxsxxmc', 'byzsh', 'xb', 'zymc', 'xz']
         };
         
         const fieldNames = {
+            'xxmc_by_sfzh': '按身份证修改学校名称(待分配专用)',
             'bj': '班级名称', 'mz': '民族', 'xm': '姓名', 'xxmc': '学校名称', 'csrq': '出生日期',
             'rxny': '入学年月', 'byny': '毕业年月', 'sfzjh': '修改身份证号', 'zsxsxxmc': '证书上显示的学校名称',
             'byzsh': '毕业证书号', 'xb': '性别', 'hkszd': '户口所在地', 'zymc': '专业名称', 'xz': '学制'
@@ -542,6 +543,7 @@
             const tip = document.getElementById('tipText');
             if (field === 'sfzjh') tip.innerText = '格式：旧身份证号 + 新身份证号';
             else if (field === 'xxmc') tip.innerText = '格式：旧学校名 | 新学校名';
+            else if (field === 'xxmc_by_sfzh') tip.innerText = '格式：身份证号 + 新学校名称（只改学校）';
             else tip.innerText = '格式：身份证 + 内容';
         }
         
@@ -569,7 +571,19 @@
             const lines = input.split('\n').filter(l => l.trim());
             let sql = '';
 
-            if (field === 'xxmc') {
+            // ==============================================
+            // 新增：待分配学生表 → 根据 sfzh 修改 xxmc
+            // ==============================================
+            if (field === 'xxmc_by_sfzh') {
+                for (let line of lines) {
+                    let parts = line.trim().split(/\s+/).filter(p => p);
+                    if (parts.length < 2) continue;
+                    const sfzh = parts[0].replace(/'/g, "''");
+                    const newXxmc = parts.slice(1).join(' ').replace(/'/g, "''");
+                    sql += `UPDATE ${table} SET xxmc = '${newXxmc}' WHERE sfzh = '${sfzh}';\n`;
+                }
+            }
+            else if (field === 'xxmc') {
                 for (let line of lines) {
                     let parts = line.trim().split(/[\s,|]+/).filter(p => p);
                     if (parts.length < 2) continue;
