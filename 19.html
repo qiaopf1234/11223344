@@ -162,7 +162,7 @@ textarea {
 ::placeholder {
   color: rgba(255, 255, 255, 0.6);
 }
-/* 日期输入框点击唤起选择器 */
+/* 日期输入框点击唤起选择器（页面已删除起止日期输入，样式保留不影响） */
 .date-input {
   position: relative;
   width: 100%;
@@ -189,6 +189,7 @@ textarea {
     <input type="text" id="customTitle" placeholder="请手动输入报告主标题">
   </div>
 
+  <!-- 年月选择行保留 -->
   <div class="date-row">
     <div class="item">
       <label>报告年份</label>
@@ -216,20 +217,7 @@ textarea {
     </div>
   </div>
 
-  <div class="date-row">
-    <div class="item">
-      <label>开始日期</label>
-      <div class="date-input">
-        <input type="date" id="startDate">
-      </div>
-    </div>
-    <div class="item">
-      <label>结束日期</label>
-      <div class="date-input">
-        <input type="date" id="endDate">
-      </div>
-    </div>
-  </div>
+  <!-- 已完整删除：开始日期、结束日期整行DOM，无注释残留 -->
 
   <div class="item">
     <label>本月工作内容（可编辑修改模板）</label>
@@ -331,43 +319,81 @@ function animate() {
 }
 animate();
 
-// 日期输入框点击唤起选择器
-document.querySelectorAll('.date-input input[type="date"]').forEach(input => {
-  input.addEventListener('click', function() {
-    this.showPicker();
-  });
-});
+// 起止日期输入框已删除，对应点击绑定代码全部移除
 
-// --- 原有功能代码 ---
-const defaultTemplate = ``;
-
-document.getElementById('mainWork').value = defaultTemplate;
+// --- 业务全局变量 ---
 const titleSel = document.getElementById('titleSel');
 const titleInputBox = document.getElementById('titleInputBox');
 const eventLabel = document.getElementById('eventLabel');
+const reportMonthSel = document.getElementById('reportMonth');
+const reportYearSel = document.getElementById('reportYear');
+const mainWorkTextarea = document.getElementById('mainWork');
 
-// 切换标题时，同步更新粘贴字段说明
+// 获取当月总天数
+function getMonthDayCount(year, monthZero) {
+  return new Date(year, monthZero + 1, 0).getDate();
+}
+
+// 判断当前是否多系统模式
+function isCurrentMultiSys() {
+  const val = titleSel.value;
+  return val === '自定义' || val.indexOf('、') > -1;
+}
+
+// 生成对应模板（自动区分单/多系统）
+function getTemplateText() {
+  const y = parseInt(reportYearSel.value);
+  const mNum = parseInt(reportMonthSel.value);
+  const mZero = mNum - 1;
+  const days = getMonthDayCount(y, mZero);
+  const mStr = `${mNum}月`;
+
+  if (isCurrentMultiSys()) {
+    // 多系统固定模板
+    return `${mStr}全月（${days}天）的机关智能化系统、民办教育管理系统、学生体质健康系统巡检工作已合并统计，期间各系统完成日巡检${days}次，并形成了每日巡检记录表，反映了每日系统运行状态与健康情况；${mStr}机关智能化系统、民办教育管理系统、学生体质健康系统巡检服务存储均在正常范围内无异常存储问题，同步监控存储容量波动与用户数据导出功能稳定性；巡检服务存储均在正常范围内无异常存储问题；各平台正常登录、无报错问题，系统响应速度小于4秒，未发现重大运行异常。
+1.服务配合与支撑：机关智能化系统 ${mStr} 通过电话、微信等远程方式为用户提供日常运维问题解答、操作指导14 次，积极响应并闭环用户问题及咨询，保障业务顺畅推进；民办机构管理系统未开放，只进行每日系统巡检与健康检查；体质健康系统未开放，只进行每日系统巡检与健康检查；
+2.安全运维：机关智能化系统、民办机构系统、体质健康系统${mStr}执行系统安全监控，并对系统进行了全面的安全审查，未发现安全隐患。
+3.故障处理：机关智能化系统、民办机构系统、体质健康系统${mStr}无故障。
+4.需求处置：机关智能化系统无新增功能优化需求；民办机构系统无新增功能需求；体质健康系统无新增功能需求。`;
+  } else {
+    // 单系统固定模板
+    return `${mStr}基础教育大数据服务平台完成月巡检1次，并形成了每月巡检记录表，反映了每月系统运行状态与健康情况；系统巡检服务存储均在正常范围内无异常存储问题，平台正常登录、无报错问题，系统响应速度小于5秒，未发现重大运行异常。
+1.服务配合与支撑：本月基础教育大数据系统通过电话、微信等远程方式为用户提供了日常运维问题解答、操作指导等支撑工作。
+2.安全运维：基础教育大数据系统进行了全面的安全审查，未发现安全隐患。
+3.故障处理：基础教育大数据系统无故障问题，运行状态良好。
+4.需求处置：基础教育大数据系统无新增功能优化需求。`;
+  }
+}
+
+// 刷新文本框内容
+function refreshTemplate() {
+  mainWorkTextarea.value = getTemplateText();
+}
+
+// 页面初始化加载模板
+refreshTemplate();
+
+// 监听月份、年份、标题切换，自动刷新模板
+reportMonthSel.addEventListener('change', refreshTemplate);
+reportYearSel.addEventListener('change', refreshTemplate);
+titleSel.addEventListener('change', () => {
+  updateLabel();
+  refreshTemplate();
+});
+
+// 切换标题时更新表格字段说明
 function updateLabel() {
   let val = titleSel.value;
   titleInputBox.style.display = val === '自定义' ? 'block' : 'none';
-  // 多系统/自定义含多个系统 → 增加【系统名称】字段
   if (val === '自定义' || val.indexOf('、') > -1) {
     eventLabel.innerText = '运维事件记录表（粘贴字段：系统名称、事件内容、问题分析、完成状态、服务对象、需求提出、处理日期、处理人）';
   } else {
     eventLabel.innerText = '运维事件记录表（粘贴字段：事件内容、问题分析、完成状态、服务对象、需求提出、处理日期、处理人）';
   }
 }
-titleSel.addEventListener('change', updateLabel);
 updateLabel();
 
-function fmt(dateStr){
-  if(!dateStr) return '';
-  let d=new Date(dateStr);
-  let y=d.getFullYear();
-  let m=String(d.getMonth()+1).padStart(2,'0');
-  let d2=String(d.getDate()).padStart(2,'0');
-  return `${y}年${m}月${d2}日`;
-}
+// 起止日期格式化函数fmt全部删除，不再使用
 
 function splitLine(str){
   return str.trim().split(/\t/);
@@ -382,7 +408,7 @@ function cutWork(){
   t.select();document.execCommand('cut');alert('剪切成功');
 }
 function resetTemplate(){
-  document.getElementById('mainWork').value = defaultTemplate;
+  refreshTemplate();
   alert('已恢复默认工作模板');
 }
 
@@ -401,21 +427,17 @@ function clearEvent(){
 function generateAndExport(){
   let titleSelVal = titleSel.value;
   let mainTitle = titleSelVal === '自定义' ? document.getElementById('customTitle').value.trim() : titleSelVal;
-  // 判断是否为多系统
   const isMultiSys = (titleSelVal === '自定义') || (mainTitle.indexOf('、') > -1);
 
-  let reportYear = document.getElementById('reportYear').value;
-  let reportMonth = document.getElementById('reportMonth').value;
-  let start=document.getElementById('startDate').value;
-  let end=document.getElementById('endDate').value;
-
-  let startStr = fmt(start);
-  let endStr = fmt(end);
-  let periodText = `（${startStr}-${endStr}）`;
+  let reportYear = reportYearSel.value;
+  let reportMonth = reportMonthSel.value;
+  // 移除startDate、endDate读取与起止周期文本
   let monthText = `${reportMonth.replace('0','')}月`;
   let titleLine1 = `${mainTitle}${reportYear}年${reportMonth.replace('0','')}月月度总结报告`;
+  // 报告副标题去掉起止日期，为空
+  let periodText = "";
 
-  let mainWorkContent = document.getElementById('mainWork').value.trim();
+  let mainWorkContent = mainWorkTextarea.value.trim();
   mainWorkContent = mainWorkContent.replace(/^本月/g, monthText);
 
   let eventLines = document.getElementById('eventList').value.trim().split('\n').filter(x=>x.trim());
@@ -427,7 +449,6 @@ function generateAndExport(){
     let sysName, nr, zt, dw, xq, rq, clr;
 
     if(isMultiSys){
-      // 多系统：0系统名称 1事件内容 2问题分析(忽略) 3完成状态 4服务对象 5需求提出 6处理日期 7处理人
       sysName = arr[0] || '';
       nr = arr[1] || '';
       zt = arr[3] || '';
@@ -447,7 +468,6 @@ function generateAndExport(){
         <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${clr}</td>
       </tr>`;
     }else{
-      // 单系统：0事件内容 1问题分析(忽略) 2完成状态 3服务对象 4需求提出 5处理日期 6处理人
       nr = arr[0] || '';
       zt = arr[2] || '';
       dw = arr[3] || '';
@@ -467,7 +487,6 @@ function generateAndExport(){
     }
   });
 
-  // 拼接表头
   let tableHead = '';
   if(isMultiSys){
     tableHead = `<tr>
@@ -521,19 +540,22 @@ table{width:100%;border-collapse:collapse;margin-top:10px;}
 .main-title-line2{
   margin-bottom:20px;
 }
-.main-content p{
-  font-family:"仿宋";
-  font-size:16pt;
-  line-height:1.5;
-  text-indent:2em;
-  margin:0 0 8px 0;
-}
+/* 一级标题：黑体三号、不加粗 */
 .sub-title{
   font-family:"黑体";
   font-size:16pt;
   font-weight:normal;
   margin:15px 0 8px 0;
   text-indent:0;
+}
+/* 正文：仿宋三号、首行缩进2字符、不加粗 */
+.main-content p{
+  font-family:"仿宋";
+  font-size:16pt;
+  line-height:1.5;
+  text-indent:2em;
+  margin:0 0 8px 0;
+  font-weight:normal;
 }
 th{
   font-family:宋体;
@@ -548,6 +570,7 @@ th{
   font-size:16pt;
   margin-top:30px;
   line-height:2;
+  font-weight:normal;
 }
 </style>
 </head>
@@ -567,7 +590,6 @@ th{
   ${eventRows}
 </table>
 
-<!-- 新增签字栏 -->
 <div class="sign-line">
   <p>运维人员：_________</p>
   <p>甲方确认：_________</p>
