@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>运维阶段报告生成器</title>
+<style>
+* {
+  box-sizing: border-box;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+}
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background: #0b0b0f;
+  color: #e0e0e0;
+  overflow-x: hidden;
+  position: relative;
+}
+/* 动态粒子画布 */
+#particles-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+.container {
+  max-width: 900px;
+  margin: 30px auto;
+  padding: 30px;
+  background: rgba(15, 15, 25, 0.75);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  z-index: 1;
+}
+h2 {
+  text-align: center;
+  color: #fff;
+  margin-bottom: 30px;
+  font-size: 28px;
+  font-weight: 600;
+  background: linear-gradient(90deg, #8a8aff, #a78bfa, #c084fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.item {
+  margin-bottom: 24px;
+}
+label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #ffffff;
+  font-size: 14px;
+  opacity: 0.9;
+}
+input, textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-size: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  transition: all 0.3s ease;
+}
+select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid rgba(138, 138, 255, 0.4);
+  border-radius: 8px;
+  font-size: 14px;
+  background: #12121b;
+  color: #ffffff;
+  transition: all 0.3s ease;
+}
+select:focus {
+  outline: none;
+  border-color: #8a8aff;
+  box-shadow: 0 0 0 3px rgba(138, 138, 255, 0.2);
+}
+select option {
+  background: #12121b;
+  color: #ffffff;
+}
+input:focus, textarea:focus {
+  outline: none;
+  border-color: #8a8aff;
+  box-shadow: 0 0 0 3px rgba(138, 138, 255, 0.2);
+}
+.date-row {
+  display: flex;
+  gap: 12px;
+}
+.date-row .item {
+  flex: 1;
+}
+.btn-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+button {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+.btn-blue {
+  background: linear-gradient(90deg, #8a8aff, #a78bfa);
+  color: white;
+}
+.btn-blue:hover {
+  box-shadow: 0 0 15px rgba(138, 138, 255, 0.4);
+  transform: translateY(-1px);
+}
+.btn-green {
+  background: #16a34a;
+  color: white;
+}
+.btn-green:hover {
+  background: #15803d;
+  box-shadow: 0 0 10px rgba(22, 163, 74, 0.3);
+}
+.btn-gray {
+  background: #4b5563;
+  color: white;
+}
+.btn-gray:hover {
+  background: #374151;
+}
+.btn-red {
+  background: #dc2626;
+  color: white;
+}
+.btn-red:hover {
+  background: #b91c1c;
+}
+textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+/* ========== 新增：UIverse 深色日历样式（适配当前主题） ========== */
+.date-input {
+  position: relative;
+  width: 100%;
+}
+.date-input input[type="date"] {
+  padding-right: 40px;
+}
+/* 隐藏原生日历图标 */
+.date-input input[type="date"]::-webkit-calendar-picker-indicator {
+  display: none;
+}
+/* 自定义日历图标按钮 */
+.date-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  color: #8a8aff;
+  transition: color 0.3s ease;
+}
+.date-icon:hover {
+  color: #c084fc;
+}
+</style>
+</head>
+<body>
+<canvas id="particles-canvas"></canvas>
+<div class="container">
+  <h2>运维阶段报告生成器</h2>
+
+  <div class="item">
+    <label>选择/自定义报告标题</label>
+    <select id="titleSel">
+      <option value="教育厅内蒙古基础教育大数据服务平台">教育厅内蒙古基础教育大数据服务平台</option>
+      <option value="教育厅机关智能化管理平台、学生体质健康监测数据管理平台、民办机构管理系统运维服务">教育厅机关智能化管理平台、学生体质健康监测数据管理平台、民办机构管理系统运维服务</option>
+      <option value="自定义">手动自定义输入</option>
+    </select>
+  </div>
+  <div class="item" id="titleInputBox" style="display:none;">
+    <input type="text" id="customTitle" placeholder="请手动输入报告主标题">
+  </div>
+
+  <!-- ========== 替换后的日期选择区域（UIverse 风格） ========== -->
+  <div class="date-row">
+    <div class="item">
+      <label>阶段开始日期</label>
+      <div class="date-input">
+        <input type="date" id="startDate">
+        <svg class="date-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      </div>
+    </div>
+    <div class="item">
+      <label>阶段结束日期</label>
+      <div class="date-input">
+        <input type="date" id="endDate">
+        <svg class="date-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        </svg>
+      </div>
+    </div>
+  </div>
+  <!-- ============================================= -->
+
+  <div class="item">
+    <label>处理人（用于节假日保障表）</label>
+    <input type="text" id="handler" placeholder="例如：乔鹏飞">
+  </div>
+
+  <div class="item">
+    <label id="eventLabel">服务事项明细（粘贴字段：事件内容、具体问题、完成状态、服务对象、需求提出、处理日期、处理人）</label>
+    <div class="btn-bar">
+      <button class="btn-green" onclick="copyEvent()">复制</button>
+      <button class="btn-gray" onclick="cutEvent()">剪切</button>
+      <button class="btn-red" onclick="clearEvent()">清空</button>
+    </div>
+    <textarea id="eventList" rows="6" placeholder="直接从Excel整行粘贴数据，填“无”=不生成表格"></textarea>
+  </div>
+
+  <div class="item">
+    <label>漏洞修复明细（粘贴字段：修复时间、漏洞修复内容、处理方式、处理人）</label>
+    <div class="btn-bar">
+      <button class="btn-green" onclick="copyBug()">复制</button>
+      <button class="btn-gray" onclick="cutBug()">剪切</button>
+      <button class="btn-red" onclick="clearBug()">清空</button>
+    </div>
+    <textarea id="bugList" rows="4" placeholder="直接从Excel整行粘贴数据，填“无”=显示无漏洞修复"></textarea>
+  </div>
+
+  <div class="item">
+    <label>故障处理明细（粘贴字段：故障处理时间、系统、故障内容、处理方式、处理结果、处理人）</label>
+    <div class="btn-bar">
+      <button class="btn-green" onclick="copyFault()">复制</button>
+      <button class="btn-gray" onclick="cutFault()">剪切</button>
+      <button class="btn-red" onclick="clearFault()">清空</button>
+    </div>
+    <textarea id="faultList" rows="4" placeholder="直接从Excel整行粘贴数据，填“无”=显示0起故障"></textarea>
+  </div>
+
+  <div class="item">
+    <label>需求处置明细（粘贴字段：需求接收时间、需求内容、处理方式、处理结果）</label>
+    <div class="btn-bar">
+      <button class="btn-green" onclick="copyNeed()">复制</button>
+      <button class="btn-gray" onclick="cutNeed()">剪切</button>
+      <button class="btn-red" onclick="clearNeed()">清空</button>
+    </div>
+    <textarea id="needList" rows="4" placeholder="直接从Excel整行粘贴数据，填“无”=显示无需求处理"></textarea>
+  </div>
+
+  <div class="item" style="text-align:center;">
+    <button class="btn-blue" onclick="generateAndExport()">生成并导出 Word 阶段总结报告</button>
+  </div>
+</div>
+
+<script>
+// --- 动态物理粒子效果 ---
+const canvas = document.getElementById('particles-canvas');
+const ctx = canvas.getContext('2d');
+let width, height;
+let particles = [];
+
+function resizeCanvas() {
+  width = canvas.width = window.innerWidth;
+  height = canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+class Particle {
+  constructor() {
+    this.reset();
+  }
+  reset() {
+    this.x = Math.random() * width;
+    this.y = Math.random() * height;
+    this.size = Math.random() * 1.5 + 0.5;
+    this.speedX = (Math.random() - 0.5) * 0.3;
+    this.speedY = (Math.random() - 0.5) * 0.3;
+    this.opacity = Math.random() * 0.5 + 0.2;
+  }
+  update() {
+    this.x += this.speedX;
+    this.y += this.speedY;
+    if (this.x < 0 || this.x > width || this.y < 0 || this.y > height) {
+      this.reset();
+    }
+  }
+  draw() {
+    ctx.fillStyle = `rgba(138, 138, 255, ${this.opacity})`;
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// 初始化粒子
+for (let i = 0; i < 80; i++) {
+  particles.push(new Particle());
+}
+
+function connectParticles() {
+  for (let a = 0; a < particles.length; a++) {
+    for (let b = a; b < particles.length; b++) {
+      const dx = particles[a].x - particles[b].x;
+      const dy = particles[a].y - particles[b].y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (distance < 120) {
+        ctx.strokeStyle = `rgba(138, 138, 255, ${0.15 * (1 - distance / 120)})`;
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        ctx.moveTo(particles[a].x, particles[a].y);
+        ctx.lineTo(particles[b].x, particles[b].y);
+        ctx.stroke();
+      }
+    }
+  }
+}
+
+function animate() {
+  ctx.clearRect(0, 0, width, height);
+  particles.forEach(p => {
+    p.update();
+    p.draw();
+  });
+  connectParticles();
+  requestAnimationFrame(animate);
+}
+animate();
+
+// --- 原有功能代码 ---
+const titleSel = document.getElementById('titleSel');
+const titleInputBox = document.getElementById('titleInputBox');
+const eventLabel = document.getElementById('eventLabel');
+
+function updateLabel() {
+  let val = titleSel.value;
+  titleInputBox.style.display = val === '自定义' ? 'block' : 'none';
+  if (val === '自定义' || val.indexOf('、') > -1) {
+    eventLabel.innerText = '服务事项明细（粘贴字段：系统名称、事件内容、具体问题、完成状态、服务对象、需求提出、处理日期、处理人）';
+  } else {
+    eventLabel.innerText = '服务事项明细（粘贴字段：事件内容、具体问题、完成状态、服务对象、需求提出、处理日期、处理人）';
+  }
+}
+titleSel.addEventListener('change', updateLabel);
+updateLabel();
+
+function fmt(dateStr){
+  if(!dateStr) return '';
+  let d = new Date(dateStr);
+  let y = d.getFullYear();
+  let m = String(d.getMonth() + 1).padStart(2, '0');
+  let day = String(d.getDate()).padStart(2, '0');
+  return `${y}年${m}月${day}日`;
+}
+
+function getMonthList(startDateStr, endDateStr) {
+  let start = new Date(startDateStr);
+  let end = new Date(endDateStr);
+  let list = [];
+  let current = new Date(start);
+  while(current <= end){
+    let y = current.getFullYear();
+    let m = current.getMonth() + 1;
+    list.push(`${y}年${m}月`);
+    current.setMonth(current.getMonth() + 1);
+  }
+  return list;
+}
+
+function splitLine(str){
+  return str.trim().split(/\t/);
+}
+
+function copyEvent(){let t=document.getElementById('eventList');t.select();document.execCommand('copy');alert('复制成功');}
+function cutEvent(){let t=document.getElementById('eventList');t.select();document.execCommand('cut');alert('剪切成功');}
+function clearEvent(){document.getElementById('eventList').value='';}
+
+function copyBug(){let t=document.getElementById('bugList');t.select();document.execCommand('copy');alert('复制成功');}
+function cutBug(){let t=document.getElementById('bugList');t.select();document.execCommand('cut');alert('剪切成功');}
+function clearBug(){document.getElementById('bugList').value='';}
+
+function copyFault(){let t=document.getElementById('faultList');t.select();document.execCommand('copy');alert('复制成功');}
+function cutFault(){let t=document.getElementById('faultList');t.select();document.execCommand('cut');alert('剪切成功');}
+function clearFault(){document.getElementById('faultList').value='';}
+
+function copyNeed(){let t=document.getElementById('needList');t.select();document.execCommand('copy');alert('复制成功');}
+function cutNeed(){let t=document.getElementById('needList');t.select();document.execCommand('cut');alert('剪切成功');}
+function clearNeed(){document.getElementById('needList').value='';}
+
+function getStageHolidays(startDateStr, endDateStr) {
+  let start = new Date(startDateStr);
+  let end = new Date(endDateStr);
+  let holidays = [
+    { name: '元旦', time: '1月1日', desc: '元旦（%Y年1月）' },
+    { name: '春节', time: '1月28日-2月4日', desc: '春节（%Y年1月28日-2月4日）' },
+    { name: '清明', time: '4月4日-4月6日', desc: '清明（%Y年4月4日-4月6日）' },
+    { name: '劳动', time: '5月1日-5月5日', desc: '劳动（%Y年5月1日-5月5日）' }
+  ];
+  let res = [];
+  holidays.forEach(h => {
+    let hYear = start.getFullYear();
+    let checkDate = new Date(`${hYear}-${h.time.split('-')[0]}`);
+    if(checkDate >= start && checkDate <= end){
+      res.push({
+        name: h.name,
+        time: h.desc.replace(/%Y/g, hYear),
+        tableTime: h.time
+      });
+    }
+  });
+  return res;
+}
+
+function generateAndExport(){
+  let titleSelVal = titleSel.value;
+  let mainTitle = titleSelVal === '自定义' ? document.getElementById('customTitle').value.trim() : titleSelVal;
+  const isMultiSys = (titleSelVal === '自定义') || (mainTitle.indexOf('、') > -1);
+  let sysShort = mainTitle.includes('基础教育大数据') ? '系统' : mainTitle;
+
+  let startDate = document.getElementById('startDate').value;
+  let endDate = document.getElementById('endDate').value;
+  let startStr = fmt(startDate);
+  let endStr = fmt(endDate);
+  let periodFull = `${startStr}-${endStr}`;
+  let monthList = getMonthList(startDate, endDate);
+  let totalMonth = monthList.length;
+  let handler = document.getElementById('handler').value || '运维人员';
+
+  let docMainTitle = `${mainTitle}第一阶段总结报告`;
+  let docSubTitle = `（${periodFull}）`;
+
+  // ========== 服务事项明细 ==========
+  let eventText = document.getElementById('eventList').value.trim();
+  let eventLines = eventText === '无' ? [] : eventText.split('\n').filter(item => item.trim());
+  let serviceTotal = eventLines.length;
+  let eventHtml = '';
+  let eventThead = '';
+
+  if(isMultiSys){
+    eventThead = `<tr><th>序号</th><th>系统</th><th>事件内容</th><th>完成状态</th><th>服务对象</th><th>需求提出方</th><th>处理日期</th><th>处理人</th></tr>`;
+  }else{
+    eventThead = `<tr><th>序号</th><th>事件内容</th><th>完成状态</th><th>服务对象</th><th>需求提出方</th><th>处理日期</th><th>处理人</th></tr>`;
+  }
+
+  if (eventText !== '无') {
+    eventLines.forEach((line, idx) => {
+      let arr = splitLine(line);
+      let xh = idx + 1; // 自动生成序号
+      let sys, content, status, obj, req, dealDate, dealUser;
+
+      if(isMultiSys){
+        // 多系统：系统、事件内容、具体问题、完成状态... 跳过第3列(具体问题)
+        sys = arr[0] || '';
+        content = arr[1] || '';
+        status = arr[3] || '';
+        obj = arr[4] || '';
+        req = arr[5] || '';
+        dealDate = arr[6] || '';
+        dealUser = arr[7] || '';
+
+        eventHtml += `<tr>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${xh}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${sys}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${content}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${status}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${obj}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${req}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${dealDate}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${dealUser}</td>
+      </tr>`;
+      } else {
+        // 单系统：事件内容、具体问题、完成状态... 跳过第2列(具体问题)
+        content = arr[0] || '';
+        status = arr[2] || '';
+        obj = arr[3] || '';
+        req = arr[4] || '';
+        dealDate = arr[5] || '';
+        dealUser = arr[6] || '';
+
+        eventHtml += `<tr>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${xh}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${content}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${status}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${obj}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${req}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${dealDate}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${dealUser}</td>
+      </tr>`;
+      }
+    });
+  }
+
+  // ========== 漏洞修复明细（自动序号，粘贴不含序号） ==========
+  let bugText = document.getElementById('bugList').value.trim();
+  let bugLines = bugText === '无' ? [] : bugText.split('\n').filter(item => item.trim());
+  let bugTotal = bugLines.length;
+  let bugHtml = '';
+  if (bugText !== '无') {
+    bugLines.forEach((line, idx) => {
+      let arr = splitLine(line);
+      let xh = idx + 1;
+      bugHtml += `<tr>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${xh}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${arr[0]||''}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${arr[1]||''}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${arr[2]||''}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${arr[3]||''}</td>
+      </tr>`;
+    });
+  }
+
+  // ========== 安全审查表头 ==========
+  let safeTh = '';
+  let safeTd = '';
+  monthList.forEach(m => {
+    safeTh += `<th>${m}审查结果</th>`;
+    safeTd += `<td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">无异常</td>`;
+  });
+
+  // ========== 故障处理明细（自动序号） ==========
+  let faultText = document.getElementById('faultList').value.trim();
+  let faultLines = faultText === '无' ? [] : faultText.split('\n').filter(item => item.trim());
+  let faultTotal = faultLines.length;
+  let faultHtml = '';
+  if (faultText !== '无') {
+    faultLines.forEach((line, idx) => {
+      let arr = splitLine(line);
+      let xh = idx + 1;
+      faultHtml += `<tr>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${xh}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${arr[0]||''}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${arr[1]||''}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${arr[2]||''}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${arr[3]||''}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${arr[4]||''}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${arr[5]||''}</td>
+      </tr>`;
+    });
+  }
+
+  // ========== 需求处置明细（自动序号） ==========
+  let needText = document.getElementById('needList').value.trim();
+  let needLines = needText === '无' ? [] : needText.split('\n').filter(item => item.trim());
+  let needTotal = needLines.length;
+  let needHtml = '';
+  if (needText !== '无') {
+    needLines.forEach((line, idx) => {
+      let arr = splitLine(line);
+      let xh = idx + 1;
+      needHtml += `<tr>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${xh}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${arr[0]||''}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${arr[1]||''}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${arr[2]||''}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${arr[3]||''}</td>
+      </tr>`;
+    });
+  }
+
+  // ========== 节假日保障 ==========
+  let holidays = getStageHolidays(startDate, endDate);
+  let hasHoliday = holidays.length > 0;
+  let holidayDescText = '';
+  let holidayTable = '';
+  if(hasHoliday){
+    let hDescArr = holidays.map(h => h.desc);
+    holidayDescText = `阶段内${hDescArr.join('、')}假期期间，系统均开展运行保障工作，保障覆盖率100%；其他月份无节假日专项保障需求。`;
+    holidayTable = `<table><tr><th>保障时间</th><th>保障内容</th><th>处理人</th></tr>`;
+    holidays.forEach(h => {
+      holidayTable += `<tr>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${h.tableTime}</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">系统运行监控与运维保障</td>
+        <td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">${handler}</td>
+      </tr>`;
+    });
+    holidayTable += `</table>`;
+  }else{
+    holidayDescText = `本阶段无节假日专项保障需求。`;
+  }
+
+  // ========== 拼接Word文档HTML ==========
+  let wordHtml = `<!DOCTYPE html>
+<html
+xmlns:v="urn:schemas-microsoft-com:vml"
+xmlns:o="urn:schemas-microsoft-com:office:office"
+xmlns:w="urn:schemas-microsoft-com:office:word"
+xmlns:m="http://schemas.microsoft.com/office/2004/12/omml"
+xmlns="http://www.w3.org/TR/REC-html40">
+<head>
+<meta charset="utf-8">
+<![if gte mso 9]><xml>
+<w:WordDocument>
+  <w:View>Print</w:View>
+  <w:Zoom>100</w:Zoom>
+  <w:TrackMoves/>
+  <w:TrackFormatting/>
+</w:WordDocument>
+</xml><![endif]>
+<style>
+body{margin:0;padding:20px;}
+table{width:100%;border-collapse:collapse;margin-top:10px;}
+.main-title-main{
+  font-family:"方正小标宋简体";
+  font-size:22pt;
+  font-weight:normal;
+  text-align:center;
+  margin-bottom:5px;
+}
+.main-title-date{
+  font-family:"方正小标宋简体";
+  font-size:22pt;
+  font-weight:normal;
+  text-align:center;
+  margin-bottom:20px;
+}
+.sub-title{
+  font-family:"黑体";
+  font-size:16pt;
+  font-weight:normal;
+  margin:15px 0 8px 0;
+  text-indent:0;
+}
+/* 二级子标题统一楷体三号 */
+.thr-title{
+  font-family:"楷体_GB2312";
+  font-size:16pt;
+  font-weight:normal;
+  margin:12px 0 6px 0;
+  text-indent:0;
+}
+/* 所有正文段落统一首行缩进2字符 */
+.main-content p{
+  font-family:"仿宋";
+  font-size:16pt;
+  line-height:1.5;
+  text-indent:2em;
+  margin:0 0 8px 0;
+}
+th{
+  font-family:宋体;
+  font-size:11pt;
+  border:1px solid #333;
+  padding:6px;
+  text-align:center;
+  background:#f5f5f5;
+}
+.sign-line{
+  font-family:"仿宋";
+  font-size:16pt;
+  margin-top:30px;
+  line-height:2;
+  text-indent:0;
+}
+</style>
+</head>
+<body>
+<div class="main-title-main">${docMainTitle}</div>
+<div class="main-title-date">${docSubTitle}</div>
+<div class="sub-title">一、阶段整体运行概况</div>
+<div class="thr-title">（一）月巡检完成数量</div>
+<div class="main-content">
+<p>系统按月开展巡检并形成每月巡检记录表，阶段内累计巡检次数为${totalMonth}次。</p>
+</div>
+<div class="thr-title">（二）关键运行指标</div>
+<div class="main-content">
+<p>阶段内系统服务存储均在正常范围内，无异常存储问题；平台可正常登录、无报错，系统响应速度均小于10秒，未发现重大运行异常。</p>
+</div>
+<div class="sub-title">二、阶段各项工作数量及核心指标统计</div>
+<div class="thr-title">（一）服务配合与支撑</div>
+<div class="thr-title">1.工作数量统计</div>
+<div class="main-content">
+<p>本阶段内系统通过电话、微信等远程方式累计完成服务事项${serviceTotal}项。</p>
+</div>
+<div class="thr-title">2.具体服务事项明细（按时间排序）</div>
+${eventText !== '无' ? `<table>${eventThead}${eventHtml}</table>` : `<div class="main-content"><p>本阶段无服务事项。</p></div>`}
+<div class="thr-title">（二）安全运维</div>
+<div class="thr-title">1.工作数量统计</div>
+<div class="main-content">
+<p>阶段内累计完成漏洞修复${bugTotal}项；系统每月各开展1次全面安全审查，阶段内系统累计完成${totalMonth}次安全审查，均未发现安全隐患。</p>
+</div>
+<div class="thr-title">2.漏洞修复明细</div>
+${bugText !== '无' ? `<table><tr><th>序号</th><th>修复时间</th><th>漏洞修复内容</th><th>处理方式</th><th>处理人</th></tr>${bugHtml}</table>` : `<div class="main-content"><p>本阶段无漏洞修复工作。</p></div>`}
+<div class="thr-title">3.安全审查指标</div>
+<table>
+<tr>${safeTh}</tr>
+<tr>${safeTd}</tr>
+</table>
+<div class="thr-title">（三）故障处理</div>
+<div class="thr-title">1.工作数量统计</div>
+<div class="main-content">
+<p>阶段内累计处理故障${faultTotal}起。</p>
+</div>
+<div class="thr-title">2.故障处理明细</div>
+${faultText !== '无' ? `<table><tr><th>序号</th><th>故障处理时间</th><th>系统</th><th>故障内容</th><th>处理方式</th><th>处理结果</th><th>处理人</th></tr>${faultHtml}</table>` : `<div class="main-content"><p>本阶段累计处理故障0起。</p></div>`}
+<div class="thr-title">（四）需求处置</div>
+<div class="thr-title">1.工作数量统计</div>
+<div class="main-content">
+<p>阶段内接收并处理需求${needTotal}项。</p>
+</div>
+<div class="thr-title">2.需求处置明细</div>
+${needText !== '无' ? `<table><tr><th>序号</th><th>需求接收时间</th><th>需求内容</th><th>处理方式</th><th>处理结果</th></tr>${needHtml}</table>` : `<div class="main-content"><p>本阶段无需求处理。</p></div>`}
+<div class="thr-title">（五）节假日保障</div>
+<div class="thr-title">1.工作覆盖范围</div>
+<div class="main-content">
+<p>${holidayDescText}</p>
+</div>
+<div class="thr-title">2.具体保障内容</div>
+${hasHoliday ? holidayTable : `<div class="main-content"><p>无。</p></div>`}
+<div class="sub-title">三、阶段工作总结</div>
+<div class="main-content">
+<p>本阶段（${periodFull}），系统通过规范的月巡检（累计${totalMonth}次）、高效的故障处理（${faultTotal}起，均无业务中断）、主动的服务支撑（累计${serviceTotal}项）与严格的安全运维（漏洞修复${bugTotal}项、累计${totalMonth}次安全审查），实现整体稳定运行，核心指标（响应速度<10秒、无重大异常、存储正常）全部达标。</p>
+<p>后续保持现有运维标准，确保系统稳定支撑教育厅业务。</p>
+</div>
+<div class="sign-line">
+运维人员：________<br>
+甲方确认：________
+</div>
+</body>
+</html>`;
+
+  let blob = new Blob([wordHtml], { type: 'application/msword' });
+  let url = URL.createObjectURL(blob);
+  let a = document.createElement('a');
+  a.href = url;
+  a.download = `${docMainTitle}（${periodFull}）.doc`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+// 点击图标容器 触发日期选择
+document.querySelectorAll('.date-input').forEach(item => {
+  item.addEventListener('click', function(){
+    this.querySelector('input[type="date"]').showPicker();
+  });
+});
+</script>
+</body>
+</html>
