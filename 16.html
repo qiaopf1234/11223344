@@ -118,6 +118,14 @@
             <button onclick="restoreFromCloud()" class="px-3 py-1 rounded bg-blue-500 text-white text-sm">
                 <i class="fa fa-cloud-download"></i> 云端恢复
             </button>
+            <!-- 新增CSV导出导入按钮 -->
+            <button onclick="exportSqlCsv()" class="px-3 py-1 rounded bg-emerald-600 text-white text-sm">
+                <i class="fa fa-download"></i> 导出CSV
+            </button>
+            <button onclick="triggerCsvImport()" class="px-3 py-1 rounded bg-indigo-500 text-white text-sm">
+                <i class="fa fa-upload"></i> 导入CSV
+            </button>
+            <input type="file" id="csvImportFile" accept=".csv" hidden>
         </div>
         <div class="flex gap-3">
             <button onclick="setCollapseHeight()" class="px-3 py-1 rounded bg-white/50 dark:bg-gray-700/50 text-sm">
@@ -136,7 +144,7 @@
         <h1 class="text-4xl md:text-5xl font-bold mb-3 flex items-center justify-center gap-3">
             <i class="fa fa-database text-primary"></i> SQL语句保存工具
         </h1>
-        <p class="text-gray-600 dark:text-gray-400">分业务管理SQL | 折叠展开 | 语法高亮 | Supabase自动云备份</p>
+        <p class="text-gray-600 dark:text-gray-400">分业务管理SQL | 折叠展开 | 语法高亮 | Supabase自动云备份 | CSV导出导入同步腾讯文档</p>
     </header>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -488,6 +496,103 @@ function delSql(id){
     saveData();
     renderAll();
 }
+
+// ========== CSV导出导入 核心新增函数 ==========
+/**
+ * 导出完整CSV，字段：分类名称,SQL唯一ID,SQL备注标题,SQL完整语句,创建时间戳
+ * 全字段双引号包裹，自动转义内部引号、换行，腾讯文档直接打开无错乱
+ */
+function exportSqlCsv(){
+    // 表头固定字段
+    let csvText = "分类名称,SQL唯一ID,SQL备注标题,SQL完整语句,创建时间戳\n";
+    data.sqlList.forEach(sqlItem => {
+        // 匹配当前SQL所属分类名称
+        const cateName = data.categories.find(c => c === sqlItem.cate) || "未分类";
+        // 转义函数：CSV标准双引号包裹，内部双引号替换为两个双引号，换行替换空格
+        const escapeCell = (str) => {
+            let s = String(str ?? "");
+            s = s.replace(/"/g, '""');
+            s = s.replace(/\r?\n/g, " ");
+            return `"${s}"`;
+        };
+        const lineArr = [
+            escapeCell(cateName),
+            escapeCell(sqlItem.id),
+            escapeCell(sqlItem.title),
+            escapeCell(sqlItem.content),
+            escapeCell(sqlItem.time)
+        ];
+        csvText += lineArr.join(",") + "\n";
+    });
+    // 生成下载文件
+    const blob = new Blob([csvText], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `SQL语句完整备份_${new Date().toLocaleDateString()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("CSV导出完成！文件可直接上传腾讯在线表格");
+}
+// 触发文件选择框
+function triggerCsvImport(){
+    document.getElementById("csvImportFile").click();
+}
+// 读取CSV文件并还原全部分类+SQL数据
+document.getElementById("csvImportFile").onchange = async function(e){
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(res){
+        const fileText = res.target.result;
+        const allLines = fileText.split("\n").filter(line => line.trim() !== "");
+        if(allLines.length <= 1){
+            alert("CSV文件无有效数据");
+            return;
+        }
+        // 新数据集
+        const newCateSet = new Set();
+        const newSqlList = [];
+        // 跳过表头，逐行解析
+        for(let i = 1; i < allLines.length; i++){
+            const line = allLines[i].trim();
+            if(!line) continue;
+            // 标准CSV双引号分割解析
+            const rowCells = line.match(/"([^"]|"")*"/g).map(cellStr => {
+                // 去除首尾引号，内部双引号还原为单引号
+                return cellStr.slice(1, -1).replace(/""/g, '"');
+            });
+            if(rowCells.length < 5) continue;
+            const [cateName, sqlId, sqlTitle, sqlContent, sqlTime] = rowCells;
+            newCateSet.add(cateName);
+            newSqlList.push({
+                id: sqlId,
+                cate: cateName,
+                title: sqlTitle,
+                content: sqlContent,
+                time: sqlTime
+            });
+        }
+        // 合并分类：原有分类+CSV新增分类，不重复
+        const mergeCategories = [...new Set([...data.categories, ...newCateSet])];
+        // 弹窗确认覆盖逻辑
+        if(confirm("导入将合并分类，SQL记录直接覆盖同ID数据，是否继续？")){
+            // 去重SQL：ID相同则用CSV覆盖，新增则追加
+            const idMap = new Map();
+            newSqlList.forEach(item => idMap.set(item.id, item));
+            // 原有数据保留不在CSV里的记录
+            const finalSql = data.sqlList.filter(old => !idMap.has(String(old.id)));
+            finalSql.push(...newSqlList);
+            // 写入全局data
+            data.categories = mergeCategories;
+            data.sqlList = finalSql;
+            saveData();
+            location.reload();
+            alert("CSV导入成功，页面刷新加载全部数据");
+        }
+    };
+    reader.readAsText(file);
+};
 
 // ========== 本地保存 + 3秒自动云端备份 ==========
 function saveData(){
