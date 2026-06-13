@@ -203,7 +203,7 @@ const DEVICE_ID = localStorage.getItem("dev_id") || (()=>{
     return uid;
 })();
 let autoTimer = null;
-const MAX_CELL_TEXT_LEN = 32000; // 单元格阈值，超过则生成txt
+const MAX_CELL_TEXT_LEN = 32000; // Excel单元格字符阈值
 
 // 粒子背景
 const canvas = document.getElementById('particles');
@@ -247,7 +247,7 @@ function animate(){
 }
 animate();
 
-// 全局数据
+// 全局本地存储数据
 let data = JSON.parse(localStorage.getItem('sqlTool')) || {
     categories: ['用户数据','订单数据','商品数据'],
     sqlList: [],
@@ -260,7 +260,16 @@ let data = JSON.parse(localStorage.getItem('sqlTool')) || {
     }
 };
 
-// 主题
+// 修复：页面加载自动去重，相同ID只保留一条，清除缓存残留重复数据
+const uniqueIdMap = new Map();
+data.sqlList = data.sqlList.filter(item=>{
+    if(uniqueIdMap.has(item.id)) return false;
+    uniqueIdMap.set(item.id, true);
+    return true;
+});
+saveData(); // 去重后立即覆盖本地存储
+
+// 暗黑模式切换
 function initTheme(){
     if(data.config.darkMode){
         document.documentElement.classList.add('dark');
@@ -274,7 +283,7 @@ function toggleTheme(){
     saveData();
 }
 
-// 文本框拖拽高度
+// 文本框高度拖拽
 let isResizing = false;
 const sqlArea = document.getElementById('sqlContent');
 document.querySelectorAll('.resize-handle').forEach(handle=>{
@@ -287,6 +296,7 @@ window.onmousemove = (e)=>{
     sqlArea.style.height = Math.max(80, h + e.movementY) + "px";
 };
 
+// 折叠高度设置
 function setCollapseHeight(){
     let h = prompt("设置SQL默认折叠高度(px)", data.config.collapseHeight);
     if(h && !isNaN(h)){
@@ -296,6 +306,7 @@ function setCollapseHeight(){
     }
 }
 
+// 排序切换
 function toggleSort(){
     const sortList = ['time','name'];
     let idx = sortList.indexOf(data.config.sortBy);
@@ -307,7 +318,7 @@ function toggleSort(){
     showToast(`已按${sortList[idx]==='time'?'时间':'名称'}${data.config.sortOrder==='desc'?'倒序':'正序'}`);
 }
 
-// SQL语法高亮
+// SQL语法高亮渲染
 function highlightSql(sql){
     let ret = sql;
     const keywords = /\b(SELECT|FROM|WHERE|AND|OR|JOIN|LEFT|INNER|RIGHT|GROUP|ORDER|BY|LIMIT|INSERT|UPDATE|DELETE|CREATE|TABLE|ALTER|DROP|UNION|ALL|DISTINCT|AS|ON|IN|LIKE|BETWEEN|IS|NULL|NOT|CASE|WHEN|THEN|ELSE|END)\b/gi;
@@ -321,6 +332,7 @@ function highlightSql(sql){
     return ret;
 }
 
+// 弹窗提示
 function showToast(msg){
     const div = document.createElement('div');
     div.className = 'toast bg-primary/90';
@@ -329,7 +341,7 @@ function showToast(msg){
     setTimeout(()=>div.remove(), 1800);
 }
 
-// 分类管理
+// 分类渲染与管理
 function renderCate(){
     const list = document.getElementById('cateList');
     list.innerHTML = "";
@@ -403,6 +415,13 @@ function saveSql(){
             time: Date.now()
         });
     }
+    // 新增后自动去重
+    const uniqueIdMap = new Map();
+    data.sqlList = data.sqlList.filter(item=>{
+        if(uniqueIdMap.has(item.id)) return false;
+        uniqueIdMap.set(item.id, true);
+        return true;
+    });
     document.getElementById('sqlTitle').value = "";
     document.getElementById('sqlContent').value = "";
     saveData();
@@ -493,7 +512,7 @@ function delSql(id){
     renderAll();
 }
 
-// ========== 混合逻辑导出函数（短SQL存Excel，超长SQL生成txt） ==========
+// ========== 修复后导出函数：1. ID强制文本格式防科学计数 2. txt去重 3. 兼容Bandizip ==========
 async function exportSqlZip(){
     try {
         if (!data.sqlList || data.sqlList.length === 0) {
@@ -503,6 +522,8 @@ async function exportSqlZip(){
         showToast("正在打包备份ZIP文件...");
         const zip = new JSZip();
         const sqlFolder = zip.folder("sql_files");
+        // 标记已写入txt的SQL ID，防止重复生成同名文件
+        const wroteTxtIds = new Set();
 
         // 表头：分类,ID,标题,SQL内容/文本文件名,时间
         const header = ["分类名称","SQL唯一ID","SQL备注标题","SQL内容/超长文本文件名","创建时间戳"];
@@ -514,30 +535,39 @@ async function exportSqlZip(){
             const txtFileName = `${sqlItem.id}.sql.txt`;
             let cellDisplayText;
 
-            // 分支判断：短文本直接写入单元格，超长写入txt、单元格存文件名标记
+            // 长短SQL分支逻辑
             if(sqlText.length <= MAX_CELL_TEXT_LEN){
                 cellDisplayText = sqlText;
             }else{
                 cellDisplayText = `【超长SQL，请查看sql_files/${txtFileName}】`;
-                // 超长SQL存入独立文本
-                sqlFolder.file(txtFileName, sqlText, {encoding:"utf-8"});
+                // 仅首次写入，避免重复生成txt文件
+                if(!wroteTxtIds.has(sqlItem.id)){
+                    sqlFolder.file(txtFileName, sqlText, {encoding:"utf-8"});
+                    wroteTxtIds.add(sqlItem.id);
+                }
             }
 
             sheetRows.push([
                 cateName,
-                sqlItem.id,
+                String(sqlItem.id), // 写入表格前强制转为字符串
                 sqlItem.title,
                 cellDisplayText,
                 sqlItem.time
             ]);
         });
 
-        // 生成XLSX
+        // 生成XLSX索引表，修复长ID科学计数法问题
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+        // 关键修复：整列B（索引1）强制文本单元格类型
+        for(let r = 0; r < sheetRows.length; r++){
+            const cellAddr = XLSX.utils.encode_cell({r, c: 1});
+            if(ws[cellAddr]) ws[cellAddr].t = 's';
+        }
+        // 加宽ID列，完整显示13位数字
         ws['!cols'] = [
             {wch:16},
-            {wch:14},
+            {wch:20},
             {wch:30},
             {wch:120},
             {wch:16}
@@ -555,7 +585,7 @@ async function exportSqlZip(){
         const xlsxBuf = XLSX.write(wb, {type:"array", bookType:"xlsx"});
         zip.file("SQL索引表.xlsx", xlsxBuf);
 
-        // 兼容Bandizip压缩配置
+        // 标准DEFLATE压缩，兼容Bandizip、WinRAR、Windows解压
         const zipBuf = await zip.generateAsync({
             type:"uint8array",
             compression: "DEFLATE",
@@ -564,18 +594,19 @@ async function exportSqlZip(){
         const blob = new Blob([zipBuf], {type:"application/x-zip-compressed"});
         const dateStr = new Date().toLocaleDateString().replace(/[\/:]/g,"-");
         saveAs(blob, `SQL完整备份_${dateStr}.zip`);
-        showToast("ZIP导出完成！短SQL直接在Excel查看，超长SQL在sql_files文件夹打开对应txt");
+        showToast("ZIP导出完成！短SQL直接在Excel查看，超长SQL在sql_files文件夹打开对应txt，ID已完整文本显示无科学计数");
     } catch(err){
         console.error("导出ZIP失败",err);
         alert("导出出错："+err.message);
     }
 }
 
+// 打开文件选择弹窗
 function triggerZipImport(){
     document.getElementById("zipImportFile").click();
 }
 
-// ========== 导入逻辑：自动识别单元格是文本还是文件名，还原完整SQL ==========
+// ZIP导入解析逻辑，自动还原长短SQL
 document.getElementById("zipImportFile").onchange = async function(e){
     const file = e.target.files[0];
     if(!file) return;
@@ -586,15 +617,15 @@ document.getElementById("zipImportFile").onchange = async function(e){
         if(!xlsxFile) throw new Error("压缩包内未找到SQL索引表.xlsx，不是本工具导出的备份");
         const xlsxBuf = await xlsxFile.async("arraybuffer");
         const wb = XLSX.read(xlsxBuf, {type:"array"});
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(ws, {header:1});
+        const ws = wb.SheetNames[0];
+        const jsonData = XLSX.utils.sheet_to_json(wb.Sheets[ws], {header:1});
         if(jsonData.length <=1) throw new Error("索引表格无有效数据");
 
         const newCateSet = new Set();
         const tempSqlMap = new Map();
         const sqlFolder = zipData.folder("sql_files");
         const fileCache = new Map();
-        // 预缓存所有txt文本
+        // 预缓存全部txt文本
         for(const filePath of Object.keys(sqlFolder.files)){
             const zipFile = sqlFolder.file(filePath);
             if(!zipFile || zipFile.dir) continue;
@@ -603,14 +634,14 @@ document.getElementById("zipImportFile").onchange = async function(e){
             fileCache.set(sqlId, txtContent);
         }
 
-        // 遍历索引表还原SQL
+        // 遍历表格还原完整SQL
         for(let i=1; i<jsonData.length; i++){
             const row = jsonData[i];
             if(!row || row.length <5) continue;
             const [cateName, sqlId, sqlTitle, cellText, sqlTime] = row;
             newCateSet.add(cateName);
             let fullSql;
-            // 判断单元格是否是超长标记
+            // 判断超长标记，读取txt或直接取单元格文本
             if(cellText.startsWith("【超长SQL，请查看sql_files/")){
                 fullSql = fileCache.get(String(sqlId)) || "";
             }else{
@@ -634,6 +665,13 @@ document.getElementById("zipImportFile").onchange = async function(e){
             const finalSql = [...remainSql, ...newSqlList];
             data.categories = mergeCategories;
             data.sqlList = finalSql;
+            // 导入后自动去重
+            const uniqueIdMap = new Map();
+            data.sqlList = data.sqlList.filter(item=>{
+                if(uniqueIdMap.has(item.id)) return false;
+                uniqueIdMap.set(item.id, true);
+                return true;
+            });
             saveData();
             location.reload();
             alert("ZIP备份导入成功，页面刷新加载全部数据");
@@ -644,11 +682,13 @@ document.getElementById("zipImportFile").onchange = async function(e){
     }
 };
 
-// 本地存储与云端备份
+// 本地存储保存函数
 function saveData(){
     localStorage.setItem('sqlTool', JSON.stringify(data));
     autoSaveCloud();
 }
+
+// 自动云端备份（延迟3秒执行）
 function autoSaveCloud(){
     clearTimeout(autoTimer);
     autoTimer = setTimeout(async()=>{
@@ -673,6 +713,8 @@ function autoSaveCloud(){
         }
     },3000);
 }
+
+// 手动云端备份
 async function backupToCloud(){
     const sql = localStorage.getItem("sqlTool");
     if(!sql) return alert("暂无SQL数据可备份");
@@ -694,6 +736,8 @@ async function backupToCloud(){
         alert("❌ 备份失败："+e.message);
     }
 }
+
+// 云端数据恢复
 async function restoreFromCloud(){
     if(!confirm("恢复将覆盖本地全部现有数据，确定吗？")) return;
     try{
@@ -710,11 +754,13 @@ async function restoreFromCloud(){
     }
 }
 
+// 全局渲染入口
 function renderAll(){
     renderCate();
     renderSql();
 }
 
+// 页面初始化执行
 initTheme();
 renderAll();
 </script>
