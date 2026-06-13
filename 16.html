@@ -5,11 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SQL语句保存工具 | Supabase云端自动备份版</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- SheetJS XLSX库 -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- JSZIP 打包压缩库 -->
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
-    <!-- 文件保存库 -->
     <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script>
@@ -114,7 +111,6 @@
 <body class="text-gray-800 dark:text-gray-200 p-4 md:p-8">
 <canvas id="particles"></canvas>
 
-<!-- 主内容区 默认显示 -->
 <div class="max-w-6xl mx-auto relative z-10" id="mainContent">
     <div class="flex justify-between items-center mb-4">
         <div class="flex gap-2">
@@ -124,9 +120,8 @@
             <button onclick="restoreFromCloud()" class="px-3 py-1 rounded bg-blue-500 text-white text-sm">
                 <i class="fa fa-cloud-download"></i> 云端恢复
             </button>
-            <!-- 导出ZIP按钮 -->
             <button onclick="exportSqlZip()" class="px-3 py-1 rounded bg-emerald-600 text-white text-sm">
-                <i class="fa fa-download"></i> 导出ZIP(XLSX+SQL文本)
+                <i class="fa fa-download"></i> 导出ZIP(XLSX+超长SQL文本)
             </button>
             <button onclick="triggerZipImport()" class="px-3 py-1 rounded bg-indigo-500 text-white text-sm">
                 <i class="fa fa-upload"></i> 导入ZIP备份包
@@ -150,7 +145,7 @@
         <h1 class="text-4xl md:text-5xl font-bold mb-3 flex items-center justify-center gap-3">
             <i class="fa fa-database text-primary"></i> SQL语句保存工具
         </h1>
-        <p class="text-gray-600 dark:text-gray-400">分业务管理SQL | 折叠展开 | 语法高亮 | Supabase自动云备份 | ZIP打包导出，超长SQL独立TXT存储无字符限制</p>
+        <p class="text-gray-600 dark:text-gray-400">短SQL直接存Excel单元格，超长SQL自动配套独立txt | 分业务管理 | 云端备份</p>
     </header>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -178,7 +173,7 @@
                         <input type="text" id="sqlTitle" placeholder="例如：用户近30天订单统计" class="w-full bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
                     </div>
                     <div>
-                        <label class="block mb-2 text-gray-600 dark:text-gray-300 text-sm font-medium">SQL语句（无长度上限，导出将存入独立txt）</label>
+                        <label class="block mb-2 text-gray-600 dark:text-gray-300 text-sm font-medium">SQL语句（超过32000字符导出为独立txt）</label>
                         <div class="resize-handle"></div>
                         <textarea id="sqlContent" placeholder="粘贴你的SQL语句..." class="w-full bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3 font-mono text-sm"></textarea>
                         <div class="resize-handle"></div>
@@ -200,16 +195,15 @@
 </div>
 
 <script>
-// ===== Supabase配置（已填你的项目信息）=====
 const SUPA_URL = "https://idmfuazwpzlkooohbxil.supabase.co";
 const SUPA_KEY = "sb_publishable_1MNTRsfYYf86DQ-hhppn9g_9-37yos7";
-// 生成唯一设备ID，同浏览器永久不变
 const DEVICE_ID = localStorage.getItem("dev_id") || (()=>{
     let uid = Date.now() + "_" + Math.random().toString(32).slice(2);
     localStorage.setItem("dev_id", uid);
     return uid;
 })();
-let autoTimer = null; //自动备份计时器
+let autoTimer = null;
+const MAX_CELL_TEXT_LEN = 32000; // 单元格阈值，超过则生成txt
 
 // 粒子背景
 const canvas = document.getElementById('particles');
@@ -221,7 +215,6 @@ function resizeCanvas() {
 }
 window.addEventListener('resize', resizeCanvas);
 resizeCanvas();
-
 class Particle {
     constructor(){this.reset()}
     reset(){
@@ -267,7 +260,7 @@ let data = JSON.parse(localStorage.getItem('sqlTool')) || {
     }
 };
 
-// ========== 主题 ==========
+// 主题
 function initTheme(){
     if(data.config.darkMode){
         document.documentElement.classList.add('dark');
@@ -281,7 +274,7 @@ function toggleTheme(){
     saveData();
 }
 
-// ========== 编辑框拖拽调整高度 ==========
+// 文本框拖拽高度
 let isResizing = false;
 const sqlArea = document.getElementById('sqlContent');
 document.querySelectorAll('.resize-handle').forEach(handle=>{
@@ -294,7 +287,6 @@ window.onmousemove = (e)=>{
     sqlArea.style.height = Math.max(80, h + e.movementY) + "px";
 };
 
-// ========== 折叠高度设置 ==========
 function setCollapseHeight(){
     let h = prompt("设置SQL默认折叠高度(px)", data.config.collapseHeight);
     if(h && !isNaN(h)){
@@ -304,7 +296,6 @@ function setCollapseHeight(){
     }
 }
 
-// ========== 排序 ==========
 function toggleSort(){
     const sortList = ['time','name'];
     let idx = sortList.indexOf(data.config.sortBy);
@@ -316,7 +307,7 @@ function toggleSort(){
     showToast(`已按${sortList[idx]==='time'?'时间':'名称'}${data.config.sortOrder==='desc'?'倒序':'正序'}`);
 }
 
-// ========== SQL语法高亮 ==========
+// SQL语法高亮
 function highlightSql(sql){
     let ret = sql;
     const keywords = /\b(SELECT|FROM|WHERE|AND|OR|JOIN|LEFT|INNER|RIGHT|GROUP|ORDER|BY|LIMIT|INSERT|UPDATE|DELETE|CREATE|TABLE|ALTER|DROP|UNION|ALL|DISTINCT|AS|ON|IN|LIKE|BETWEEN|IS|NULL|NOT|CASE|WHEN|THEN|ELSE|END)\b/gi;
@@ -330,7 +321,6 @@ function highlightSql(sql){
     return ret;
 }
 
-// ========== 悬浮提示 ==========
 function showToast(msg){
     const div = document.createElement('div');
     div.className = 'toast bg-primary/90';
@@ -339,7 +329,7 @@ function showToast(msg){
     setTimeout(()=>div.remove(), 1800);
 }
 
-// ========== 分类管理 ==========
+// 分类管理
 function renderCate(){
     const list = document.getElementById('cateList');
     list.innerHTML = "";
@@ -393,7 +383,7 @@ function renameCategory(oldName){
     showToast("分类重命名成功");
 }
 
-// ========== SQL管理 ==========
+// SQL增删改查
 function saveSql(){
     const title = document.getElementById('sqlTitle').value.trim();
     const content = document.getElementById('sqlContent').value.trim();
@@ -422,7 +412,6 @@ function saveSql(){
 function renderSql(){
     const list = document.getElementById('sqlList');
     let items = data.sqlList.filter(item=>item.cate === data.currentCate);
-    // 排序
     if(data.config.sortBy === 'name'){
         items.sort((a,b)=>{
             return data.config.sortOrder === 'asc' ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title);
@@ -446,6 +435,7 @@ function renderSql(){
                 <div class="flex items-center gap-2">
                     <i class="fa fa-file-text-o text-primary"></i>
                     <span class="font-medium">${item.title}</span>
+                    ${item.content.length > MAX_CELL_TEXT_LEN ? '<span class="text-red-400 text-xs">[超长SQL]</span>' : ''}
                 </div>
                 <div class="flex gap-2">
                     <button onclick="copySql(${item.id})" class="bg-primary/20 text-primary px-3 py-1 rounded text-sm">
@@ -503,7 +493,7 @@ function delSql(id){
     renderAll();
 }
 
-// ========== 修复兼容Bandizip的ZIP导出函数 ==========
+// ========== 混合逻辑导出函数（短SQL存Excel，超长SQL生成txt） ==========
 async function exportSqlZip(){
     try {
         if (!data.sqlList || data.sqlList.length === 0) {
@@ -514,69 +504,84 @@ async function exportSqlZip(){
         const zip = new JSZip();
         const sqlFolder = zip.folder("sql_files");
 
-        // 构建XLSX索引表格
-        const header = ["分类名称","SQL唯一ID","SQL备注标题","SQL文本文件名","创建时间戳"];
+        // 表头：分类,ID,标题,SQL内容/文本文件名,时间
+        const header = ["分类名称","SQL唯一ID","SQL备注标题","SQL内容/超长文本文件名","创建时间戳"];
         const sheetRows = [header];
+
         data.sqlList.forEach(sqlItem => {
             const cateName = data.categories.find(c => c === sqlItem.cate) || "未分类";
+            const sqlText = sqlItem.content;
             const txtFileName = `${sqlItem.id}.sql.txt`;
+            let cellDisplayText;
+
+            // 分支判断：短文本直接写入单元格，超长写入txt、单元格存文件名标记
+            if(sqlText.length <= MAX_CELL_TEXT_LEN){
+                cellDisplayText = sqlText;
+            }else{
+                cellDisplayText = `【超长SQL，请查看sql_files/${txtFileName}】`;
+                // 超长SQL存入独立文本
+                sqlFolder.file(txtFileName, sqlText, {encoding:"utf-8"});
+            }
+
             sheetRows.push([
                 cateName,
                 sqlItem.id,
                 sqlItem.title,
-                txtFileName,
+                cellDisplayText,
                 sqlItem.time
             ]);
-            // 写入SQL文本，强制UTF-8编码
-            sqlFolder.file(txtFileName, sqlItem.content, {encoding:"utf-8"});
         });
 
-        // 生成XLSX二进制文件
+        // 生成XLSX
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.aoa_to_sheet(sheetRows);
         ws['!cols'] = [
             {wch:16},
             {wch:14},
             {wch:30},
-            {wch:24},
+            {wch:120},
             {wch:16}
         ];
+        // D列自动换行
+        const range = ws['!ref'] ? XLSX.utils.decode_range(ws['!ref']) : null;
+        if(range){
+            const wrapStyle = { alignment: { wrapText: true, vertical: "top" } };
+            for(let r = range.s.r; r <= range.e.r; r++){
+                const cellKey = XLSX.utils.encode_cell({r, c: 3});
+                if(ws[cellKey]) ws[cellKey].s = wrapStyle;
+            }
+        }
         XLSX.utils.book_append_sheet(wb, ws, "SQL索引表");
         const xlsxBuf = XLSX.write(wb, {type:"array", bookType:"xlsx"});
         zip.file("SQL索引表.xlsx", xlsxBuf);
 
-        // 核心修复：标准DEFLATE压缩，兼容所有解压软件
+        // 兼容Bandizip压缩配置
         const zipBuf = await zip.generateAsync({
             type:"uint8array",
             compression: "DEFLATE",
             compressionOptions: { level: 6 }
         });
-        // 标准ZIP MIME类型，解决Bandizip未知格式报错
         const blob = new Blob([zipBuf], {type:"application/x-zip-compressed"});
-
-        // 下载文件，清理文件名特殊字符
         const dateStr = new Date().toLocaleDateString().replace(/[\/:]/g,"-");
         saveAs(blob, `SQL完整备份_${dateStr}.zip`);
-        showToast("ZIP备份包导出完成！支持Bandizip/WinRAR/Windows自带解压");
+        showToast("ZIP导出完成！短SQL直接在Excel查看，超长SQL在sql_files文件夹打开对应txt");
     } catch(err){
         console.error("导出ZIP失败",err);
         alert("导出出错："+err.message);
     }
 }
 
-// 触发ZIP文件选择弹窗
 function triggerZipImport(){
     document.getElementById("zipImportFile").click();
 }
 
-// ========== ZIP导入解析逻辑 ==========
+// ========== 导入逻辑：自动识别单元格是文本还是文件名，还原完整SQL ==========
 document.getElementById("zipImportFile").onchange = async function(e){
     const file = e.target.files[0];
     if(!file) return;
     try{
         showToast("正在解析ZIP备份包...");
         const zipData = await JSZip.loadAsync(file);
-        // 校验索引表是否存在
         const xlsxFile = zipData.file("SQL索引表.xlsx");
         if(!xlsxFile) throw new Error("压缩包内未找到SQL索引表.xlsx，不是本工具导出的备份");
         const xlsxBuf = await xlsxFile.async("arraybuffer");
@@ -587,37 +592,39 @@ document.getElementById("zipImportFile").onchange = async function(e){
 
         const newCateSet = new Set();
         const tempSqlMap = new Map();
+        const sqlFolder = zipData.folder("sql_files");
+        const fileCache = new Map();
+        // 预缓存所有txt文本
+        for(const filePath of Object.keys(sqlFolder.files)){
+            const zipFile = sqlFolder.file(filePath);
+            if(!zipFile || zipFile.dir) continue;
+            const txtContent = await zipFile.async("string");
+            const sqlId = filePath.replace(".sql.txt","");
+            fileCache.set(sqlId, txtContent);
+        }
 
-        // 第一步：读取索引表格基础信息
+        // 遍历索引表还原SQL
         for(let i=1; i<jsonData.length; i++){
             const row = jsonData[i];
             if(!row || row.length <5) continue;
-            const [cateName, sqlId, sqlTitle, txtFileName, sqlTime] = row;
+            const [cateName, sqlId, sqlTitle, cellText, sqlTime] = row;
             newCateSet.add(cateName);
+            let fullSql;
+            // 判断单元格是否是超长标记
+            if(cellText.startsWith("【超长SQL，请查看sql_files/")){
+                fullSql = fileCache.get(String(sqlId)) || "";
+            }else{
+                fullSql = cellText;
+            }
             tempSqlMap.set(String(sqlId), {
                 id: sqlId,
                 cate: cateName,
                 title: sqlTitle,
                 time: sqlTime,
-                txtFile: txtFileName,
-                content: ""
+                content: fullSql
             });
         }
 
-        // 第二步：读取sql_files文件夹内全部SQL文本
-        const sqlFolder = zipData.folder("sql_files");
-        const fileList = Object.keys(sqlFolder.files);
-        for(const filePath of fileList){
-            const zipFile = sqlFolder.file(filePath);
-            if(!zipFile || zipFile.dir) continue;
-            const txtContent = await zipFile.async("string");
-            const sqlId = filePath.replace(".sql.txt","");
-            if(tempSqlMap.has(sqlId)){
-                tempSqlMap.get(sqlId).content = txtContent;
-            }
-        }
-
-        // 合并新旧数据
         const newSqlList = Array.from(tempSqlMap.values());
         const mergeCategories = [...new Set([...data.categories, ...newCateSet])];
         if(confirm("导入将合并分类，同ID SQL覆盖，确认导入？")){
@@ -625,7 +632,6 @@ document.getElementById("zipImportFile").onchange = async function(e){
             newSqlList.forEach(item => idMap.set(String(item.id), item));
             const remainSql = data.sqlList.filter(old => !idMap.has(String(old.id)));
             const finalSql = [...remainSql, ...newSqlList];
-
             data.categories = mergeCategories;
             data.sqlList = finalSql;
             saveData();
@@ -638,13 +644,11 @@ document.getElementById("zipImportFile").onchange = async function(e){
     }
 };
 
-// ========== 本地保存 + 3秒自动云端备份 ==========
+// 本地存储与云端备份
 function saveData(){
     localStorage.setItem('sqlTool', JSON.stringify(data));
     autoSaveCloud();
 }
-
-// 自动云端备份延迟3秒执行
 function autoSaveCloud(){
     clearTimeout(autoTimer);
     autoTimer = setTimeout(async()=>{
@@ -669,8 +673,6 @@ function autoSaveCloud(){
         }
     },3000);
 }
-
-// 手动一键云端备份
 async function backupToCloud(){
     const sql = localStorage.getItem("sqlTool");
     if(!sql) return alert("暂无SQL数据可备份");
@@ -692,8 +694,6 @@ async function backupToCloud(){
         alert("❌ 备份失败："+e.message);
     }
 }
-
-// 云端恢复（拉取当前设备最新备份覆盖本地）
 async function restoreFromCloud(){
     if(!confirm("恢复将覆盖本地全部现有数据，确定吗？")) return;
     try{
@@ -715,7 +715,6 @@ function renderAll(){
     renderSql();
 }
 
-// 页面初始化
 initTheme();
 renderAll();
 </script>
