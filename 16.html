@@ -124,7 +124,7 @@
             <button onclick="restoreFromCloud()" class="px-3 py-1 rounded bg-blue-500 text-white text-sm">
                 <i class="fa fa-cloud-download"></i> 云端恢复
             </button>
-            <!-- 修改导出按钮文案，打包ZIP -->
+            <!-- 导出ZIP按钮 -->
             <button onclick="exportSqlZip()" class="px-3 py-1 rounded bg-emerald-600 text-white text-sm">
                 <i class="fa fa-download"></i> 导出ZIP(XLSX+SQL文本)
             </button>
@@ -503,7 +503,7 @@ function delSql(id){
     renderAll();
 }
 
-// ========== 全新ZIP导出：XLSX索引 + sql文本文件夹 ==========
+// ========== 修复兼容Bandizip的ZIP导出函数 ==========
 async function exportSqlZip(){
     try {
         if (!data.sqlList || data.sqlList.length === 0) {
@@ -512,10 +512,9 @@ async function exportSqlZip(){
         }
         showToast("正在打包备份ZIP文件...");
         const zip = new JSZip();
-        // 创建sql文本子文件夹
         const sqlFolder = zip.folder("sql_files");
 
-        // 1. 构建XLSX索引表格（不含SQL原文，只存txt文件名）
+        // 构建XLSX索引表格
         const header = ["分类名称","SQL唯一ID","SQL备注标题","SQL文本文件名","创建时间戳"];
         const sheetRows = [header];
         data.sqlList.forEach(sqlItem => {
@@ -528,11 +527,11 @@ async function exportSqlZip(){
                 txtFileName,
                 sqlItem.time
             ]);
-            // 向压缩包写入独立SQL文本，无字符长度限制
+            // 写入SQL文本，强制UTF-8编码
             sqlFolder.file(txtFileName, sqlItem.content, {encoding:"utf-8"});
         });
 
-        // 生成XLSX二进制
+        // 生成XLSX二进制文件
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.aoa_to_sheet(sheetRows);
         ws['!cols'] = [
@@ -546,31 +545,38 @@ async function exportSqlZip(){
         const xlsxBuf = XLSX.write(wb, {type:"array", bookType:"xlsx"});
         zip.file("SQL索引表.xlsx", xlsxBuf);
 
-        // 生成压缩包并下载
-        const zipBuf = await zip.generateAsync({type:"array"});
+        // 核心修复：标准DEFLATE压缩，兼容所有解压软件
+        const zipBuf = await zip.generateAsync({
+            type:"uint8array",
+            compression: "DEFLATE",
+            compressionOptions: { level: 6 }
+        });
+        // 标准ZIP MIME类型，解决Bandizip未知格式报错
+        const blob = new Blob([zipBuf], {type:"application/x-zip-compressed"});
+
+        // 下载文件，清理文件名特殊字符
         const dateStr = new Date().toLocaleDateString().replace(/[\/:]/g,"-");
-        const blob = new Blob([zipBuf], {type:"application/zip"});
         saveAs(blob, `SQL完整备份_${dateStr}.zip`);
-        showToast("ZIP备份包导出完成！解压后打开SQL索引表.xlsx，sql_files文件夹存放全部完整SQL");
+        showToast("ZIP备份包导出完成！支持Bandizip/WinRAR/Windows自带解压");
     } catch(err){
         console.error("导出ZIP失败",err);
         alert("导出出错："+err.message);
     }
 }
 
-// 触发ZIP文件选择
+// 触发ZIP文件选择弹窗
 function triggerZipImport(){
     document.getElementById("zipImportFile").click();
 }
 
-// ========== ZIP导入解析，还原XLSX索引+txtSQL ==========
+// ========== ZIP导入解析逻辑 ==========
 document.getElementById("zipImportFile").onchange = async function(e){
     const file = e.target.files[0];
     if(!file) return;
     try{
         showToast("正在解析ZIP备份包...");
         const zipData = await JSZip.loadAsync(file);
-        // 读取索引xlsx
+        // 校验索引表是否存在
         const xlsxFile = zipData.file("SQL索引表.xlsx");
         if(!xlsxFile) throw new Error("压缩包内未找到SQL索引表.xlsx，不是本工具导出的备份");
         const xlsxBuf = await xlsxFile.async("arraybuffer");
@@ -582,7 +588,7 @@ document.getElementById("zipImportFile").onchange = async function(e){
         const newCateSet = new Set();
         const tempSqlMap = new Map();
 
-        // 第一步：读取索引表，缓存基础信息
+        // 第一步：读取索引表格基础信息
         for(let i=1; i<jsonData.length; i++){
             const row = jsonData[i];
             if(!row || row.length <5) continue;
@@ -598,7 +604,7 @@ document.getElementById("zipImportFile").onchange = async function(e){
             });
         }
 
-        // 第二步：读取sql_files文件夹内所有txt文本，填充完整SQL内容
+        // 第二步：读取sql_files文件夹内全部SQL文本
         const sqlFolder = zipData.folder("sql_files");
         const fileList = Object.keys(sqlFolder.files);
         for(const filePath of fileList){
@@ -611,7 +617,7 @@ document.getElementById("zipImportFile").onchange = async function(e){
             }
         }
 
-        // 整理导入数据
+        // 合并新旧数据
         const newSqlList = Array.from(tempSqlMap.values());
         const mergeCategories = [...new Set([...data.categories, ...newCateSet])];
         if(confirm("导入将合并分类，同ID SQL覆盖，确认导入？")){
@@ -638,7 +644,7 @@ function saveData(){
     autoSaveCloud();
 }
 
-// 自动备份（修改数据3秒延迟上传Supabase）
+// 自动云端备份延迟3秒执行
 function autoSaveCloud(){
     clearTimeout(autoTimer);
     autoTimer = setTimeout(async()=>{
@@ -687,7 +693,7 @@ async function backupToCloud(){
     }
 }
 
-// 云端恢复（拉取当前设备最新一条备份覆盖本地）
+// 云端恢复（拉取当前设备最新备份覆盖本地）
 async function restoreFromCloud(){
     if(!confirm("恢复将覆盖本地全部现有数据，确定吗？")) return;
     try{
@@ -709,7 +715,7 @@ function renderAll(){
     renderSql();
 }
 
-// 初始化
+// 页面初始化
 initTheme();
 renderAll();
 </script>
