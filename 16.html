@@ -2,22 +2,13 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>SQL语句保存工具 · 赛博毛玻璃版</title>
-    <!-- 保留原有依赖 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SQL语句保存工具 | Supabase云端自动备份版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <!-- Three.js 核心库 -->
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
-            }
-        }
-    </script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -34,921 +25,744 @@
     <style type="text/tailwindcss">
         @layer utilities {
             .glass {
-                background: rgba(255, 255, 255, 0.1);
+                background: rgba(255, 255, 255, 0.15);
                 backdrop-filter: blur(12px);
-                border: 1px solid rgba(139, 92, 246, 0.3);
-                transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+                border: 1px solid rgba(255, 255, 255, 0.3);
             }
             .dark .glass {
-                background: rgba(30, 41, 59, 0.5);
-                border: 1px solid rgba(139, 92, 246, 0.3);
-            }
-            .glass:hover {
-                border-color: rgba(139, 92, 246, 0.7);
-                transform: translateY(-3px);
-                box-shadow: 0 8px 32px rgba(139, 92, 246, 0.2);
+                background: rgba(30, 41, 59, 0.6);
+                border: 1px solid rgba(255, 255, 255, 0.1);
             }
             .card-hover {
                 transition: all 0.3s ease;
             }
+            .card-hover:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 8px 32px rgba(0, 212, 255, 0.2);
+            }
             .btn-primary {
-                background: linear-gradient(135deg, #8b5cf6, #06b6d4);
-                transition: all 0.2s;
+                background: linear-gradient(135deg, #00D8FF, #00FFA1);
             }
-            .btn-primary:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 0 15px rgba(139, 92, 246, 0.5);
-            }
-            .sql-keyword { color: #5CC8FF; font-weight: 600; }
-            .sql-function { color: #9ECDCA; font-weight: 600; }
-            .sql-string { color: #CE9178; }
-            .sql-comment { color: #6A9955; font-style: italic; }
+            .sql-keyword { color: #0066CC; font-weight: 600; }
+            .dark .sql-keyword { color: #5CC8FF; }
+            .sql-function { color: #008000; font-weight: 600; }
+            .dark .sql-function { color: #9ECDCA; }
+            .sql-string { color: #A35100; }
+            .dark .sql-string { color: #CE9178; }
+            .sql-comment { color: #008000; font-style: italic; }
+            .dark .sql-comment { color: #6A9955; }
         }
     </style>
     <style>
-        /* 覆盖原有背景为透明，Three.js 画布全屏背景 */
-        body {
-            background: transparent !important;
-            position: relative;
-            overflow-x: hidden;
-        }
-        .dark body {
-            background: transparent !important;
-        }
-        #bg-canvas {
+        #particles {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
+            pointer-events: none;
             z-index: 0;
-            pointer-events: none;
         }
-        /* 鼠标光晕层 */
-        .mouse-glow {
-            position: fixed;
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, rgba(6, 182, 212, 0) 70%);
-            border-radius: 50%;
-            pointer-events: none;
-            transform: translate(-50%, -50%);
-            z-index: 999;
-            transition: transform 0.05s linear;
-            will-change: transform;
+        body {
+            background: linear-gradient(135deg, #E0F7FF 0%, #E6FFFA 100%);
+            min-height: 100vh;
+            transition: all 0.3s ease;
         }
-        /* 所有卡片已有毛玻璃，强化霓虹边框 */
-        .glass, .glass-card, .bg-white\/40 {
-            backdrop-filter: blur(12px);
-            background: rgba(20, 30, 50, 0.55) !important;
-            border: 1px solid rgba(139, 92, 246, 0.4);
+        .dark body {
+            background: #0f172a;
         }
-        .dark .glass, .dark .bg-white\/40 {
-            background: rgba(20, 30, 50, 0.5) !important;
-        }
-        /* 按钮流光效果 */
-        button:not(.btn-primary) {
-            position: relative;
-            overflow: hidden;
-        }
-        button:not(.btn-primary)::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.3), transparent);
-            transition: left 0.5s;
-        }
-        button:not(.btn-primary):hover::before {
-            left: 100%;
-        }
-        /* 修复标题颜色：星空紫/淡紫色 */
-        .glass h2,
-        .glass .text-xl.font-bold,
-        .glass-card h2,
-        .glass-card .text-xl.font-bold,
-        .rounded-2xl h2,
-        .rounded-2xl .text-xl.font-bold {
-            background: linear-gradient(135deg, #c084fc, #a78bfa);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent !important;
-            text-shadow: 0 0 5px rgba(139, 92, 246, 0.3);
-        }
-        .dark .glass h2,
-        .dark .glass .text-xl.font-bold,
-        .dark .glass-card h2,
-        .dark .glass-card .text-xl.font-bold,
-        .dark .rounded-2xl h2,
-        .dark .rounded-2xl .text-xl.font-bold {
-            background: linear-gradient(135deg, #d8b4fe, #c084fc);
-            -webkit-background-clip: text;
-            background-clip: text;
-            color: transparent !important;
-        }
-        /* 修复 SQL 标题备注文字颜色（亮白色/淡紫） */
-        .sql-card-title {
-            color: #f0f3ff !important;
-            font-weight: 500;
-        }
-        .dark .sql-card-title {
-            color: #f0f3ff !important;
-        }
-        /* 版本历史卡片 */
-        .history-item {
-            background: rgba(10, 20, 35, 0.5);
-            border-radius: 12px;
-            padding: 8px 12px;
-            margin-bottom: 8px;
-            transition: all 0.2s;
-            cursor: pointer;
-        }
-        .history-item:hover {
-            background: rgba(139, 92, 246, 0.2);
-            transform: translateX(4px);
-        }
-        .sql-content-collapsed::after {
-            background: linear-gradient(to top, rgba(20,30,50,0.9), transparent);
-        }
-        .dark .sql-content-collapsed::after {
-            background: linear-gradient(to top, rgba(20,30,50,0.9), transparent);
-        }
-        /* 滚动条 */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #1e293b;
-            border-radius: 6px;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #8b5cf6;
-            border-radius: 6px;
-        }
-        /* 折叠区域过渡 */
         .sql-content-collapsed {
             overflow: hidden;
-            transition: max-height 0.3s ease;
+            position: relative;
+        }
+        .sql-content-collapsed::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: linear-gradient(to top, rgba(255,255,255,0.9), transparent);
+        }
+        .dark .sql-content-collapsed::after {
+            background: linear-gradient(to top, rgba(30,41,59,0.9), transparent);
+        }
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 8px;
+            color: white;
+            z-index: 9999;
+            animation: fadeIn 0.3s, fadeOut 0.3s 1.5s;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+        .resize-handle {
+            cursor: row-resize;
+            height: 6px;
+            background: rgba(0,212,255,0.2);
+            border-radius: 3px;
+            margin: 4px 0;
         }
     </style>
 </head>
 <body class="text-gray-800 dark:text-gray-200 p-4 md:p-8">
+<canvas id="particles"></canvas>
 
-    <!-- Three.js 粒子画布背景 -->
-    <canvas id="bg-canvas"></canvas>
-    <!-- 鼠标光晕层 -->
-    <div class="mouse-glow" id="mouseGlow"></div>
-
-    <div class="max-w-6xl mx-auto relative z-10" id="mainContent">
-        <div class="flex justify-between items-center mb-4">
-            <div class="flex gap-2">
-                <button onclick="backupToCloud()" class="px-3 py-1 rounded bg-green-500 text-white text-sm">
-                    <i class="fa fa-cloud-upload"></i> 云端备份
-                </button>
-                <button onclick="restoreFromCloud()" class="px-3 py-1 rounded bg-blue-500 text-white text-sm">
-                    <i class="fa fa-cloud-download"></i> 云端恢复
-                </button>
-                <button onclick="exportSqlZip()" class="px-3 py-1 rounded bg-emerald-600 text-white text-sm">
-                    <i class="fa fa-download"></i> 导出ZIP
-                </button>
-                <button onclick="triggerZipImport()" class="px-3 py-1 rounded bg-indigo-500 text-white text-sm">
-                    <i class="fa fa-upload"></i> 导入ZIP
-                </button>
-                <input type="file" id="zipImportFile" accept=".zip" hidden>
-            </div>
-            <div class="flex gap-3">
-                <button onclick="setCollapseHeight()" class="px-3 py-1 rounded bg-white/50 dark:bg-gray-700/50 text-sm">
-                    <i class="fa fa-arrows-v mr-1"></i> 折叠高度
-                </button>
-                <button onclick="toggleSort()" class="px-3 py-1 rounded bg-white/50 dark:bg-gray-700/50 text-sm">
-                    <i class="fa fa-sort mr-1"></i> 排序
-                </button>
-                <button onclick="toggleTheme()" class="px-3 py-1 rounded bg-white/50 dark:bg-gray-700/50 text-sm">
-                    <i id="themeIcon" class="fa fa-moon-o mr-1"></i> 主题
-                </button>
-            </div>
+<div class="max-w-6xl mx-auto relative z-10" id="mainContent">
+    <div class="flex justify-between items-center mb-4">
+        <div class="flex gap-2">
+            <button onclick="backupToCloud()" class="px-3 py-1 rounded bg-green-500 text-white text-sm">
+                <i class="fa fa-cloud-upload"></i> 云端备份
+            </button>
+            <button onclick="restoreFromCloud()" class="px-3 py-1 rounded bg-blue-500 text-white text-sm">
+                <i class="fa fa-cloud-download"></i> 云端恢复
+            </button>
+            <button onclick="exportSqlZip()" class="px-3 py-1 rounded bg-emerald-600 text-white text-sm">
+                <i class="fa fa-download"></i> 导出ZIP(XLSX+超长SQL文本)
+            </button>
+            <button onclick="triggerZipImport()" class="px-3 py-1 rounded bg-indigo-500 text-white text-sm">
+                <i class="fa fa-upload"></i> 导入ZIP备份包
+            </button>
+            <input type="file" id="zipImportFile" accept=".zip" hidden>
         </div>
-
-        <header class="text-center mb-8">
-            <h1 class="text-4xl md:text-5xl font-bold mb-3 flex items-center justify-center gap-3" style="color: #c084fc;">
-                <i class="fa fa-database" style="color: #c084fc;"></i> SQL语句保存工具
-            </h1>
-            <p class="text-gray-300 dark:text-gray-400">毛玻璃·3D星云·版本回溯 | 超长SQL自动txt | 云端备份</p>
-        </header>
-
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <!-- 左侧分类 -->
-            <div class="glass rounded-2xl p-6 card-hover">
-                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
-                    <i class="fa fa-folder-open text-primary"></i> 业务分类
-                </h2>
-                <div class="flex gap-2 mb-4">
-                    <input type="text" id="cateName" placeholder="输入分类名称" class="flex-1 bg-black/30 dark:bg-gray-800/50 border border-gray-500 rounded-lg p-2 text-gray-200">
-                    <button onclick="addCategory()" class="btn-primary text-white px-3 py-2 rounded-lg font-medium">
-                        <i class="fa fa-plus"></i>
-                    </button>
-                </div>
-                <ul id="cateList" class="space-y-2 max-h-96 overflow-y-auto"></ul>
-            </div>
-
-            <div class="md:col-span-3 space-y-6">
-                <!-- SQL编辑卡片 -->
-                <div class="glass rounded-2xl p-6 card-hover">
-                    <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
-                        <i class="fa fa-edit text-primary"></i> SQL管理
-                    </h2>
-                    <div class="grid grid-cols-1 gap-4 mb-4">
-                        <div>
-                            <label class="block mb-2 text-gray-300 text-sm font-medium">SQL名称（备注）</label>
-                            <input type="text" id="sqlTitle" placeholder="例如：用户近30天订单统计" class="w-full bg-black/30 dark:bg-gray-800/50 border border-gray-500 rounded-lg p-3 text-gray-200">
-                        </div>
-                        <div>
-                            <label class="block mb-2 text-gray-300 text-sm font-medium">SQL语句（超过32000字符导出为独立txt）</label>
-                            <div class="resize-handle"></div>
-                            <textarea id="sqlContent" placeholder="粘贴你的SQL语句..." class="w-full bg-black/30 dark:bg-gray-800/50 border border-gray-500 rounded-lg p-3 font-mono text-sm text-gray-200"></textarea>
-                            <div class="resize-handle"></div>
-                        </div>
-                    </div>
-                    <button onclick="saveSql()" class="btn-primary text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2">
-                        <i class="fa fa-save"></i> 保存当前SQL
-                    </button>
-                </div>
-
-                <!-- SQL列表卡片 -->
-                <div class="glass rounded-2xl p-6 card-hover">
-                    <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
-                        <i class="fa fa-list-alt text-primary"></i> 已保存SQL
-                    </h2>
-                    <div id="sqlList" class="space-y-4"></div>
-                </div>
-
-                <!-- 版本历史卡片 -->
-                <div class="glass rounded-2xl p-6 card-hover">
-                    <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
-                        <i class="fa fa-history text-primary"></i> 版本历史（时间倒序）
-                    </h2>
-                    <div id="versionList" class="max-h-64 overflow-y-auto space-y-2">
-                        <div class="text-gray-400 text-center py-4">暂无版本记录，编辑或保存SQL后将自动创建版本快照</div>
-                    </div>
-                </div>
-            </div>
+        <div class="flex gap-3">
+            <button onclick="setCollapseHeight()" class="px-3 py-1 rounded bg-white/50 dark:bg-gray-700/50 text-sm">
+                <i class="fa fa-arrows-v mr-1"></i> 折叠高度
+            </button>
+            <button onclick="toggleSort()" class="px-3 py-1 rounded bg-white/50 dark:bg-gray-700/50 text-sm">
+                <i class="fa fa-sort mr-1"></i> 排序
+            </button>
+            <button onclick="toggleTheme()" class="px-3 py-1 rounded bg-white/50 dark:bg-gray-700/50 text-sm">
+                <i id="themeIcon" class="fa fa-moon-o mr-1"></i> 主题
+            </button>
         </div>
     </div>
 
-    <!-- Three.js 粒子背景脚本（与之前相同，略作精简） -->
-    <script type="module">
-        import * as THREE from 'three';
-        const canvas = document.getElementById('bg-canvas');
-        const renderer = new THREE.WebGLRenderer({ canvas, alpha: false });
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x03050b);
-        const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 1.5, 14);
-        camera.lookAt(0, 0, 0);
-        
-        const particleCount = 2100;
-        const geom = new THREE.BufferGeometry();
-        const positions = new Float32Array(particleCount * 3);
-        for (let i = 0; i < particleCount; i++) {
-            positions[i*3] = (Math.random() - 0.5) * 38;
-            positions[i*3+1] = (Math.random() - 0.5) * 24;
-            positions[i*3+2] = (Math.random() - 0.5) * 30 - 8;
-        }
-        geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        const particleMat = new THREE.PointsMaterial({ color: 0x8b5cf6, size: 0.09, transparent: true, opacity: 0.65, blending: THREE.AdditiveBlending });
-        const particleSys = new THREE.Points(geom, particleMat);
-        scene.add(particleSys);
-        
-        const geom2 = new THREE.BufferGeometry();
-        const pos2 = new Float32Array(1400 * 3);
-        for (let i = 0; i < 1400; i++) {
-            pos2[i*3] = (Math.random() - 0.5) * 44;
-            pos2[i*3+1] = (Math.random() - 0.5) * 28;
-            pos2[i*3+2] = (Math.random() - 0.5) * 34 - 10;
-        }
-        geom2.setAttribute('position', new THREE.BufferAttribute(pos2, 3));
-        const mat2 = new THREE.PointsMaterial({ color: 0x06b6d4, size: 0.08, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending });
-        const particleSys2 = new THREE.Points(geom2, mat2);
-        scene.add(particleSys2);
-        
-        const geom3 = new THREE.BufferGeometry();
-        const pos3 = new Float32Array(900 * 3);
-        for (let i = 0; i < 900; i++) {
-            pos3[i*3] = (Math.random() - 0.5) * 48;
-            pos3[i*3+1] = (Math.random() - 0.5) * 30;
-            pos3[i*3+2] = (Math.random() - 0.5) * 38 - 12;
-        }
-        geom3.setAttribute('position', new THREE.BufferAttribute(pos3, 3));
-        const mat3 = new THREE.PointsMaterial({ color: 0xf472b6, size: 0.1, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending });
-        const particleSys3 = new THREE.Points(geom3, mat3);
-        scene.add(particleSys3);
-        
-        const ringCount = 380;
-        const ringGeo = new THREE.BufferGeometry();
-        const ringPositions = new Float32Array(ringCount * 3);
-        for (let i = 0; i < ringCount; i++) {
-            const angle = (i / ringCount) * Math.PI * 2;
-            const r = 5.2;
-            ringPositions[i*3] = Math.cos(angle) * r;
-            ringPositions[i*3+1] = Math.sin(angle) * r * 0.4;
-            ringPositions[i*3+2] = -1.8;
-        }
-        ringGeo.setAttribute('position', new THREE.BufferAttribute(ringPositions, 3));
-        const ringPoints = new THREE.Points(ringGeo, new THREE.PointsMaterial({ color: 0xa78bfa, size: 0.09, blending: THREE.AdditiveBlending }));
-        scene.add(ringPoints);
-        
-        scene.fog = new THREE.FogExp2(0x03050b, 0.008);
-        
-        let targetCamX = 0, targetCamY = 0;
-        window.addEventListener('mousemove', (e) => {
-            let mx = (e.clientX / window.innerWidth) * 2 - 1;
-            let my = (e.clientY / window.innerHeight) * 2 - 1;
-            targetCamX = mx * 0.9;
-            targetCamY = my * 0.6;
-        });
-        
-        let time = 0;
-        function animate() {
-            requestAnimationFrame(animate);
-            time += 0.007;
-            particleSys.rotation.y = time * 0.06;
-            particleSys.rotation.x = Math.sin(time * 0.18) * 0.08;
-            particleSys2.rotation.y = time * 0.04;
-            particleSys3.rotation.x = time * 0.03;
-            ringPoints.rotation.z = time * 0.12;
-            camera.position.x += (targetCamX * 0.5 - camera.position.x) * 0.04;
-            camera.position.y += (targetCamY * 0.4 - camera.position.y) * 0.04;
-            camera.lookAt(0, 0, 0);
-            renderer.render(scene, camera);
-        }
-        function onResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        window.addEventListener('resize', onResize);
-        animate();
-    </script>
+    <header class="text-center mb-8">
+        <h1 class="text-4xl md:text-5xl font-bold mb-3 flex items-center justify-center gap-3">
+            <i class="fa fa-database text-primary"></i> SQL语句保存工具
+        </h1>
+        <p class="text-gray-600 dark:text-gray-400">短SQL直接存Excel单元格，超长SQL自动配套独立txt | 分业务管理 | 云端备份</p>
+    </header>
 
-    <script>
-        const glow = document.getElementById('mouseGlow');
-        document.addEventListener('mousemove', (e) => {
-            glow.style.left = e.clientX + 'px';
-            glow.style.top = e.clientY + 'px';
-        });
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div class="glass rounded-2xl p-6 card-hover">
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                <i class="fa fa-folder-open text-primary"></i> 业务分类
+            </h2>
+            <div class="flex gap-2 mb-4">
+                <input type="text" id="cateName" placeholder="输入分类名称" class="flex-1 bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded-lg p-2">
+                <button onclick="addCategory()" class="btn-primary text-white px-3 py-2 rounded-lg font-medium">
+                    <i class="fa fa-plus"></i>
+                </button>
+            </div>
+            <ul id="cateList" class="space-y-2 max-h-96 overflow-y-auto"></ul>
+        </div>
 
-        // ----- 原有 Supabase 配置、本地存储变量、辅助函数保持不变 -----
-        const SUPA_URL = "https://idmfuazwpzlkooohbxil.supabase.co";
-        const SUPA_KEY = "sb_publishable_1MNTRsfYYf86DQ-hhppn9g_9-37yos7";
-        const DEVICE_ID = localStorage.getItem("dev_id") || (()=>{
-            let uid = Date.now() + "_" + Math.random().toString(32).slice(2);
-            localStorage.setItem("dev_id", uid);
-            return uid;
-        })();
-        let autoTimer = null;
-        const MAX_CELL_TEXT_LEN = 32000;
-        // 超长SQL截断阈值（展示用，防止渲染卡死）
-        const DISPLAY_TRUNCATE_LEN = 2000;
-
-        let data = JSON.parse(localStorage.getItem('sqlTool')) || {
-            categories: ['用户数据','订单数据','商品数据'],
-            sqlList: [],
-            currentCate: '用户数据',
-            config: {
-                collapseHeight: 120,
-                sortBy: "time",
-                sortOrder: "desc",
-                darkMode: false
-            }
-        };
-        const uniqueIdMap = new Map();
-        data.sqlList = data.sqlList.filter(item=>{
-            if(uniqueIdMap.has(item.id)) return false;
-            uniqueIdMap.set(item.id, true);
-            return true;
-        });
-
-        // 版本历史
-        let versionHistory = JSON.parse(localStorage.getItem('sql_version_history')) || [];
-        const MAX_VERSIONS = 30;
-        function addVersionSnapshot(action, snapshotData = null) {
-            const snapshot = {
-                id: Date.now(),
-                time: new Date().toLocaleString(),
-                action: action,
-                data: snapshotData ? JSON.parse(JSON.stringify(snapshotData)) : JSON.parse(JSON.stringify(data))
-            };
-            versionHistory.unshift(snapshot);
-            if (versionHistory.length > MAX_VERSIONS) versionHistory.pop();
-            localStorage.setItem('sql_version_history', JSON.stringify(versionHistory));
-            renderVersionHistory();
-        }
-        function restoreVersion(version) {
-            if (confirm(`确定恢复到 ${version.time} 的版本吗？当前数据将被覆盖。`)) {
-                data = version.data;
-                if (!data.config) data.config = { collapseHeight: 120, sortBy: "time", sortOrder: "desc", darkMode: false };
-                saveData();
-                renderAll();
-                showToast(`已恢复到 ${version.time} 的版本`);
-                addVersionSnapshot(`恢复到版本 ${version.time}`);
-            }
-        }
-        function renderVersionHistory() {
-            const container = document.getElementById('versionList');
-            if (!versionHistory.length) {
-                container.innerHTML = '<div class="text-gray-400 text-center py-4">暂无版本记录，编辑或保存SQL后将自动创建版本快照</div>';
-                return;
-            }
-            let html = '';
-            versionHistory.forEach(v => {
-                html += `
-                    <div class="history-item" data-id="${v.id}">
-                        <div class="flex justify-between items-center">
-                            <div>
-                                <span class="text-primary text-sm">📌 ${v.action}</span><br>
-                                <span class="text-xs text-gray-400">${v.time}</span>
-                            </div>
-                            <button class="restore-version-btn text-xs bg-purple-600 px-3 py-1 rounded-full hover:bg-purple-500">恢复</button>
-                        </div>
+        <div class="md:col-span-3 space-y-6">
+            <div class="glass rounded-2xl p-6 card-hover">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i class="fa fa-edit text-primary"></i> SQL管理
+                </h2>
+                <div class="grid grid-cols-1 gap-4 mb-4">
+                    <div>
+                        <label class="block mb-2 text-gray-600 dark:text-gray-300 text-sm font-medium">SQL名称（备注）</label>
+                        <input type="text" id="sqlTitle" placeholder="例如：用户近30天订单统计" class="w-full bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3">
                     </div>
-                `;
-            });
-            container.innerHTML = html;
-            document.querySelectorAll('.history-item').forEach(item => {
-                const btn = item.querySelector('.restore-version-btn');
-                const id = parseInt(item.dataset.id);
-                btn.onclick = (e) => {
-                    e.stopPropagation();
-                    const ver = versionHistory.find(v => v.id === id);
-                    if (ver) restoreVersion(ver);
-                };
-            });
-        }
-
-        function saveData() {
-            localStorage.setItem('sqlTool', JSON.stringify(data));
-            autoSaveCloud();
-            renderAll();
-        }
-
-        function initTheme(){
-            if(data.config.darkMode){
-                document.documentElement.classList.add('dark');
-                document.getElementById('themeIcon').className = 'fa fa-sun-o mr-1';
-            }
-        }
-        function toggleTheme(){
-            data.config.darkMode = !data.config.darkMode;
-            document.documentElement.classList.toggle('dark');
-            document.getElementById('themeIcon').className = data.config.darkMode ? 'fa fa-sun-o mr-1' : 'fa fa-moon-o mr-1';
-            saveData();
-        }
-        let isResizing = false;
-        const sqlArea = document.getElementById('sqlContent');
-        document.querySelectorAll('.resize-handle').forEach(handle=>{
-            handle.onmousedown = ()=>isResizing = true;
-        });
-        window.onmouseup = ()=>isResizing = false;
-        window.onmousemove = (e)=>{
-            if(!isResizing) return;
-            let h = parseInt(sqlArea.style.height || "160px");
-            sqlArea.style.height = Math.max(80, h + e.movementY) + "px";
-        };
-        function setCollapseHeight(){
-            let h = prompt("设置SQL默认折叠高度(px)", data.config.collapseHeight);
-            if(h && !isNaN(h)){
-                data.config.collapseHeight = parseInt(h);
-                saveData();
-                renderAll();
-            }
-        }
-        function toggleSort(){
-            const sortList = ['time','name'];
-            let idx = sortList.indexOf(data.config.sortBy);
-            idx = (idx + 1) % sortList.length;
-            data.config.sortBy = sortList[idx];
-            data.config.sortOrder = data.config.sortOrder === 'desc' ? 'asc' : 'desc';
-            saveData();
-            renderAll();
-            showToast(`已按${sortList[idx]==='time'?'时间':'名称'}${data.config.sortOrder==='desc'?'倒序':'正序'}`);
-        }
-        function highlightSql(sql){
-            let ret = sql;
-            const keywords = /\b(SELECT|FROM|WHERE|AND|OR|JOIN|LEFT|INNER|RIGHT|GROUP|ORDER|BY|LIMIT|INSERT|UPDATE|DELETE|CREATE|TABLE|ALTER|DROP|UNION|ALL|DISTINCT|AS|ON|IN|LIKE|BETWEEN|IS|NULL|NOT|CASE|WHEN|THEN|ELSE|END)\b/gi;
-            const funcs = /\b(COUNT|SUM|AVG|MAX|MIN|IFNULL|COALESCE|CONCAT|SUBSTRING|REPLACE|UPPER|LOWER|DATE|NOW|CURDATE)\b/gi;
-            const strs = /'[^']*'|"[^"]*"/g;
-            const comments = /--.*$/gm;
-            ret = ret.replace(comments, m=>`<span class="sql-comment">${m}</span>`);
-            ret = ret.replace(strs, m=>`<span class="sql-string">${m}</span>`);
-            ret = ret.replace(funcs, m=>`<span class="sql-function">${m}</span>`);
-            ret = ret.replace(keywords, m=>`<span class="sql-keyword">${m}</span>`);
-            return ret;
-        }
-        function showToast(msg){
-            const div = document.createElement('div');
-            div.className = 'toast bg-primary/90';
-            div.innerText = msg;
-            document.body.appendChild(div);
-            setTimeout(()=>div.remove(), 1800);
-        }
-        function renderCate(){
-            const list = document.getElementById('cateList');
-            list.innerHTML = "";
-            data.categories.forEach(cate=>{
-                const li = document.createElement('li');
-                li.className = `p-3 rounded-lg cursor-pointer transition-all ${cate === data.currentCate ? 'bg-primary/20 border-l-4 border-primary font-medium' : 'bg-white/30 dark:bg-gray-700/30 hover:bg-white/50'}`;
-                li.innerHTML = `
-                    <div class="flex justify-between items-center">
-                        <span style="color: #E8EDF5;">${cate}</span>
-                        <div class="flex gap-2">
-                            <button onclick="renameCategory('${cate}')" class="text-yellow-500 text-xs"><i class="fa fa-pencil"></i></button>
-                            <button onclick="delCategory('${cate}')" class="text-red-400 text-xs"><i class="fa fa-trash"></i></button>
-                        </div>
+                    <div>
+                        <label class="block mb-2 text-gray-600 dark:text-gray-300 text-sm font-medium">SQL语句（超过32000字符导出为独立txt）</label>
+                        <div class="resize-handle"></div>
+                        <textarea id="sqlContent" placeholder="粘贴你的SQL语句..." class="w-full bg-white/50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3 font-mono text-sm"></textarea>
+                        <div class="resize-handle"></div>
                     </div>
-                `;
-                li.onclick = e=>{
-                    if(e.target.tagName === 'BUTTON') return;
-                    data.currentCate = cate;
-                    saveData();
-                    renderAll();
-                };
-                list.appendChild(li);
-            });
-        }
-        function addCategory(){
-            const name = document.getElementById('cateName').value.trim();
-            if(!name) return alert("请输入分类名称");
-            if(data.categories.includes(name)) return alert("分类已存在");
-            data.categories.push(name);
-            document.getElementById('cateName').value = "";
+                </div>
+                <button onclick="saveSql()" class="btn-primary text-white px-6 py-3 rounded-lg font-medium flex items-center gap-2">
+                    <i class="fa fa-save"></i> 保存当前SQL
+                </button>
+            </div>
+
+            <div class="glass rounded-2xl p-6 card-hover">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i class="fa fa-list-alt text-primary"></i> 已保存SQL
+                </h2>
+                <div id="sqlList" class="space-y-4"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const SUPA_URL = "https://idmfuazwpzlkooohbxil.supabase.co";
+const SUPA_KEY = "sb_publishable_1MNTRsfYYf86DQ-hhppn9g_9-37yos7";
+const DEVICE_ID = localStorage.getItem("dev_id") || (()=>{
+    let uid = Date.now() + "_" + Math.random().toString(32).slice(2);
+    localStorage.setItem("dev_id", uid);
+    return uid;
+})();
+let autoTimer = null;
+const MAX_CELL_TEXT_LEN = 32000; // Excel单元格字符阈值
+
+// 粒子背景
+const canvas = document.getElementById('particles');
+const ctx = canvas.getContext('2d');
+let particles = [];
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+class Particle {
+    constructor(){this.reset()}
+    reset(){
+        this.x = Math.random()*canvas.width;
+        this.y = Math.random()*canvas.height;
+        this.radius = Math.random()*3+1;
+        this.speedX = (Math.random()-0.5)*0.5;
+        this.speedY = (Math.random()-0.5)*0.5;
+        this.opacity = Math.random()*0.5+0.2;
+    }
+    update(){
+        this.x += this.speedX;
+        this.y += this.speedY;
+        if(this.x<0||this.x>canvas.width||this.y<0||this.y>canvas.height) this.reset();
+    }
+    draw(){
+        ctx.beginPath();
+        ctx.arc(this.x,this.y,this.radius,0,Math.PI*2);
+        ctx.fillStyle = document.documentElement.classList.contains('dark')
+            ? `rgba(0,212,255,${this.opacity*0.6})`
+            : `rgba(0,212,255,${this.opacity})`;
+        ctx.fill();
+    }
+}
+for(let i=0;i<80;i++) particles.push(new Particle());
+function animate(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    particles.forEach(p=>{p.update();p.draw()});
+    requestAnimationFrame(animate);
+}
+animate();
+
+// 全局本地存储数据
+let data = JSON.parse(localStorage.getItem('sqlTool')) || {
+    categories: ['用户数据','订单数据','商品数据'],
+    sqlList: [],
+    currentCate: '用户数据',
+    config: {
+        collapseHeight: 120,
+        sortBy: "time",
+        sortOrder: "desc",
+        darkMode: false
+    }
+};
+
+// 修复：页面加载自动去重，相同ID只保留一条，清除缓存残留重复数据
+const uniqueIdMap = new Map();
+data.sqlList = data.sqlList.filter(item=>{
+    if(uniqueIdMap.has(item.id)) return false;
+    uniqueIdMap.set(item.id, true);
+    return true;
+});
+saveData(); // 去重后立即覆盖本地存储
+
+// 暗黑模式切换
+function initTheme(){
+    if(data.config.darkMode){
+        document.documentElement.classList.add('dark');
+        document.getElementById('themeIcon').className = 'fa fa-sun-o mr-1';
+    }
+}
+function toggleTheme(){
+    data.config.darkMode = !data.config.darkMode;
+    document.documentElement.classList.toggle('dark');
+    document.getElementById('themeIcon').className = data.config.darkMode ? 'fa fa-sun-o mr-1' : 'fa fa-moon-o mr-1';
+    saveData();
+}
+
+// 文本框高度拖拽
+let isResizing = false;
+const sqlArea = document.getElementById('sqlContent');
+document.querySelectorAll('.resize-handle').forEach(handle=>{
+    handle.onmousedown = ()=>isResizing = true;
+});
+window.onmouseup = ()=>isResizing = false;
+window.onmousemove = (e)=>{
+    if(!isResizing) return;
+    let h = parseInt(sqlArea.style.height || "160px");
+    sqlArea.style.height = Math.max(80, h + e.movementY) + "px";
+};
+
+// 折叠高度设置
+function setCollapseHeight(){
+    let h = prompt("设置SQL默认折叠高度(px)", data.config.collapseHeight);
+    if(h && !isNaN(h)){
+        data.config.collapseHeight = parseInt(h);
+        saveData();
+        renderAll();
+    }
+}
+
+// 排序切换
+function toggleSort(){
+    const sortList = ['time','name'];
+    let idx = sortList.indexOf(data.config.sortBy);
+    idx = (idx + 1) % sortList.length;
+    data.config.sortBy = sortList[idx];
+    data.config.sortOrder = data.config.sortOrder === 'desc' ? 'asc' : 'desc';
+    saveData();
+    renderAll();
+    showToast(`已按${sortList[idx]==='time'?'时间':'名称'}${data.config.sortOrder==='desc'?'倒序':'正序'}`);
+}
+
+// SQL语法高亮渲染
+function highlightSql(sql){
+    let ret = sql;
+    const keywords = /\b(SELECT|FROM|WHERE|AND|OR|JOIN|LEFT|INNER|RIGHT|GROUP|ORDER|BY|LIMIT|INSERT|UPDATE|DELETE|CREATE|TABLE|ALTER|DROP|UNION|ALL|DISTINCT|AS|ON|IN|LIKE|BETWEEN|IS|NULL|NOT|CASE|WHEN|THEN|ELSE|END)\b/gi;
+    const funcs = /\b(COUNT|SUM|AVG|MAX|MIN|IFNULL|COALESCE|CONCAT|SUBSTRING|REPLACE|UPPER|LOWER|DATE|NOW|CURDATE)\b/gi;
+    const strs = /'[^']*'|"[^"]*"/g;
+    const comments = /--.*$/gm;
+    ret = ret.replace(comments, m=>`<span class="sql-comment">${m}</span>`);
+    ret = ret.replace(strs, m=>`<span class="sql-string">${m}</span>`);
+    ret = ret.replace(funcs, m=>`<span class="sql-function">${m}</span>`);
+    ret = ret.replace(keywords, m=>`<span class="sql-keyword">${m}</span>`);
+    return ret;
+}
+
+// 弹窗提示
+function showToast(msg){
+    const div = document.createElement('div');
+    div.className = 'toast bg-primary/90';
+    div.innerText = msg;
+    document.body.appendChild(div);
+    setTimeout(()=>div.remove(), 1800);
+}
+
+// 分类渲染与管理
+function renderCate(){
+    const list = document.getElementById('cateList');
+    list.innerHTML = "";
+    data.categories.forEach(cate=>{
+        const li = document.createElement('li');
+        li.className = `p-3 rounded-lg cursor-pointer transition-all ${cate === data.currentCate ? 'bg-primary/20 border-l-4 border-primary font-medium' : 'bg-white/30 dark:bg-gray-700/30 hover:bg-white/50'}`;
+        li.innerHTML = `
+            <div class="flex justify-between items-center">
+                <span>${cate}</span>
+                <div class="flex gap-2">
+                    <button onclick="renameCategory('${cate}')" class="text-yellow-500 text-xs"><i class="fa fa-pencil"></i></button>
+                    <button onclick="delCategory('${cate}')" class="text-red-400 text-xs"><i class="fa fa-trash"></i></button>
+                </div>
+            </div>
+        `;
+        li.onclick = e=>{
+            if(e.target.tagName === 'BUTTON') return;
+            data.currentCate = cate;
             saveData();
             renderAll();
-            addVersionSnapshot(`新增分类 “${name}”`);
+        };
+        list.appendChild(li);
+    });
+}
+function addCategory(){
+    const name = document.getElementById('cateName').value.trim();
+    if(!name) return alert("请输入分类名称");
+    if(data.categories.includes(name)) return alert("分类已存在");
+    data.categories.push(name);
+    document.getElementById('cateName').value = "";
+    saveData();
+    renderAll();
+}
+function delCategory(cate){
+    if(!confirm("确定删除该分类及所有关联SQL？")) return;
+    data.categories = data.categories.filter(c=>c!==cate);
+    data.sqlList = data.sqlList.filter(s=>s.cate!==cate);
+    if(data.currentCate === cate) data.currentCate = data.categories[0] || "";
+    saveData();
+    renderAll();
+}
+function renameCategory(oldName){
+    let newName = prompt("请输入新分类名称", oldName);
+    if(!newName) return;
+    if(newName !== oldName && data.categories.includes(newName)) return alert("分类名称已存在");
+    data.categories = data.categories.map(c=>c===oldName?newName:c);
+    data.sqlList.forEach(s=>{if(s.cate === oldName) s.cate = newName;});
+    if(data.currentCate === oldName) data.currentCate = newName;
+    saveData();
+    renderAll();
+    showToast("分类重命名成功");
+}
+
+// SQL增删改查
+function saveSql(){
+    const title = document.getElementById('sqlTitle').value.trim();
+    const content = document.getElementById('sqlContent').value.trim();
+    if(!title || !content) return alert("请填写名称和SQL内容");
+    let editDom = document.getElementById('editId');
+    if(editDom){
+        let id = editDom.value;
+        let idx = data.sqlList.findIndex(item=>item.id == id);
+        data.sqlList[idx] = {id:id, title, content, cate:data.currentCate, time:Date.now()};
+        editDom.remove();
+    }else{
+        data.sqlList.push({
+            id: Date.now(),
+            title,
+            content,
+            cate: data.currentCate,
+            time: Date.now()
+        });
+    }
+    // 新增后自动去重
+    const uniqueIdMap = new Map();
+    data.sqlList = data.sqlList.filter(item=>{
+        if(uniqueIdMap.has(item.id)) return false;
+        uniqueIdMap.set(item.id, true);
+        return true;
+    });
+    document.getElementById('sqlTitle').value = "";
+    document.getElementById('sqlContent').value = "";
+    saveData();
+    renderAll();
+    showToast("SQL保存成功");
+}
+function renderSql(){
+    const list = document.getElementById('sqlList');
+    let items = data.sqlList.filter(item=>item.cate === data.currentCate);
+    if(data.config.sortBy === 'name'){
+        items.sort((a,b)=>{
+            return data.config.sortOrder === 'asc' ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title);
+        });
+    }else{
+        items.sort((a,b)=>{
+            return data.config.sortOrder === 'asc' ? a.time - b.time : b.time - a.time;
+        });
+    }
+    if(items.length === 0){
+        list.innerHTML = '<div class="text-center py-10 text-gray-500">暂无保存的SQL</div>';
+        return;
+    }
+    list.innerHTML = "";
+    const collapseH = data.config.collapseHeight + "px";
+    items.forEach(item=>{
+        const div = document.createElement('div');
+        div.className = 'bg-white/40 dark:bg-gray-800/40 rounded-xl p-4 border border-white/50';
+        div.innerHTML = `
+            <div class="flex justify-between items-center mb-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa fa-file-text-o text-primary"></i>
+                    <span class="font-medium">${item.title}</span>
+                    ${item.content.length > MAX_CELL_TEXT_LEN ? '<span class="text-red-400 text-xs">[超长SQL]</span>' : ''}
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="copySql(${item.id})" class="bg-primary/20 text-primary px-3 py-1 rounded text-sm">
+                        <i class="fa fa-copy"></i> 复制
+                    </button>
+                    <button onclick="editSql(${item.id})" class="bg-green-100 dark:bg-green-900/30 text-green-600 px-3 py-1 rounded text-sm">
+                        <i class="fa fa-pencil"></i> 编辑
+                    </button>
+                    <button onclick="delSql(${item.id})" class="bg-red-100 text-red-600 px-3 py-1 rounded text-sm">
+                        <i class="fa fa-trash"></i> 删除
+                    </button>
+                </div>
+            </div>
+            <div id="sql-${item.id}" class="sql-content-collapsed bg-gray-100 dark:bg-gray-800/60 p-3 rounded-lg font-mono text-sm whitespace-pre-wrap" style="max-height:${collapseH}">
+                ${highlightSql(item.content)}
+            </div>
+            <div class="text-center mt-2">
+                <button onclick="toggleSql(${item.id})" class="text-primary text-sm">
+                    <i class="fa fa-chevron-down"></i> 展开
+                </button>
+            </div>
+        `;
+        list.appendChild(div);
+    });
+}
+function toggleSql(id){
+    const el = document.getElementById(`sql-${id}`);
+    const btn = el.nextElementSibling.querySelector('button');
+    if(el.classList.contains('sql-content-collapsed')){
+        el.classList.remove('sql-content-collapsed');
+        btn.innerHTML = '<i class="fa fa-chevron-up"></i> 收起';
+    }else{
+        el.classList.add('sql-content-collapsed');
+        btn.innerHTML = '<i class="fa fa-chevron-down"></i> 展开';
+    }
+}
+function copySql(id){
+    let sql = data.sqlList.find(item=>item.id == id).content;
+    navigator.clipboard.writeText(sql).then(()=>showToast("复制成功"));
+}
+function editSql(id){
+    let item = data.sqlList.find(item=>item.id == id);
+    document.getElementById('sqlTitle').value = item.title;
+    document.getElementById('sqlContent').value = item.content;
+    let input = document.createElement('input');
+    input.type = 'hidden';
+    input.id = 'editId';
+    input.value = id;
+    document.querySelector('.md\\:col-span-3').appendChild(input);
+}
+function delSql(id){
+    if(!confirm("确定删除这条SQL？")) return;
+    data.sqlList = data.sqlList.filter(item=>item.id != id);
+    saveData();
+    renderAll();
+}
+
+// ========== 修复后导出函数：1. ID强制文本格式防科学计数 2. txt去重 3. 兼容Bandizip ==========
+async function exportSqlZip(){
+    try {
+        if (!data.sqlList || data.sqlList.length === 0) {
+            alert("暂无SQL记录，无法导出");
+            return;
         }
-        function delCategory(cate){
-            if(!confirm("确定删除该分类及所有关联SQL？")) return;
-            data.categories = data.categories.filter(c=>c!==cate);
-            data.sqlList = data.sqlList.filter(s=>s.cate!==cate);
-            if(data.currentCate === cate) data.currentCate = data.categories[0] || "";
-            saveData();
-            renderAll();
-            addVersionSnapshot(`删除分类 “${cate}”`);
-        }
-        function renameCategory(oldName){
-            let newName = prompt("请输入新分类名称", oldName);
-            if(!newName) return;
-            if(newName !== oldName && data.categories.includes(newName)) return alert("分类名称已存在");
-            data.categories = data.categories.map(c=>c===oldName?newName:c);
-            data.sqlList.forEach(s=>{if(s.cate === oldName) s.cate = newName;});
-            if(data.currentCate === oldName) data.currentCate = newName;
-            saveData();
-            renderAll();
-            showToast("分类重命名成功");
-            addVersionSnapshot(`重命名分类 “${oldName}” -> “${newName}”`);
-        }
-        function saveSql(){
-            const title = document.getElementById('sqlTitle').value.trim();
-            const content = document.getElementById('sqlContent').value.trim();
-            if(!title || !content) return alert("请填写名称和SQL内容");
-            let editDom = document.getElementById('editId');
-            if(editDom){
-                let id = editDom.value;
-                let idx = data.sqlList.findIndex(item=>item.id == id);
-                const oldTitle = data.sqlList[idx].title;
-                data.sqlList[idx] = {id:id, title, content, cate:data.currentCate, time:Date.now()};
-                editDom.remove();
-                addVersionSnapshot(`编辑SQL “${oldTitle}” -> “${title}”`);
+        showToast("正在打包备份ZIP文件...");
+        const zip = new JSZip();
+        const sqlFolder = zip.folder("sql_files");
+        // 标记已写入txt的SQL ID，防止重复生成同名文件
+        const wroteTxtIds = new Set();
+
+        // 表头：分类,ID,标题,SQL内容/文本文件名,时间
+        const header = ["分类名称","SQL唯一ID","SQL备注标题","SQL内容/超长文本文件名","创建时间戳"];
+        const sheetRows = [header];
+
+        data.sqlList.forEach(sqlItem => {
+            const cateName = data.categories.find(c => c === sqlItem.cate) || "未分类";
+            const sqlText = sqlItem.content;
+            const txtFileName = `${sqlItem.id}.sql.txt`;
+            let cellDisplayText;
+
+            // 长短SQL分支逻辑
+            if(sqlText.length <= MAX_CELL_TEXT_LEN){
+                cellDisplayText = sqlText;
             }else{
-                data.sqlList.push({
-                    id: Date.now(),
-                    title,
-                    content,
-                    cate: data.currentCate,
-                    time: Date.now()
-                });
-                addVersionSnapshot(`新增SQL “${title}”`);
+                cellDisplayText = `【超长SQL，请查看sql_files/${txtFileName}】`;
+                // 仅首次写入，避免重复生成txt文件
+                if(!wroteTxtIds.has(sqlItem.id)){
+                    sqlFolder.file(txtFileName, sqlText, {encoding:"utf-8"});
+                    wroteTxtIds.add(sqlItem.id);
+                }
             }
+
+            sheetRows.push([
+                cateName,
+                String(sqlItem.id), // 写入表格前强制转为字符串
+                sqlItem.title,
+                cellDisplayText,
+                sqlItem.time
+            ]);
+        });
+
+        // 生成XLSX索引表，修复长ID科学计数法问题
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+        // 关键修复：整列B（索引1）强制文本单元格类型
+        for(let r = 0; r < sheetRows.length; r++){
+            const cellAddr = XLSX.utils.encode_cell({r, c: 1});
+            if(ws[cellAddr]) ws[cellAddr].t = 's';
+        }
+        // 加宽ID列，完整显示13位数字
+        ws['!cols'] = [
+            {wch:16},
+            {wch:20},
+            {wch:30},
+            {wch:120},
+            {wch:16}
+        ];
+        // D列自动换行
+        const range = ws['!ref'] ? XLSX.utils.decode_range(ws['!ref']) : null;
+        if(range){
+            const wrapStyle = { alignment: { wrapText: true, vertical: "top" } };
+            for(let r = range.s.r; r <= range.e.r; r++){
+                const cellKey = XLSX.utils.encode_cell({r, c: 3});
+                if(ws[cellKey]) ws[cellKey].s = wrapStyle;
+            }
+        }
+        XLSX.utils.book_append_sheet(wb, ws, "SQL索引表");
+        const xlsxBuf = XLSX.write(wb, {type:"array", bookType:"xlsx"});
+        zip.file("SQL索引表.xlsx", xlsxBuf);
+
+        // 标准DEFLATE压缩，兼容Bandizip、WinRAR、Windows解压
+        const zipBuf = await zip.generateAsync({
+            type:"uint8array",
+            compression: "DEFLATE",
+            compressionOptions: { level: 6 }
+        });
+        const blob = new Blob([zipBuf], {type:"application/x-zip-compressed"});
+        const dateStr = new Date().toLocaleDateString().replace(/[\/:]/g,"-");
+        saveAs(blob, `SQL完整备份_${dateStr}.zip`);
+        showToast("ZIP导出完成！短SQL直接在Excel查看，超长SQL在sql_files文件夹打开对应txt，ID已完整文本显示无科学计数");
+    } catch(err){
+        console.error("导出ZIP失败",err);
+        alert("导出出错："+err.message);
+    }
+}
+
+// 打开文件选择弹窗
+function triggerZipImport(){
+    document.getElementById("zipImportFile").click();
+}
+
+// ZIP导入解析逻辑，自动还原长短SQL
+document.getElementById("zipImportFile").onchange = async function(e){
+    const file = e.target.files[0];
+    if(!file) return;
+    try{
+        showToast("正在解析ZIP备份包...");
+        const zipData = await JSZip.loadAsync(file);
+        const xlsxFile = zipData.file("SQL索引表.xlsx");
+        if(!xlsxFile) throw new Error("压缩包内未找到SQL索引表.xlsx，不是本工具导出的备份");
+        const xlsxBuf = await xlsxFile.async("arraybuffer");
+        const wb = XLSX.read(xlsxBuf, {type:"array"});
+        const ws = wb.SheetNames[0];
+        const jsonData = XLSX.utils.sheet_to_json(wb.Sheets[ws], {header:1});
+        if(jsonData.length <=1) throw new Error("索引表格无有效数据");
+
+        const newCateSet = new Set();
+        const tempSqlMap = new Map();
+        const sqlFolder = zipData.folder("sql_files");
+        const fileCache = new Map();
+        // 预缓存全部txt文本
+        for(const filePath of Object.keys(sqlFolder.files)){
+            const zipFile = sqlFolder.file(filePath);
+            if(!zipFile || zipFile.dir) continue;
+            const txtContent = await zipFile.async("string");
+            const sqlId = filePath.replace(".sql.txt","");
+            fileCache.set(sqlId, txtContent);
+        }
+
+        // 遍历表格还原完整SQL
+        for(let i=1; i<jsonData.length; i++){
+            const row = jsonData[i];
+            if(!row || row.length <5) continue;
+            const [cateName, sqlId, sqlTitle, cellText, sqlTime] = row;
+            newCateSet.add(cateName);
+            let fullSql;
+            // 判断超长标记，读取txt或直接取单元格文本
+            if(cellText.startsWith("【超长SQL，请查看sql_files/")){
+                fullSql = fileCache.get(String(sqlId)) || "";
+            }else{
+                fullSql = cellText;
+            }
+            tempSqlMap.set(String(sqlId), {
+                id: sqlId,
+                cate: cateName,
+                title: sqlTitle,
+                time: sqlTime,
+                content: fullSql
+            });
+        }
+
+        const newSqlList = Array.from(tempSqlMap.values());
+        const mergeCategories = [...new Set([...data.categories, ...newCateSet])];
+        if(confirm("导入将合并分类，同ID SQL覆盖，确认导入？")){
+            const idMap = new Map();
+            newSqlList.forEach(item => idMap.set(String(item.id), item));
+            const remainSql = data.sqlList.filter(old => !idMap.has(String(old.id)));
+            const finalSql = [...remainSql, ...newSqlList];
+            data.categories = mergeCategories;
+            data.sqlList = finalSql;
+            // 导入后自动去重
             const uniqueIdMap = new Map();
             data.sqlList = data.sqlList.filter(item=>{
                 if(uniqueIdMap.has(item.id)) return false;
                 uniqueIdMap.set(item.id, true);
                 return true;
             });
-            document.getElementById('sqlTitle').value = "";
-            document.getElementById('sqlContent').value = "";
             saveData();
-            renderAll();
-            showToast("SQL保存成功");
+            location.reload();
+            alert("ZIP备份导入成功，页面刷新加载全部数据");
         }
+    }catch(err){
+        console.error("导入ZIP异常",err);
+        alert("导入解析失败："+err.message);
+    }
+};
 
-        // ========== 修复 renderSql：超长 SQL 截断，默认折叠 ==========
-        function renderSql(){
-            const list = document.getElementById('sqlList');
-            let items = data.sqlList.filter(item=>item.cate === data.currentCate);
-            if(data.config.sortBy === 'name'){
-                items.sort((a,b)=> data.config.sortOrder === 'asc' ? a.title.localeCompare(b.title) : b.title.localeCompare(a.title));
-            }else{
-                items.sort((a,b)=> data.config.sortOrder === 'asc' ? a.time - b.time : b.time - a.time);
-            }
-            if(items.length === 0){
-                list.innerHTML = '<div class="text-center py-10 text-gray-500">暂无保存的SQL</div>';
-                return;
-            }
-            list.innerHTML = "";
-            const collapseH = data.config.collapseHeight + "px";
-            items.forEach(item=>{
-                const fullSql = item.content;
-                let displaySql = fullSql;
-                let isTruncated = false;
-                if (fullSql.length > DISPLAY_TRUNCATE_LEN) {
-                    displaySql = fullSql.substring(0, DISPLAY_TRUNCATE_LEN) + "\n... [已截断，点击展开查看完整内容]";
-                    isTruncated = true;
-                }
-                const highlighted = highlightSql(displaySql);
-                const div = document.createElement('div');
-                div.className = 'bg-white/40 dark:bg-gray-800/40 rounded-xl p-4 border border-white/50';
-                div.innerHTML = `
-                    <div class="flex justify-between items-center mb-3">
-                        <div class="flex items-center gap-2">
-                            <i class="fa fa-file-text-o text-primary"></i>
-                            <span class="font-medium sql-card-title">${escapeHtml(item.title)}</span>
-                            ${item.content.length > MAX_CELL_TEXT_LEN ? '<span class="text-red-400 text-xs">[超长SQL]</span>' : ''}
-                            ${isTruncated ? '<span class="text-yellow-400 text-xs ml-2">[已截断]</span>' : ''}
-                        </div>
-                        <div class="flex gap-2">
-                            <button onclick="copySql(${item.id})" class="bg-primary/20 text-primary px-3 py-1 rounded text-sm"><i class="fa fa-copy"></i> 复制</button>
-                            <button onclick="editSql(${item.id})" class="bg-green-100 dark:bg-green-900/30 text-green-600 px-3 py-1 rounded text-sm"><i class="fa fa-pencil"></i> 编辑</button>
-                            <button onclick="delSql(${item.id})" class="bg-red-100 text-red-600 px-3 py-1 rounded text-sm"><i class="fa fa-trash"></i> 删除</button>
-                        </div>
-                    </div>
-                    <div id="sql-${item.id}" class="sql-content-collapsed bg-gray-100 dark:bg-gray-800/60 p-3 rounded-lg font-mono text-sm whitespace-pre-wrap" style="max-height:${collapseH}">
-                        ${highlighted}
-                    </div>
-                    <div class="text-center mt-2">
-                        <button onclick="toggleSql(${item.id}, ${item.content.length > DISPLAY_TRUNCATE_LEN ? item.content.replace(/[\\"]/g, '\\$&') : 'null'})" class="text-primary text-sm">
-                            <i class="fa fa-chevron-down"></i> 展开
-                        </button>
-                    </div>
-                `;
-                list.appendChild(div);
+// 本地存储保存函数
+function saveData(){
+    localStorage.setItem('sqlTool', JSON.stringify(data));
+    autoSaveCloud();
+}
+
+// 自动云端备份（延迟3秒执行）
+function autoSaveCloud(){
+    clearTimeout(autoTimer);
+    autoTimer = setTimeout(async()=>{
+        const sql = localStorage.getItem("sqlTool");
+        if(!sql) return;
+        try{
+            await fetch(`${SUPA_URL}/rest/v1/sqlbackup`,{
+                method:"POST",
+                headers:{
+                    "apikey":SUPA_KEY,
+                    "Content-Type":"application/json"
+                },
+                body:JSON.stringify({
+                    device_id:DEVICE_ID,
+                    backup_time:new Date().toLocaleString(),
+                    sql_data:sql
+                })
             });
+            console.log("✅自动云端备份成功");
+        }catch(e){
+            console.log("❌自动备份异常",e)
         }
+    },3000);
+}
 
-        // 由于需要传递完整SQL用于展开，修改 toggleSql 支持完整内容
-        window.toggleSql = function(id, fullSqlArg) {
-            const el = document.getElementById(`sql-${id}`);
-            const btn = el.nextElementSibling.querySelector('button');
-            const isCollapsed = el.classList.contains('sql-content-collapsed');
-            if (isCollapsed) {
-                // 展开：需要加载完整内容（如果是截断的）
-                const currentContent = el.innerText.trim();
-                // 如果当前内容包含截断标记，则需要从数据中获取完整SQL
-                if (fullSqlArg && currentContent.includes('[已截断]')) {
-                    const fullSql = fullSqlArg;
-                    const highlightedFull = highlightSql(fullSql);
-                    el.innerHTML = highlightedFull;
-                }
-                el.classList.remove('sql-content-collapsed');
-                btn.innerHTML = '<i class="fa fa-chevron-up"></i> 收起';
-            } else {
-                el.classList.add('sql-content-collapsed');
-                btn.innerHTML = '<i class="fa fa-chevron-down"></i> 展开';
-            }
-        };
+// 手动云端备份
+async function backupToCloud(){
+    const sql = localStorage.getItem("sqlTool");
+    if(!sql) return alert("暂无SQL数据可备份");
+    try{
+        await fetch(`${SUPA_URL}/rest/v1/sqlbackup`,{
+            method:"POST", 
+            headers:{
+                "apikey":SUPA_KEY,
+                "Content-Type":"application/json"
+            },
+            body:JSON.stringify({
+                device_id:DEVICE_ID,
+                backup_time:new Date().toLocaleString(),
+                sql_data:sql
+            })
+        });
+        showToast("✅ 云端备份成功！去Supabase后台查看数据表");
+    }catch(e){
+        alert("❌ 备份失败："+e.message);
+    }
+}
 
-        function copySql(id){
-            let sql = data.sqlList.find(item=>item.id == id).content;
-            navigator.clipboard.writeText(sql).then(()=>showToast("复制成功"));
-        }
-        function editSql(id){
-            let item = data.sqlList.find(item=>item.id == id);
-            document.getElementById('sqlTitle').value = item.title;
-            document.getElementById('sqlContent').value = item.content;
-            let input = document.createElement('input');
-            input.type = 'hidden';
-            input.id = 'editId';
-            input.value = id;
-            document.querySelector('.md\\:col-span-3').appendChild(input);
-        }
-        function delSql(id){
-            if(!confirm("确定删除这条SQL？")) return;
-            const sqlItem = data.sqlList.find(item=>item.id == id);
-            data.sqlList = data.sqlList.filter(item=>item.id != id);
-            saveData();
-            renderAll();
-            addVersionSnapshot(`删除SQL “${sqlItem.title}”`);
-        }
+// 云端数据恢复
+async function restoreFromCloud(){
+    if(!confirm("恢复将覆盖本地全部现有数据，确定吗？")) return;
+    try{
+        const res = await fetch(`${SUPA_URL}/rest/v1/sqlbackup?device_id=eq.${DEVICE_ID}&order=backup_time.desc&limit=1`,{
+            headers:{"apikey":SUPA_KEY}
+        });
+        const arr = await res.json();
+        if(!arr || arr.length===0) return alert("暂无云端备份记录");
+        localStorage.setItem("sqlTool",arr[0].sql_data);
+        location.reload();
+        alert("✅ 云端数据恢复成功！页面已刷新");
+    }catch(e){
+        alert("❌ 恢复失败："+e.message);
+    }
+}
 
-        // 导出ZIP和导入ZIP函数（与之前相同，此处保留完整）
-        async function exportSqlZip() {
-            try {
-                if (!data.sqlList || data.sqlList.length === 0) {
-                    alert("暂无SQL记录，无法导出");
-                    return;
-                }
-                showToast("正在打包备份ZIP文件...");
-                const zip = new JSZip();
-                const sqlFolder = zip.folder("sql_files");
-                const wroteTxtIds = new Set();
+// 全局渲染入口
+function renderAll(){
+    renderCate();
+    renderSql();
+}
 
-                const header = ["分类名称","SQL唯一ID","SQL备注标题","SQL内容/超长文本文件名","创建时间戳"];
-                const sheetRows = [header];
-
-                data.sqlList.forEach(sqlItem => {
-                    const cateName = data.categories.find(c => c === sqlItem.cate) || "未分类";
-                    const sqlText = sqlItem.content;
-                    const txtFileName = `${sqlItem.id}.sql.txt`;
-                    let cellDisplayText;
-
-                    if(sqlText.length <= MAX_CELL_TEXT_LEN){
-                        cellDisplayText = sqlText;
-                    }else{
-                        cellDisplayText = `【超长SQL，请查看sql_files/${txtFileName}】`;
-                        if(!wroteTxtIds.has(sqlItem.id)){
-                            sqlFolder.file(txtFileName, sqlText, {encoding:"utf-8"});
-                            wroteTxtIds.add(sqlItem.id);
-                        }
-                    }
-
-                    sheetRows.push([
-                        cateName,
-                        String(sqlItem.id),
-                        sqlItem.title,
-                        cellDisplayText,
-                        sqlItem.time
-                    ]);
-                });
-
-                const wb = XLSX.utils.book_new();
-                const ws = XLSX.utils.aoa_to_sheet(sheetRows);
-                for(let r = 0; r < sheetRows.length; r++){
-                    const cellAddr = XLSX.utils.encode_cell({r, c: 1});
-                    if(ws[cellAddr]) ws[cellAddr].t = 's';
-                }
-                ws['!cols'] = [{wch:16},{wch:20},{wch:30},{wch:120},{wch:16}];
-                const range = ws['!ref'] ? XLSX.utils.decode_range(ws['!ref']) : null;
-                if(range){
-                    for(let r = range.s.r; r <= range.e.r; r++){
-                        const cellKey = XLSX.utils.encode_cell({r, c: 3});
-                        if(ws[cellKey]) ws[cellKey].s = { alignment: { wrapText: true, vertical: "top" } };
-                    }
-                }
-                XLSX.utils.book_append_sheet(wb, ws, "SQL索引表");
-                const xlsxBuf = XLSX.write(wb, {type:"array", bookType:"xlsx"});
-                zip.file("SQL索引表.xlsx", xlsxBuf);
-
-                const zipBuf = await zip.generateAsync({ type:"uint8array", compression: "DEFLATE", compressionOptions: { level: 6 } });
-                const blob = new Blob([zipBuf], {type:"application/x-zip-compressed"});
-                const dateStr = new Date().toLocaleDateString().replace(/[\/:]/g,"-");
-                saveAs(blob, `SQL完整备份_${dateStr}.zip`);
-                showToast("ZIP导出完成！");
-            } catch(err){
-                alert("导出出错："+err.message);
-            }
-        }
-        function triggerZipImport(){
-            document.getElementById("zipImportFile").click();
-        }
-        document.getElementById("zipImportFile").onchange = async function(e){
-            const file = e.target.files[0];
-            if(!file) return;
-            try{
-                showToast("正在解析ZIP备份包...");
-                const zipData = await JSZip.loadAsync(file);
-                const xlsxFile = zipData.file("SQL索引表.xlsx");
-                if(!xlsxFile) throw new Error("压缩包内未找到SQL索引表.xlsx");
-                const xlsxBuf = await xlsxFile.async("arraybuffer");
-                const wb = XLSX.read(xlsxBuf, {type:"array"});
-                const ws = wb.SheetNames[0];
-                const jsonData = XLSX.utils.sheet_to_json(wb.Sheets[ws], {header:1});
-                if(jsonData.length <=1) throw new Error("索引表格无有效数据");
-
-                const newCateSet = new Set();
-                const tempSqlMap = new Map();
-                const sqlFolder = zipData.folder("sql_files");
-                const fileCache = new Map();
-                for(const filePath of Object.keys(sqlFolder.files)){
-                    const zipFile = sqlFolder.file(filePath);
-                    if(!zipFile || zipFile.dir) continue;
-                    const txtContent = await zipFile.async("string");
-                    const sqlId = filePath.replace(".sql.txt","");
-                    fileCache.set(sqlId, txtContent);
-                }
-
-                for(let i=1; i<jsonData.length; i++){
-                    const row = jsonData[i];
-                    if(!row || row.length <5) continue;
-                    const [cateName, sqlId, sqlTitle, cellText, sqlTime] = row;
-                    newCateSet.add(cateName);
-                    let fullSql;
-                    if(cellText.startsWith("【超长SQL，请查看sql_files/")){
-                        fullSql = fileCache.get(String(sqlId)) || "";
-                    }else{
-                        fullSql = cellText;
-                    }
-                    tempSqlMap.set(String(sqlId), {
-                        id: sqlId,
-                        cate: cateName,
-                        title: sqlTitle,
-                        time: sqlTime,
-                        content: fullSql
-                    });
-                }
-
-                const newSqlList = Array.from(tempSqlMap.values());
-                const mergeCategories = [...new Set([...data.categories, ...newCateSet])];
-                if(confirm("导入将合并分类，同ID SQL覆盖，确认导入？")){
-                    const idMap = new Map();
-                    newSqlList.forEach(item => idMap.set(String(item.id), item));
-                    const remainSql = data.sqlList.filter(old => !idMap.has(String(old.id)));
-                    const finalSql = [...remainSql, ...newSqlList];
-                    data.categories = mergeCategories;
-                    data.sqlList = finalSql;
-                    const uniqueIdMap = new Map();
-                    data.sqlList = data.sqlList.filter(item=>{
-                        if(uniqueIdMap.has(item.id)) return false;
-                        uniqueIdMap.set(item.id, true);
-                        return true;
-                    });
-                    saveData();
-                    addVersionSnapshot("导入ZIP备份包");
-                    location.reload();
-                    alert("ZIP备份导入成功，页面刷新加载全部数据");
-                }
-            }catch(err){
-                alert("导入解析失败："+err.message);
-            }
-        };
-
-        async function backupToCloud(){
-            const sql = localStorage.getItem("sqlTool");
-            if(!sql) return alert("暂无SQL数据可备份");
-            try{
-                await fetch(`${SUPA_URL}/rest/v1/sqlbackup`,{ method:"POST", headers:{ "apikey":SUPA_KEY, "Content-Type":"application/json" }, body:JSON.stringify({ device_id:DEVICE_ID, backup_time:new Date().toLocaleString(), sql_data:sql }) });
-                showToast("✅ 云端备份成功！");
-                addVersionSnapshot("手动云端备份");
-            }catch(e){ alert("❌ 备份失败："+e.message); }
-        }
-        async function restoreFromCloud(){
-            if(!confirm("恢复将覆盖本地全部现有数据，确定吗？")) return;
-            try{
-                const res = await fetch(`${SUPA_URL}/rest/v1/sqlbackup?device_id=eq.${DEVICE_ID}&order=backup_time.desc&limit=1`,{ headers:{"apikey":SUPA_KEY} });
-                const arr = await res.json();
-                if(!arr || arr.length===0) return alert("暂无云端备份记录");
-                localStorage.setItem("sqlTool",arr[0].sql_data);
-                addVersionSnapshot("从云端恢复数据");
-                location.reload();
-                alert("✅ 云端数据恢复成功！");
-            }catch(e){ alert("❌ 恢复失败："+e.message); }
-        }
-        function autoSaveCloud(){
-            clearTimeout(autoTimer);
-            autoTimer = setTimeout(async()=>{
-                const sql = localStorage.getItem("sqlTool");
-                if(!sql) return;
-                try{
-                    await fetch(`${SUPA_URL}/rest/v1/sqlbackup`,{ method:"POST", headers:{ "apikey":SUPA_KEY, "Content-Type":"application/json" }, body:JSON.stringify({ device_id:DEVICE_ID, backup_time:new Date().toLocaleString(), sql_data:sql }) });
-                    console.log("✅自动云端备份成功");
-                }catch(e){ console.log("❌自动备份异常",e) }
-            },3000);
-        }
-        function renderAll(){
-            renderCate();
-            renderSql();
-        }
-        function escapeHtml(str) {
-            if (!str) return '';
-            return str.replace(/[&<>]/g, function(m) {
-                if (m === '&') return '&amp;';
-                if (m === '<') return '&lt;';
-                if (m === '>') return '&gt;';
-                return m;
-            });
-        }
-
-        window.saveSql = saveSql;
-        window.delSql = delSql;
-        window.editSql = editSql;
-        window.copySql = copySql;
-        window.toggleSql = toggleSql;
-        window.addCategory = addCategory;
-        window.delCategory = delCategory;
-        window.renameCategory = renameCategory;
-        window.setCollapseHeight = setCollapseHeight;
-        window.toggleSort = toggleSort;
-        window.toggleTheme = toggleTheme;
-        window.backupToCloud = backupToCloud;
-        window.restoreFromCloud = restoreFromCloud;
-        window.exportSqlZip = exportSqlZip;
-        window.triggerZipImport = triggerZipImport;
-
-        initTheme();
-        renderAll();
-        renderVersionHistory();
-    </script>
+// 页面初始化执行
+initTheme();
+renderAll();
+</script>
 </body>
 </html>
