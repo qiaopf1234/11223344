@@ -143,6 +143,7 @@
             width: 100%;
             height: 100%;
             display: block;
+            loading: lazy;
         }
         /* 兼容小屏 */
         @media (max-width: 680px) {
@@ -311,12 +312,12 @@
             </div>
         </div>
 
-        <!-- ========= 一级折叠菜单：教育厅 ========= -->
-        <div class="menu-item" onclick="toggleSubMenu(this)">
+        <!-- ========= 一级折叠菜单：教育厅（默认展开，首屏只预加载本组页面） ========= -->
+        <div class="menu-item open" onclick="toggleSubMenu(this)">
             📋 教育厅 <span class="arrow">▶</span>
         </div>
-        <div class="sub-menu">
-            <div class="menu-item" data-href="1.html">电子证照・学生信息批量录入</div>
+        <div class="sub-menu" style="display:block;">
+            <div class="menu-item active" data-href="1.html">电子证照・学生信息批量录入</div>
             <div class="menu-item" data-href="13.html">电子证照・学生信息批量更新</div>
             <div class="menu-item" data-href="21.html">电子证照・盟市账号启停管控</div>
             <div class="menu-item" data-href="10.html">装备统计・业务表填报状态查</div>
@@ -324,7 +325,7 @@
             <div class="menu-item" data-href="12.html">装备统计・状态批量更新工具</div>
         </div>
 
-        <!-- ========= 一级折叠菜单：运维辅助 ========= -->
+        <!-- ========= 一级折叠菜单：运维辅助（默认折叠，切换展开时再加载iframe） ========= -->
         <div class="menu-item" onclick="toggleSubMenu(this)">
             📋 运维辅助 <span class="arrow">▶</span>
         </div>
@@ -338,7 +339,7 @@
             <div class="menu-item" data-href="22.html">运维辅助・W-E模版下载中心</div>
         </div>
 
-        <!-- ========= 原有折叠菜单：大青山管理局 ========= -->
+        <!-- ========= 原有折叠菜单：大青山管理局（默认折叠） ========= -->
         <div class="menu-item" onclick="toggleSubMenu(this)">
             📋 大青山管理局 <span class="arrow">▶</span>
         </div>
@@ -356,7 +357,7 @@
         </div>
     </div>
 
-    <!-- 右侧 iframe 存放容器，已删除原有固定iframe -->
+    <!-- 右侧 iframe 存放容器 -->
     <div class="main-box"></div>
 
     <!-- Three.js 动态粒子背景脚本 -->
@@ -370,17 +371,17 @@
 
     <script type="module">
         import * as THREE from 'three';
-
         const canvas = document.getElementById('bg-canvas');
-        const renderer = new THREE.WebGLRenderer({ canvas, alpha: false });
+        const renderer = new THREE.WebGLRenderer({ canvas, alpha: false, powerPreference: "low-power" });
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x03050b);
-
         const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 1000);
         camera.position.set(0, 1.5, 14);
         camera.lookAt(0, 0, 0);
 
-        // 主粒子群 (紫罗兰)
+        // 优化1：分阶段创建粒子，首屏只渲染第一层粒子，延迟创建第二层、第三层、装饰环
+        let particleSys, particleSys2, particleSys3, ringPoints;
+        // 第一层粒子（首屏立刻渲染）
         const particleCount = 2100;
         const geom = new THREE.BufferGeometry();
         const positions = new Float32Array(particleCount * 3);
@@ -391,52 +392,57 @@
         }
         geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
         const particleMat = new THREE.PointsMaterial({ color: 0x8b5cf6, size: 0.09, transparent: true, opacity: 0.65, blending: THREE.AdditiveBlending });
-        const particleSys = new THREE.Points(geom, particleMat);
+        particleSys = new THREE.Points(geom, particleMat);
         scene.add(particleSys);
 
-        // 第二层粒子 (青色)
-        const geom2 = new THREE.BufferGeometry();
-        const pos2 = new Float32Array(1400 * 3);
-        for (let i = 0; i < 1400; i++) {
-            pos2[i*3] = (Math.random() - 0.5) * 44;
-            pos2[i*3+1] = (Math.random() - 0.5) * 28;
-            pos2[i*3+2] = (Math.random() - 0.5) * 34 - 10;
-        }
-        geom2.setAttribute('position', new THREE.BufferAttribute(pos2, 3));
-        const mat2 = new THREE.PointsMaterial({ color: 0x06b6d4, size: 0.08, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending });
-        const particleSys2 = new THREE.Points(geom2, mat2);
-        scene.add(particleSys2);
+        // 延迟创建第二层粒子（页面渲染完成后500ms）
+        setTimeout(()=>{
+            const geom2 = new THREE.BufferGeometry();
+            const pos2 = new Float32Array(1400 * 3);
+            for (let i = 0; i < 1400; i++) {
+                pos2[i*3] = (Math.random() - 0.5) * 44;
+                pos2[i*3+1] = (Math.random() - 0.5) * 28;
+                pos2[i*3+2] = (Math.random() - 0.5) * 34 - 10;
+            }
+            geom2.setAttribute('position', new THREE.BufferAttribute(pos2, 3));
+            const mat2 = new THREE.PointsMaterial({ color: 0x06b6d4, size: 0.08, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending });
+            particleSys2 = new THREE.Points(geom2, mat2);
+            scene.add(particleSys2);
+        },500);
 
-        // 第三层粒子 (粉晶)
-        const geom3 = new THREE.BufferGeometry();
-        const pos3 = new Float32Array(900 * 3);
-        for (let i = 0; i < 900; i++) {
-            pos3[i*3] = (Math.random() - 0.5) * 48;
-            pos3[i*3+1] = (Math.random() - 0.5) * 30;
-            pos3[i*3+2] = (Math.random() - 0.5) * 38 - 12;
-        }
-        geom3.setAttribute('position', new THREE.BufferAttribute(pos3, 3));
-        const mat3 = new THREE.PointsMaterial({ color: 0xf472b6, size: 0.1, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending });
-        const particleSys3 = new THREE.Points(geom3, mat3);
-        scene.add(particleSys3);
+        // 延迟第三层粒子 1000ms
+        setTimeout(()=>{
+            const geom3 = new THREE.BufferGeometry();
+            const pos3 = new Float32Array(900 * 3);
+            for (let i = 0; i < 900; i++) {
+                pos3[i*3] = (Math.random() - 0.5) * 48;
+                pos3[i*3+1] = (Math.random() - 0.5) * 30;
+                pos3[i*3+2] = (Math.random() - 0.5) * 38 - 12;
+            }
+            geom3.setAttribute('position', new THREE.BufferAttribute(pos3, 3));
+            const mat3 = new THREE.PointsMaterial({ color: 0xf472b6, size: 0.1, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending });
+            particleSys3 = new THREE.Points(geom3, mat3);
+            scene.add(particleSys3);
+        },1000);
 
-        // 装饰环
-        const ringCount = 380;
-        const ringGeo = new THREE.BufferGeometry();
-        const ringPositions = new Float32Array(ringCount * 3);
-        for (let i = 0; i < ringCount; i++) {
-            const angle = (i / ringCount) * Math.PI * 2;
-            const r = 5.2;
-            ringPositions[i*3] = Math.cos(angle) * r;
-            ringPositions[i*3+1] = Math.sin(angle) * r * 0.4;
-            ringPositions[i*3+2] = -1.8;
-        }
-        ringGeo.setAttribute('position', new THREE.BufferAttribute(ringPositions, 3));
-        const ringPoints = new THREE.Points(ringGeo, new THREE.PointsMaterial({ color: 0xa78bfa, size: 0.09, blending: THREE.AdditiveBlending }));
-        scene.add(ringPoints);
+        // 装饰环延迟1500ms创建
+        setTimeout(()=>{
+            const ringCount = 380;
+            const ringGeo = new THREE.BufferGeometry();
+            const ringPositions = new Float32Array(ringCount * 3);
+            for (let i = 0; i < ringCount; i++) {
+                const angle = (i / ringCount) * Math.PI * 2;
+                const r = 5.2;
+                ringPositions[i*3] = Math.cos(angle) * r;
+                ringPositions[i*3+1] = Math.sin(angle) * r * 0.4;
+                ringPositions[i*3+2] = -1.8;
+            }
+            ringGeo.setAttribute('position', new THREE.BufferAttribute(ringPositions, 3));
+            ringPoints = new THREE.Points(ringGeo, new THREE.PointsMaterial({ color: 0xa78bfa, size: 0.09, blending: THREE.AdditiveBlending }));
+            scene.add(ringPoints);
+        },1500);
 
         scene.fog = new THREE.FogExp2(0x03050b, 0.008);
-
         let targetCamX = 0, targetCamY = 0;
         window.addEventListener('mousemove', (e) => {
             let mx = (e.clientX / window.innerWidth) * 2 - 1;
@@ -451,9 +457,9 @@
             time += 0.007;
             particleSys.rotation.y = time * 0.06;
             particleSys.rotation.x = Math.sin(time * 0.18) * 0.08;
-            particleSys2.rotation.y = time * 0.04;
-            particleSys3.rotation.x = time * 0.03;
-            ringPoints.rotation.z = time * 0.12;
+            if(particleSys2) particleSys2.rotation.y = time * 0.04;
+            if(particleSys3) particleSys3.rotation.x = time * 0.03;
+            if(ringPoints) ringPoints.rotation.z = time * 0.12;
             camera.position.x += (targetCamX * 0.5 - camera.position.x) * 0.04;
             camera.position.y += (targetCamY * 0.4 - camera.position.y) * 0.04;
             camera.lookAt(0, 0, 0);
@@ -466,12 +472,12 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.2)); // 限制像素比降低渲染压力
         window.addEventListener('resize', onResize);
         animate();
     </script>
 
-    <!-- 全新预加载iframe缓存逻辑，解决白屏、file协议兼容 -->
+    <!-- 优化后iframe懒加载脚本：只预加载当前展开菜单，其他菜单点击时动态创建 -->
     <script>
         // 鼠标光晕逻辑保留
         const glow = document.getElementById('mouseGlow');
@@ -480,24 +486,32 @@
             glow.style.top = e.clientY + 'px';
         });
 
-        // 所有子页面清单，核对你本地所有html文件名
-        const allPageUrls = [
-            "1.html", "13.html", "21.html", "10.html", "11.html", "12.html",
-            "14.html", "19.html", "20.html", "23.html", "15.html", "16.html", "22.html",
-            "17.html", "18.html", "109.html", "200.html"
-        ];
+        // 按菜单分组页面，实现分组懒加载
+        const menuGroupMap = {
+            edu: ["1.html", "13.html", "21.html", "10.html", "11.html", "12.html"],
+            ops: ["14.html", "19.html", "20.html", "23.html", "15.html", "16.html", "22.html"],
+            mountain: ["17.html", "18.html", "109.html", "200.html"]
+        };
+        // 菜单DOM与分组绑定
+        const groupDomMap = new Map();
+        groupDomMap.set(document.querySelectorAll('.menu-item.open')[0], "edu");
+        groupDomMap.set(document.querySelectorAll('.menu-item')[1], "ops");
+        groupDomMap.set(document.querySelectorAll('.menu-item')[2], "mountain");
+
         const pageCache = new Map();
         let currentUrl = "1.html";
         const mainBox = document.querySelector('.main-box');
+        let loadedGroup = new Set(); // 记录已加载分组
 
-        // 创建预加载iframe，统一放入右侧容器，默认完全移出屏幕隐藏
+        // 创建缓存iframe，移出可视区隐藏
         function createCachedIframe(url) {
+            if(pageCache.has(url)) return pageCache.get(url);
             const frame = document.createElement('iframe');
             frame.style.position = 'absolute';
             frame.style.width = '100%';
             frame.style.height = '100%';
             frame.style.top = '0';
-            frame.style.left = '105%'; // 移出可视区域，不渲染空白
+            frame.style.left = '105%';
             frame.style.border = 'none';
             frame.style.background = '#0f172a';
             frame.src = url;
@@ -506,33 +520,41 @@
             return frame;
         }
 
-        // 分批串行预加载，避免浏览器请求拥堵卡顿
-        async function preloadAllPages() {
-            for (const url of allPageUrls) {
-                if (!pageCache.has(url)) createCachedIframe(url);
-                // 每个页面间隔60ms，分散网络与渲染压力
-                await new Promise(res => setTimeout(res, 60));
+        // 异步加载整组页面
+        async function loadPageGroup(groupKey) {
+            if(loadedGroup.has(groupKey)) return;
+            loadedGroup.add(groupKey);
+            const urls = menuGroupMap[groupKey];
+            for(const url of urls) {
+                createCachedIframe(url);
+                await new Promise(res => setTimeout(res,20));
             }
-            // 全部预加载完成后显示默认首页
-            switchPageTo("1.html");
         }
 
-        // 毫秒级切换页面：仅移动iframe位置，无销毁、无重建、零网络请求
+        // 切换页面，自动加载对应分组
         function switchPageTo(targetUrl) {
-            if (!pageCache.has(targetUrl)) return;
-            // 更新菜单激活高亮
+            // 匹配当前页面所属分组并加载
+            let targetGroup = null;
+            for(const [g,urls] of Object.entries(menuGroupMap)){
+                if(urls.includes(targetUrl)){
+                    targetGroup = g;
+                    break;
+                }
+            }
+            if(targetGroup) loadPageGroup(targetGroup);
+
+            // 菜单高亮
             document.querySelectorAll('.menu-item[data-href]').forEach(i => i.classList.remove('active'));
             document.querySelector(`.menu-item[data-href="${targetUrl}"]`)?.classList.add('active');
 
-            // 所有缓存iframe全部移出可视区域
+            // 切换显示iframe
             pageCache.forEach(frame => frame.style.left = '105%');
-            // 目标页面iframe移入可视窗口
             const targetFrame = pageCache.get(targetUrl);
-            targetFrame.style.left = '0';
+            if(targetFrame) targetFrame.style.left = '0';
             currentUrl = targetUrl;
         }
 
-        // 菜单点击切换绑定
+        // 菜单点击切换页面
         document.querySelectorAll('.menu-item[data-href]').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -541,12 +563,15 @@
             });
         });
 
-        // 一级菜单折叠展开
+        // 一级菜单折叠展开，展开时加载对应分组iframe
         window.toggleSubMenu = function(el) {
             el.classList.toggle('open');
             const sub = el.nextElementSibling;
             if (sub?.classList.contains('sub-menu')) {
                 sub.style.display = sub.style.display === 'block' ? 'none' : 'block';
+                // 展开菜单时加载本组所有页面
+                const group = groupDomMap.get(el);
+                if(group) loadPageGroup(group);
             }
         };
 
@@ -561,11 +586,11 @@
             window.open(currentUrl, '_blank');
         });
 
-        // 页面初始化：所有二级菜单默认折叠隐藏
-        document.querySelectorAll('.sub-menu').forEach(sub => sub.style.display = 'none');
-
-        // 页面全部资源加载完毕后，开始批量预加载所有子页面
-        window.addEventListener('load', preloadAllPages);
+        // 页面初始化：只加载默认展开的【教育厅】分组，其他分组完全不创建iframe
+        window.addEventListener('DOMContentLoaded', async () => {
+            await loadPageGroup("edu");
+            switchPageTo("1.html");
+        });
     </script>
 </body>
 </html>
