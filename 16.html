@@ -563,7 +563,7 @@
                 li.className = `p-3 rounded-lg cursor-pointer transition-all ${cate === data.currentCate ? 'bg-primary/20 border-l-4 border-primary font-medium' : 'bg-white/30 dark:bg-gray-700/30 hover:bg-white/50'}`;
                 li.innerHTML = `
                     <div class="flex justify-between items-center">
-                        <span>${cate}</span>
+                        <span style="color: #c084fc;">${cate}</span>
                         <div class="flex gap-2">
                             <button onclick="renameCategory('${cate}')" class="text-yellow-500 text-xs"><i class="fa fa-pencil"></i></button>
                             <button onclick="delCategory('${cate}')" class="text-red-400 text-xs"><i class="fa fa-trash"></i></button>
