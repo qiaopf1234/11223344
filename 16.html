@@ -120,7 +120,7 @@
             <button onclick="restoreFromCloud()" class="px-3 py-1 rounded bg-blue-500 text-white text-sm">
                 <i class="fa fa-cloud-download"></i> 云端恢复
             </button>
-            <!-- 替换为XLSX导出导入 -->
+            <!-- XLSX导出导入 -->
             <button onclick="exportSqlXlsx()" class="px-3 py-1 rounded bg-emerald-600 text-white text-sm">
                 <i class="fa fa-download"></i> 导出XLSX
             </button>
@@ -499,57 +499,60 @@ function delSql(id){
     renderAll();
 }
 
-// ========== XLSX导出导入 替换原CSV逻辑 ==========
-/**
- * 导出XLSX，超长SQL存入单个单元格，自动换行，宽列适配
- */
+// ========== 修复后的XLSX导出导入（移除卡死循环） ==========
 function exportSqlXlsx(){
-    // 表头
-    const header = ["分类名称","SQL唯一ID","SQL备注标题","SQL完整语句","创建时间戳"];
-    const sheetRows = [header];
+    try {
+        showToast("正在生成XLSX文件...");
+        // 表头
+        const header = ["分类名称","SQL唯一ID","SQL备注标题","SQL完整语句","创建时间戳"];
+        const sheetRows = [header];
 
-    data.sqlList.forEach(sqlItem => {
-        const cateName = data.categories.find(c => c === sqlItem.cate) || "未分类";
-        sheetRows.push([
-            cateName,
-            sqlItem.id,
-            sqlItem.title,
-            sqlItem.content,
-            sqlItem.time
-        ]);
-    });
+        data.sqlList.forEach(sqlItem => {
+            const cateName = data.categories.find(c => c === sqlItem.cate) || "未分类";
+            sheetRows.push([
+                cateName,
+                sqlItem.id,
+                sqlItem.title,
+                sqlItem.content,
+                sqlItem.time
+            ]);
+        });
 
-    // 创建工作簿&工作表
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+        // 创建工作簿&工作表
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(sheetRows);
 
-    // 列宽配置，SQL列加宽
-    ws['!cols'] = [
-        {wch:16}, // 分类
-        {wch:14}, // ID
-        {wch:30}, // 标题
-        {wch:120}, // SQL超长列
-        {wch:16}  // 时间
-    ];
+        // 列宽配置，SQL列加宽
+        ws['!cols'] = [
+            {wch:16}, // A分类
+            {wch:14}, // B ID
+            {wch:30}, // C标题
+            {wch:120}, // D SQL超长列
+            {wch:16}  // E时间
+        ];
 
-    // 批量设置所有单元格自动换行，解决长SQL显示
-    const range = XLSX.utils.decode_range(ws['!ref']);
-    for(let r = range.s.r; r <= range.e.r; r++){
-        for(let c = range.s.c; c <= range.e.c; c++){
-            const cellAddr = XLSX.utils.encode_cell({r,c});
-            if(!ws[cellAddr]) continue;
-            ws[cellAddr].s = {
-                alignment: {
-                    wrapText: true,
-                    vertical: "top"
-                }
+        // 仅设置D列（SQL列）自动换行，不再全局循环所有单元格
+        const wrapStyle = {
+            alignment: {
+                wrapText: true,
+                vertical: "top"
             }
+        };
+        const range = XLSX.utils.decode_range(ws['!ref']);
+        for(let r = range.s.r; r <= range.e.r; r++){
+            const cellKey = XLSX.utils.encode_cell({r, c: 3}); // D列索引3
+            if(ws[cellKey]) ws[cellKey].s = wrapStyle;
         }
-    }
 
-    XLSX.utils.book_append_sheet(wb, ws, "SQL数据");
-    XLSX.writeFile(wb, `SQL语句完整备份_${new Date().toLocaleDateString()}.xlsx`);
-    showToast("XLSX导出完成，超长SQL完整保存在单元格");
+        XLSX.utils.book_append_sheet(wb, ws, "SQL数据");
+        // 清理文件名特殊字符
+        const dateStr = new Date().toLocaleDateString().replace(/[\/:]/g,"-");
+        XLSX.writeFile(wb, `SQL语句完整备份_${dateStr}.xlsx`);
+        showToast("XLSX导出完成，超长SQL完整保存在单元格");
+    } catch(err){
+        console.error("导出失败",err);
+        alert("导出出错："+err.message);
+    }
 }
 
 // 打开文件选择框
@@ -563,48 +566,53 @@ document.getElementById("xlsxImportFile").onchange = async function(e){
     if(!file) return;
     const reader = new FileReader();
     reader.onload = function(e){
-        const buffer = e.target.result;
-        const wb = XLSX.read(buffer, {type:"array"});
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(ws, {header:1});
+        try{
+            const buffer = e.target.result;
+            const wb = XLSX.read(buffer, {type:"array"});
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(ws, {header:1});
 
-        if(jsonData.length <= 1){
-            alert("XLSX文件无有效数据");
-            return;
-        }
+            if(jsonData.length <= 1){
+                alert("XLSX文件无有效数据");
+                return;
+            }
 
-        const newCateSet = new Set();
-        const newSqlList = [];
+            const newCateSet = new Set();
+            const newSqlList = [];
 
-        // 跳过表头第0行
-        for(let i = 1; i < jsonData.length; i++){
-            const row = jsonData[i];
-            if(!row || row.length <5) continue;
-            const [cateName, sqlId, sqlTitle, sqlContent, sqlTime] = row;
-            newCateSet.add(cateName);
-            newSqlList.push({
-                id: sqlId,
-                cate: cateName,
-                title: sqlTitle,
-                content: sqlContent,
-                time: sqlTime
-            });
-        }
+            // 跳过表头第0行
+            for(let i = 1; i < jsonData.length; i++){
+                const row = jsonData[i];
+                if(!row || row.length <5) continue;
+                const [cateName, sqlId, sqlTitle, sqlContent, sqlTime] = row;
+                newCateSet.add(cateName);
+                newSqlList.push({
+                    id: sqlId,
+                    cate: cateName,
+                    title: sqlTitle,
+                    content: sqlContent,
+                    time: sqlTime
+                });
+            }
 
-        // 合并分类
-        const mergeCategories = [...new Set([...data.categories, ...newCateSet])];
-        if(confirm("导入将合并分类，同ID SQL覆盖，确认导入？")){
-            const idMap = new Map();
-            newSqlList.forEach(item => idMap.set(String(item.id), item));
-            // 保留本地独有的SQL
-            const remainSql = data.sqlList.filter(old => !idMap.has(String(old.id)));
-            const finalSql = [...remainSql, ...newSqlList];
+            // 合并分类
+            const mergeCategories = [...new Set([...data.categories, ...newCateSet])];
+            if(confirm("导入将合并分类，同ID SQL覆盖，确认导入？")){
+                const idMap = new Map();
+                newSqlList.forEach(item => idMap.set(String(item.id), item));
+                // 保留本地独有的SQL
+                const remainSql = data.sqlList.filter(old => !idMap.has(String(old.id)));
+                const finalSql = [...remainSql, ...newSqlList];
 
-            data.categories = mergeCategories;
-            data.sqlList = finalSql;
-            saveData();
-            location.reload();
-            alert("XLSX导入成功，页面刷新加载数据");
+                data.categories = mergeCategories;
+                data.sqlList = finalSql;
+                saveData();
+                location.reload();
+                alert("XLSX导入成功，页面刷新加载数据");
+            }
+        }catch(err){
+            console.error("导入异常",err);
+            alert("导入文件解析失败："+err.message);
         }
     };
     reader.readAsArrayBuffer(file);
