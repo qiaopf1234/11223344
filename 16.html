@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SQL语句保存工具 | Supabase云端自动备份版</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS XLSX库 -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -118,14 +120,14 @@
             <button onclick="restoreFromCloud()" class="px-3 py-1 rounded bg-blue-500 text-white text-sm">
                 <i class="fa fa-cloud-download"></i> 云端恢复
             </button>
-            <!-- 新增CSV导出导入按钮 -->
-            <button onclick="exportSqlCsv()" class="px-3 py-1 rounded bg-emerald-600 text-white text-sm">
-                <i class="fa fa-download"></i> 导出CSV
+            <!-- 替换为XLSX导出导入 -->
+            <button onclick="exportSqlXlsx()" class="px-3 py-1 rounded bg-emerald-600 text-white text-sm">
+                <i class="fa fa-download"></i> 导出XLSX
             </button>
-            <button onclick="triggerCsvImport()" class="px-3 py-1 rounded bg-indigo-500 text-white text-sm">
-                <i class="fa fa-upload"></i> 导入CSV
+            <button onclick="triggerXlsxImport()" class="px-3 py-1 rounded bg-indigo-500 text-white text-sm">
+                <i class="fa fa-upload"></i> 导入XLSX
             </button>
-            <input type="file" id="csvImportFile" accept=".csv" hidden>
+            <input type="file" id="xlsxImportFile" accept=".xlsx" hidden>
         </div>
         <div class="flex gap-3">
             <button onclick="setCollapseHeight()" class="px-3 py-1 rounded bg-white/50 dark:bg-gray-700/50 text-sm">
@@ -144,7 +146,7 @@
         <h1 class="text-4xl md:text-5xl font-bold mb-3 flex items-center justify-center gap-3">
             <i class="fa fa-database text-primary"></i> SQL语句保存工具
         </h1>
-        <p class="text-gray-600 dark:text-gray-400">分业务管理SQL | 折叠展开 | 语法高亮 | Supabase自动云备份 | CSV导出导入同步腾讯文档</p>
+        <p class="text-gray-600 dark:text-gray-400">分业务管理SQL | 折叠展开 | 语法高亮 | Supabase自动云备份 | XLSX导出导入支持超长SQL单元格</p>
     </header>
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -497,73 +499,88 @@ function delSql(id){
     renderAll();
 }
 
-// ========== CSV导出导入 核心新增函数 ==========
+// ========== XLSX导出导入 替换原CSV逻辑 ==========
 /**
- * 导出完整CSV，字段：分类名称,SQL唯一ID,SQL备注标题,SQL完整语句,创建时间戳
- * 全字段双引号包裹，自动转义内部引号、换行，腾讯文档直接打开无错乱
+ * 导出XLSX，超长SQL存入单个单元格，自动换行，宽列适配
  */
-function exportSqlCsv(){
-    // 表头固定字段
-    let csvText = "分类名称,SQL唯一ID,SQL备注标题,SQL完整语句,创建时间戳\n";
+function exportSqlXlsx(){
+    // 表头
+    const header = ["分类名称","SQL唯一ID","SQL备注标题","SQL完整语句","创建时间戳"];
+    const sheetRows = [header];
+
     data.sqlList.forEach(sqlItem => {
-        // 匹配当前SQL所属分类名称
         const cateName = data.categories.find(c => c === sqlItem.cate) || "未分类";
-        // 转义函数：CSV标准双引号包裹，内部双引号替换为两个双引号，换行替换空格
-        const escapeCell = (str) => {
-            let s = String(str ?? "");
-            s = s.replace(/"/g, '""');
-            s = s.replace(/\r?\n/g, " ");
-            return `"${s}"`;
-        };
-        const lineArr = [
-            escapeCell(cateName),
-            escapeCell(sqlItem.id),
-            escapeCell(sqlItem.title),
-            escapeCell(sqlItem.content),
-            escapeCell(sqlItem.time)
-        ];
-        csvText += lineArr.join(",") + "\n";
+        sheetRows.push([
+            cateName,
+            sqlItem.id,
+            sqlItem.title,
+            sqlItem.content,
+            sqlItem.time
+        ]);
     });
-    // 生成下载文件
-    const blob = new Blob([csvText], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `SQL语句完整备份_${new Date().toLocaleDateString()}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    showToast("CSV导出完成！文件可直接上传腾讯在线表格");
+
+    // 创建工作簿&工作表
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(sheetRows);
+
+    // 列宽配置，SQL列加宽
+    ws['!cols'] = [
+        {wch:16}, // 分类
+        {wch:14}, // ID
+        {wch:30}, // 标题
+        {wch:120}, // SQL超长列
+        {wch:16}  // 时间
+    ];
+
+    // 批量设置所有单元格自动换行，解决长SQL显示
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for(let r = range.s.r; r <= range.e.r; r++){
+        for(let c = range.s.c; c <= range.e.c; c++){
+            const cellAddr = XLSX.utils.encode_cell({r,c});
+            if(!ws[cellAddr]) continue;
+            ws[cellAddr].s = {
+                alignment: {
+                    wrapText: true,
+                    vertical: "top"
+                }
+            }
+        }
+    }
+
+    XLSX.utils.book_append_sheet(wb, ws, "SQL数据");
+    XLSX.writeFile(wb, `SQL语句完整备份_${new Date().toLocaleDateString()}.xlsx`);
+    showToast("XLSX导出完成，超长SQL完整保存在单元格");
 }
-// 触发文件选择框
-function triggerCsvImport(){
-    document.getElementById("csvImportFile").click();
+
+// 打开文件选择框
+function triggerXlsxImport(){
+    document.getElementById("xlsxImportFile").click();
 }
-// 读取CSV文件并还原全部分类+SQL数据
-document.getElementById("csvImportFile").onchange = async function(e){
+
+// 读取XLSX导入逻辑
+document.getElementById("xlsxImportFile").onchange = async function(e){
     const file = e.target.files[0];
     if(!file) return;
     const reader = new FileReader();
-    reader.onload = function(res){
-        const fileText = res.target.result;
-        const allLines = fileText.split("\n").filter(line => line.trim() !== "");
-        if(allLines.length <= 1){
-            alert("CSV文件无有效数据");
+    reader.onload = function(e){
+        const buffer = e.target.result;
+        const wb = XLSX.read(buffer, {type:"array"});
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(ws, {header:1});
+
+        if(jsonData.length <= 1){
+            alert("XLSX文件无有效数据");
             return;
         }
-        // 新数据集
+
         const newCateSet = new Set();
         const newSqlList = [];
-        // 跳过表头，逐行解析
-        for(let i = 1; i < allLines.length; i++){
-            const line = allLines[i].trim();
-            if(!line) continue;
-            // 标准CSV双引号分割解析
-            const rowCells = line.match(/"([^"]|"")*"/g).map(cellStr => {
-                // 去除首尾引号，内部双引号还原为单引号
-                return cellStr.slice(1, -1).replace(/""/g, '"');
-            });
-            if(rowCells.length < 5) continue;
-            const [cateName, sqlId, sqlTitle, sqlContent, sqlTime] = rowCells;
+
+        // 跳过表头第0行
+        for(let i = 1; i < jsonData.length; i++){
+            const row = jsonData[i];
+            if(!row || row.length <5) continue;
+            const [cateName, sqlId, sqlTitle, sqlContent, sqlTime] = row;
             newCateSet.add(cateName);
             newSqlList.push({
                 id: sqlId,
@@ -573,25 +590,24 @@ document.getElementById("csvImportFile").onchange = async function(e){
                 time: sqlTime
             });
         }
-        // 合并分类：原有分类+CSV新增分类，不重复
+
+        // 合并分类
         const mergeCategories = [...new Set([...data.categories, ...newCateSet])];
-        // 弹窗确认覆盖逻辑
-        if(confirm("导入将合并分类，SQL记录直接覆盖同ID数据，是否继续？")){
-            // 去重SQL：ID相同则用CSV覆盖，新增则追加
+        if(confirm("导入将合并分类，同ID SQL覆盖，确认导入？")){
             const idMap = new Map();
-            newSqlList.forEach(item => idMap.set(item.id, item));
-            // 原有数据保留不在CSV里的记录
-            const finalSql = data.sqlList.filter(old => !idMap.has(String(old.id)));
-            finalSql.push(...newSqlList);
-            // 写入全局data
+            newSqlList.forEach(item => idMap.set(String(item.id), item));
+            // 保留本地独有的SQL
+            const remainSql = data.sqlList.filter(old => !idMap.has(String(old.id)));
+            const finalSql = [...remainSql, ...newSqlList];
+
             data.categories = mergeCategories;
             data.sqlList = finalSql;
             saveData();
             location.reload();
-            alert("CSV导入成功，页面刷新加载全部数据");
+            alert("XLSX导入成功，页面刷新加载数据");
         }
     };
-    reader.readAsText(file);
+    reader.readAsArrayBuffer(file);
 };
 
 // ========== 本地保存 + 3秒自动云端备份 ==========
