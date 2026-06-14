@@ -12,8 +12,9 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  background: linear-gradient(135deg, #004aad 0%, #0066cc 50%, #0099ff 100%);
-  color: #e0e0e0;
+  /* 匹配图片橙红几何渐变背景 */
+  background: linear-gradient(145deg, #ff9033 0%, #e04848 50%, #702060 100%);
+  color: #fefefe;
   position: relative;
   overflow-x: hidden;
 }
@@ -30,129 +31,144 @@ body {
 .container {
   max-width: 900px;
   margin: 30px auto;
-  padding: 30px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 32px;
+  /* 深色亚克力卡片（对应图左侧深色侧边栏） */
+  background: rgba(30, 12, 18, 0.42);
+  border-radius: 24px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 220, 190, 0.18);
   position: relative;
   z-index: 1;
 }
 h2 {
   text-align: center;
   color: #fff;
-  margin-bottom: 30px;
+  margin-bottom: 32px;
   font-size: 28px;
-  font-weight: 700;
-  background: linear-gradient(90deg, #ffffff, #e0e0ff);
+  font-weight: 600;
+  /* 暖橙渐变文字 */
+  background: linear-gradient(90deg, #fff8f0, #ffcc99);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 .item {
-  margin-bottom: 24px;
+  margin-bottom: 26px;
 }
 label {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 9px;
   font-weight: 500;
-  color: #ffffff;
+  color: #ffe9dd;
   font-size: 14px;
+  letter-spacing: 0.3px;
 }
 input, textarea {
   width: 100%;
-  padding: 12px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 10px;
+  padding: 13px 18px;
+  /* 半透深色输入框 */
+  border: 1px solid rgba(255, 210, 180, 0.22);
+  border-radius: 14px;
   font-size: 14px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
+  background: rgba(20, 8, 14, 0.35);
+  color: #fff8f2;
   transition: all 0.3s ease;
+  backdrop-filter: blur(6px);
 }
 select {
   width: 100%;
-  padding: 12px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 10px;
+  padding: 13px 18px;
+  border: 1px solid rgba(255, 210, 180, 0.26);
+  border-radius: 14px;
   font-size: 14px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  background: rgba(20, 8, 14, 0.35);
+  color: #fff8f2;
   transition: all 0.3s ease;
+  backdrop-filter: blur(6px);
 }
 select:focus {
   outline: none;
-  border-color: #ffffff;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+  border-color: #ffbc80;
+  box-shadow: 0 0 10px rgba(255, 150, 60, 0.45);
 }
 select option {
-  background: #004aad;
-  color: #ffffff;
+  background: #461828;
+  color: #fff8f2;
 }
 input:focus, textarea:focus {
   outline: none;
-  border-color: #ffffff;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+  border-color: #ffbc80;
+  box-shadow: 0 0 10px rgba(255, 150, 60, 0.45);
 }
 .date-row {
   display: flex;
-  gap: 12px;
+  gap: 14px;
 }
 .date-row .item {
   flex: 1;
 }
 .btn-bar {
   display: flex;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 button {
-  padding: 8px 16px;
+  padding: 9px 18px;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   cursor: pointer;
   font-size: 14px;
   font-weight: 500;
   transition: all 0.3s ease;
+  backdrop-filter: blur(4px);
 }
+/* 主橙色按钮（匹配图片底部橙色操作按钮） */
 .btn-blue {
-  background: #ffffff;
-  color: #004aad;
+  background: linear-gradient(135deg, #ff9138, #ff6b22);
+  color: #ffffff;
 }
 .btn-blue:hover {
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 18px rgba(255, 120, 30, 0.55);
   transform: translateY(-2px);
 }
+/* 绿色复制按钮 */
 .btn-green {
-  background: linear-gradient(90deg, #00b894, #55efc4);
+  background: linear-gradient(135deg, #34b97b, #20a062);
   color: white;
 }
 .btn-green:hover {
-  box-shadow: 0 0 15px rgba(0, 184, 148, 0.6);
+  box-shadow: 0 0 15px rgba(52, 185, 123, 0.5);
   transform: translateY(-2px);
 }
+/* 浅灰剪切按钮（图片浅色面板辅助按钮） */
 .btn-gray {
-  background: linear-gradient(90deg, #636e72, #b2bec3);
-  color: white;
+  background: rgba(255, 240, 230, 0.18);
+  border: 1px solid rgba(255, 215, 190, 0.25);
+  color: #ffe9dd;
 }
 .btn-gray:hover {
-  box-shadow: 0 0 15px rgba(99, 110, 114, 0.6);
+  background: rgba(255, 240, 230, 0.28);
+  box-shadow: 0 0 12px rgba(255, 200, 160, 0.25);
   transform: translateY(-2px);
 }
+/* 红色清空/重置按钮 */
 .btn-red {
-  background: linear-gradient(90deg, #d63031, #ff7675);
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
   color: white;
 }
 .btn-red:hover {
-  box-shadow: 0 0 15px rgba(214, 48, 49, 0.6);
+  box-shadow: 0 0 15px rgba(231, 76, 60, 0.5);
   transform: translateY(-2px);
 }
+/* 紫色导出按钮保留原有色系，适配暖背景 */
 .btn-purple {
-  background: linear-gradient(90deg, #9d50bb, #6e48aa);
+  background: linear-gradient(135deg, #9d50bb, #7c3da0);
   color: #fff;
 }
 .btn-purple:hover {
-  box-shadow: 0 0 15px rgba(157, 80, 187, 0.6);
+  box-shadow: 0 0 15px rgba(157, 80, 187, 0.5);
   transform: translateY(-2px);
 }
 textarea {
@@ -160,7 +176,7 @@ textarea {
   min-height: 100px;
 }
 ::placeholder {
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 230, 210, 0.55);
 }
 /* 日期输入框点击唤起选择器（页面已删除起止日期输入，样式保留不影响） */
 .date-input {
@@ -278,7 +294,7 @@ class Particle {
     }
   }
   draw() {
-    ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+    ctx.fillStyle = `rgba(255, 225, 200, ${this.opacity})`;
     ctx.beginPath();
     ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
     ctx.fill();
@@ -297,7 +313,7 @@ function connectParticles() {
       const dy = particles[a].y - particles[b].y;
       const distance = Math.sqrt(dx * dx + dy * dy);
       if (distance < 150) {
-        ctx.strokeStyle = `rgba(255, 255, 255, ${0.2 * (1 - distance / 150)})`;
+        ctx.strokeStyle = `rgba(255, 210, 170, ${0.2 * (1 - distance / 150)})`;
         ctx.lineWidth = 0.5;
         ctx.beginPath();
         ctx.moveTo(particles[a].x, particles[a].y);
