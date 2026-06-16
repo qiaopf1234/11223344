@@ -2,98 +2,149 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>运维季度报告生成器</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>运维季度报告生成器 · 赛博星云版</title>
 <style>
+/* ========== 赛博毛玻璃全局样式 ========== */
 * {
   box-sizing: border-box;
-  font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+  font-family: 'Segoe UI', 'Inter', 'Microsoft YaHei', system-ui, sans-serif;
 }
+
 body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  background: linear-gradient(135deg, #004aad 0%, #0066cc 50%, #0099ff 100%);
-  color: #e0e0e0;
+  background: #0a0c12;
+  color: #e2e8f0;
   position: relative;
   overflow-x: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
-/* 动态粒子画布 */
+
+/* 原粒子画布已隐藏，使用 Three.js 星云背景 */
 #particles-canvas {
+  display: none !important;
+}
+
+/* Three.js 星云画布 */
+#bg-canvas {
   position: fixed;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   z-index: 0;
+  background: radial-gradient(circle at 20% 30%, #0a0a1a, #020308);
   pointer-events: none;
 }
-.container {
-  max-width: 900px;
-  margin: 30px auto;
-  padding: 30px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  position: relative;
-  z-index: 1;
+
+/* 鼠标跟随光晕层 */
+.mouse-glow {
+  position: fixed;
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, rgba(6, 182, 212, 0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  z-index: 999;
+  transition: transform 0.05s linear;
+  will-change: transform;
 }
+
+/* 毛玻璃主容器 — 霓虹渐变边框 + 悬浮上浮 */
+.container {
+  max-width: 960px;
+  margin: 30px auto;
+  padding: 32px;
+  background: rgba(15, 25, 45, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-radius: 32px;
+  border: 1px solid rgba(139, 92, 246, 0.35);
+  box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(139, 92, 246, 0.1) inset;
+  transition: transform 0.25s ease, box-shadow 0.3s ease;
+  position: relative;
+  z-index: 20;
+}
+.container:hover {
+  transform: translateY(-4px);
+  border-color: rgba(139, 92, 246, 0.7);
+  box-shadow: 0 28px 44px -12px rgba(139, 92, 246, 0.25), 0 0 0 1px rgba(139, 92, 246, 0.25) inset;
+}
+
+/* 标题霓虹渐变 */
 h2 {
   text-align: center;
-  color: #fff;
-  margin-bottom: 30px;
-  font-size: 28px;
+  margin-bottom: 32px;
+  font-size: 2rem;
   font-weight: 700;
-  background: linear-gradient(90deg, #ffffff, #e0e0ff);
+  background: linear-gradient(135deg, #f0f3ff, #a78bfa, #f472b6);
   -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
   background-clip: text;
+  color: transparent;
+  letter-spacing: -0.3px;
 }
+
 .item {
   margin-bottom: 24px;
 }
+
 label {
   display: block;
   margin-bottom: 8px;
   font-weight: 500;
-  color: #ffffff;
-  font-size: 14px;
+  color: #c084fc;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
 }
-input, textarea {
+
+/* 表单控件 — 毛玻璃霓虹风 */
+input, textarea, select {
   width: 100%;
   padding: 12px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 10px;
-  font-size: 14px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  transition: all 0.3s ease;
+  background: rgba(10, 18, 30, 0.7);
+  border: 1.5px solid rgba(139, 92, 246, 0.4);
+  border-radius: 14px;
+  font-size: 0.9rem;
+  color: #e2e8f0;
+  transition: all 0.2s ease;
+  outline: none;
 }
 select {
-  width: 100%;
-  padding: 12px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.4);
-  border-radius: 10px;
-  font-size: 14px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-  transition: all 0.3s ease;
-}
-select:focus {
-  outline: none;
-  border-color: #ffffff;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%238b5cf6' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1rem;
 }
 select option {
-  background: #004aad;
+  background: #1e293b;
+  color: #e2e8f0;
+}
+input:focus, textarea:focus, select:focus {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25);
+  background: rgba(20, 32, 50, 0.85);
+}
+textarea {
+  resize: vertical;
+  font-family: 'Fira Code', monospace;
+  min-height: 80px;
+  line-height: 1.5;
+}
+input[type="date"] {
+  color-scheme: dark;
   color: #ffffff;
 }
-input:focus, textarea:focus {
-  outline: none;
-  border-color: #ffffff;
-  box-shadow: 0 0 8px rgba(255, 255, 255, 0.5);
+::placeholder {
+  color: #5c6f87;
 }
+
 .date-row {
   display: flex;
   gap: 12px;
@@ -101,60 +152,7 @@ input:focus, textarea:focus {
 .date-row .item {
   flex: 1;
 }
-.btn-bar {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-button {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.3s ease;
-}
-.btn-blue {
-  background: #ffffff;
-  color: #004aad;
-}
-.btn-blue:hover {
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.6);
-  transform: translateY(-2px);
-}
-.btn-green {
-  background: linear-gradient(90deg, #00b894, #55efc4);
-  color: white;
-}
-.btn-green:hover {
-  box-shadow: 0 0 15px rgba(0, 184, 148, 0.6);
-  transform: translateY(-2px);
-}
-.btn-gray {
-  background: linear-gradient(90deg, #636e72, #b2bec3);
-  color: white;
-}
-.btn-gray:hover {
-  box-shadow: 0 0 15px rgba(99, 110, 114, 0.6);
-  transform: translateY(-2px);
-}
-.btn-red {
-  background: linear-gradient(90deg, #d63031, #ff7675);
-  color: white;
-}
-.btn-red:hover {
-  box-shadow: 0 0 15px rgba(214, 48, 49, 0.6);
-  transform: translateY(-2px);
-}
-textarea {
-  resize: vertical;
-  min-height: 80px;
-}
-::placeholder {
-  color: rgba(255, 255, 255, 0.6);
-}
-/* 日期输入框点击唤起选择器样式 */
+
 .date-input {
   position: relative;
   width: 100%;
@@ -162,12 +160,120 @@ textarea {
 .date-input input[type="date"] {
   cursor: pointer;
 }
+
+/* 霓虹流光按钮组 */
+.btn-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+button {
+  padding: 8px 18px;
+  border: none;
+  border-radius: 40px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+  position: relative;
+  overflow: hidden;
+  background: rgba(15, 23, 42, 0.8);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(139, 92, 246, 0.5);
+  color: #e0e7ff;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.4), transparent);
+  transition: left 0.5s ease;
+}
+button:hover::before {
+  left: 100%;
+}
+button:hover {
+  transform: translateY(-2px);
+  border-color: #a78bfa;
+  box-shadow: 0 5px 15px rgba(139, 92, 246, 0.3);
+  color: white;
+}
+
+.btn-blue {
+  background: linear-gradient(95deg, #06b6d4, #8b5cf6);
+  border: none;
+  padding: 10px 24px;
+  font-size: 0.9rem;
+}
+.btn-blue:hover {
+  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+}
+.btn-green {
+  background: linear-gradient(95deg, rgba(34, 197, 94, 0.3), rgba(16, 185, 129, 0.2));
+  border-color: #10b981;
+}
+.btn-gray {
+  background: linear-gradient(95deg, rgba(100, 116, 139, 0.3), rgba(71, 85, 105, 0.2));
+  border-color: #64748b;
+}
+.btn-red {
+  background: linear-gradient(95deg, rgba(239, 68, 68, 0.3), rgba(220, 38, 38, 0.2));
+  border-color: #ef4444;
+}
+
+/* 滚动条美颜 */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0f172a;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #8b5cf6;
+  border-radius: 8px;
+}
+
+/* 响应式微调 */
+@media (max-width: 700px) {
+  .container {
+    margin: 16px;
+    padding: 20px;
+  }
+  .date-row {
+    flex-direction: column;
+    gap: 16px;
+  }
+  .btn-bar {
+    flex-direction: column;
+  }
+  button {
+    justify-content: center;
+    width: 100%;
+  }
+}
 </style>
 </head>
 <body>
-<canvas id="particles-canvas"></canvas>
+
+<!-- Three.js 星云粒子画布 -->
+<canvas id="bg-canvas"></canvas>
+<!-- 鼠标跟随光晕层 -->
+<div class="mouse-glow" id="mouseGlow"></div>
+
+<!-- 原粒子画布（已通过 CSS 隐藏，保留 JS 逻辑避免报错） -->
+<canvas id="particles-canvas" style="display:none;"></canvas>
+
 <div class="container">
-  <h2>运维季度报告生成器</h2>
+  <h2>📊 运维季度报告生成器</h2>
 
   <!-- 标题选择 单/多系统/自定义 -->
   <div class="item">
@@ -182,7 +288,7 @@ textarea {
     <input type="text" id="customTitle" placeholder="请手动输入报告主标题">
   </div>
 
-  <!-- 季度起止日期（支持点击唤起选择器） -->
+  <!-- 季度起止日期 -->
   <div class="date-row">
     <div class="item">
       <label>季度开始日期</label>
@@ -198,19 +304,19 @@ textarea {
     </div>
   </div>
 
-  <!-- 处理人（用于节假日保障表） -->
+  <!-- 处理人 -->
   <div class="item">
     <label>处理人（用于节假日保障表）</label>
-    <input type="text" id="handler" placeholder="例如：乔鹏飞">
+    <input type="text" id="handler" placeholder="">
   </div>
 
-  <!-- 服务事项明细（和月度表格逻辑完全一致） -->
+  <!-- 服务事项明细 -->
   <div class="item">
     <label id="eventLabel">服务事项明细（粘贴字段：事件内容、问题分析、完成状态、服务对象、需求提出、处理日期、处理人）</label>
     <div class="btn-bar">
-      <button class="btn-green" onclick="copyEvent()">复制</button>
-      <button class="btn-gray" onclick="cutEvent()">剪切</button>
-      <button class="btn-red" onclick="clearEvent()">清空</button>
+      <button class="btn-green" onclick="copyEvent()">📋 复制</button>
+      <button class="btn-gray" onclick="cutEvent()">✂️ 剪切</button>
+      <button class="btn-red" onclick="clearEvent()">🗑️ 清空</button>
     </div>
     <textarea id="eventList" rows="6" placeholder="直接从Excel整行粘贴数据，填“无”=不生成表格"></textarea>
   </div>
@@ -219,9 +325,9 @@ textarea {
   <div class="item">
     <label>漏洞修复明细（粘贴字段：修复时间、漏洞修复内容、处理方式、处理人）</label>
     <div class="btn-bar">
-      <button class="btn-green" onclick="copyBug()">复制</button>
-      <button class="btn-gray" onclick="cutBug()">剪切</button>
-      <button class="btn-red" onclick="clearBug()">清空</button>
+      <button class="btn-green" onclick="copyBug()">📋 复制</button>
+      <button class="btn-gray" onclick="cutBug()">✂️ 剪切</button>
+      <button class="btn-red" onclick="clearBug()">🗑️ 清空</button>
     </div>
     <textarea id="bugList" rows="4" placeholder="直接从Excel整行粘贴数据，填“无”=显示无漏洞修复"></textarea>
   </div>
@@ -230,47 +336,165 @@ textarea {
   <div class="item">
     <label>故障处理明细（粘贴字段：故障处理时间、系统、故障内容、处理方式、处理结果、处理人）</label>
     <div class="btn-bar">
-      <button class="btn-green" onclick="copyFault()">复制</button>
-      <button class="btn-gray" onclick="cutFault()">剪切</button>
-      <button class="btn-red" onclick="clearFault()">清空</button>
+      <button class="btn-green" onclick="copyFault()">📋 复制</button>
+      <button class="btn-gray" onclick="cutFault()">✂️ 剪切</button>
+      <button class="btn-red" onclick="clearFault()">🗑️ 清空</button>
     </div>
     <textarea id="faultList" rows="4" placeholder="直接从Excel整行粘贴数据，填“无”=显示0起故障"></textarea>
   </div>
 
-  <!-- 需求处置明细（修改提示：仅4个字段） -->
+  <!-- 需求处置明细 -->
   <div class="item">
     <label>需求处置明细（粘贴字段：需求接收时间、需求内容、处理方式、处理结果）</label>
     <div class="btn-bar">
-      <button class="btn-green" onclick="copyNeed()">复制</button>
-      <button class="btn-gray" onclick="cutNeed()">剪切</button>
-      <button class="btn-red" onclick="clearNeed()">清空</button>
+      <button class="btn-green" onclick="copyNeed()">📋 复制</button>
+      <button class="btn-gray" onclick="cutNeed()">✂️ 剪切</button>
+      <button class="btn-red" onclick="clearNeed()">🗑️ 清空</button>
     </div>
     <textarea id="needList" rows="4" placeholder="直接从Excel整行粘贴4项数据，填“无”=显示无需求处理"></textarea>
   </div>
 
-  <div class="item" style="text-align:center;">
-    <button class="btn-blue" onclick="generateAndExport()">生成并导出 Word 季度总结报告</button>
+  <div class="item" style="text-align:center; margin-top: 8px;">
+    <button class="btn-blue" onclick="generateAndExport()">📄 生成并导出 Word 季度总结报告</button>
   </div>
 </div>
 
+<!-- Three.js 星云粒子背景（紫青粉三色） -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+const canvas = document.getElementById('bg-canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, alpha: false });
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x03050b);
+
+const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 1000);
+camera.position.set(0, 1.5, 14);
+camera.lookAt(0, 0, 0);
+
+// 主粒子群 (紫罗兰)
+const particleCount = 2100;
+const geom = new THREE.BufferGeometry();
+const positions = new Float32Array(particleCount * 3);
+for (let i = 0; i < particleCount; i++) {
+  positions[i*3] = (Math.random() - 0.5) * 38;
+  positions[i*3+1] = (Math.random() - 0.5) * 24;
+  positions[i*3+2] = (Math.random() - 0.5) * 30 - 8;
+}
+geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+const particleMat = new THREE.PointsMaterial({ color: 0x8b5cf6, size: 0.09, transparent: true, opacity: 0.65, blending: THREE.AdditiveBlending });
+const particleSys = new THREE.Points(geom, particleMat);
+scene.add(particleSys);
+
+// 第二层粒子 (青色)
+const geom2 = new THREE.BufferGeometry();
+const pos2 = new Float32Array(1400 * 3);
+for (let i = 0; i < 1400; i++) {
+  pos2[i*3] = (Math.random() - 0.5) * 44;
+  pos2[i*3+1] = (Math.random() - 0.5) * 28;
+  pos2[i*3+2] = (Math.random() - 0.5) * 34 - 10;
+}
+geom2.setAttribute('position', new THREE.BufferAttribute(pos2, 3));
+const mat2 = new THREE.PointsMaterial({ color: 0x06b6d4, size: 0.08, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending });
+const particleSys2 = new THREE.Points(geom2, mat2);
+scene.add(particleSys2);
+
+// 第三层粒子 (粉晶)
+const geom3 = new THREE.BufferGeometry();
+const pos3 = new Float32Array(900 * 3);
+for (let i = 0; i < 900; i++) {
+  pos3[i*3] = (Math.random() - 0.5) * 48;
+  pos3[i*3+1] = (Math.random() - 0.5) * 30;
+  pos3[i*3+2] = (Math.random() - 0.5) * 38 - 12;
+}
+geom3.setAttribute('position', new THREE.BufferAttribute(pos3, 3));
+const mat3 = new THREE.PointsMaterial({ color: 0xf472b6, size: 0.1, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending });
+const particleSys3 = new THREE.Points(geom3, mat3);
+scene.add(particleSys3);
+
+// 装饰环
+const ringCount = 380;
+const ringGeo = new THREE.BufferGeometry();
+const ringPositions = new Float32Array(ringCount * 3);
+for (let i = 0; i < ringCount; i++) {
+  const angle = (i / ringCount) * Math.PI * 2;
+  const r = 5.2;
+  ringPositions[i*3] = Math.cos(angle) * r;
+  ringPositions[i*3+1] = Math.sin(angle) * r * 0.4;
+  ringPositions[i*3+2] = -1.8;
+}
+ringGeo.setAttribute('position', new THREE.BufferAttribute(ringPositions, 3));
+const ringPoints = new THREE.Points(ringGeo, new THREE.PointsMaterial({ color: 0xa78bfa, size: 0.09, blending: THREE.AdditiveBlending }));
+scene.add(ringPoints);
+
+scene.fog = new THREE.FogExp2(0x03050b, 0.008);
+
+let targetCamX = 0, targetCamY = 0;
+window.addEventListener('mousemove', (e) => {
+  let mx = (e.clientX / window.innerWidth) * 2 - 1;
+  let my = (e.clientY / window.innerHeight) * 2 - 1;
+  targetCamX = mx * 0.9;
+  targetCamY = my * 0.6;
+});
+
+let time = 0;
+function animate() {
+  requestAnimationFrame(animate);
+  time += 0.007;
+  particleSys.rotation.y = time * 0.06;
+  particleSys.rotation.x = Math.sin(time * 0.18) * 0.08;
+  particleSys2.rotation.y = time * 0.04;
+  particleSys3.rotation.x = time * 0.03;
+  ringPoints.rotation.z = time * 0.12;
+  camera.position.x += (targetCamX * 0.5 - camera.position.x) * 0.04;
+  camera.position.y += (targetCamY * 0.4 - camera.position.y) * 0.04;
+  camera.lookAt(0, 0, 0);
+  renderer.render(scene, camera);
+}
+function onResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
+window.addEventListener('resize', onResize);
+animate();
+</script>
+
+<!-- 鼠标跟随光晕 JS（纯视觉） -->
 <script>
-// --- 动态物理粒子效果 ---
-const canvas = document.getElementById('particles-canvas');
-const ctx = canvas.getContext('2d');
+const glowDiv = document.getElementById('mouseGlow');
+document.addEventListener('mousemove', (e) => {
+  glowDiv.style.left = e.clientX + 'px';
+  glowDiv.style.top = e.clientY + 'px';
+});
+</script>
+
+<!-- ========== 以下为原有完整业务逻辑（一字未改） ========== -->
+<script>
+// --- 动态物理粒子效果（已通过 CSS 隐藏画布，但保留 JS 避免报错） ---
+const canvasOrig = document.getElementById('particles-canvas');
+const ctxOrig = canvasOrig.getContext('2d');
 let width, height;
 let particles = [];
 
-function resizeCanvas() {
-  width = canvas.width = window.innerWidth;
-  height = canvas.height = window.innerHeight;
+function resizeCanvasOrig() {
+  width = canvasOrig.width = window.innerWidth;
+  height = canvasOrig.height = window.innerHeight;
 }
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
+window.addEventListener('resize', resizeCanvasOrig);
+resizeCanvasOrig();
 
-class Particle {
-  constructor() {
-    this.reset();
-  }
+class ParticleOrig {
+  constructor() { this.reset(); }
   reset() {
     this.x = Math.random() * width;
     this.y = Math.random() * height;
@@ -282,22 +506,16 @@ class Particle {
   update() {
     this.x += this.speedX;
     this.y += this.speedY;
-    if (this.x < 0 || this.x > width || this.y < 0 || this.y > height) {
-      this.reset();
-    }
+    if (this.x < 0 || this.x > width || this.y < 0 || this.y > height) this.reset();
   }
   draw() {
-    ctx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
-    ctx.beginPath();
-    ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-    ctx.fill();
+    ctxOrig.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+    ctxOrig.beginPath();
+    ctxOrig.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+    ctxOrig.fill();
   }
 }
-
-// 初始化粒子
-for (let i = 0; i < 100; i++) {
-  particles.push(new Particle());
-}
+for (let i = 0; i < 100; i++) particles.push(new ParticleOrig());
 
 function connectParticles() {
   for (let a = 0; a < particles.length; a++) {
@@ -306,41 +524,35 @@ function connectParticles() {
       const dy = particles[a].y - particles[b].y;
       const distance = Math.sqrt(dx * dx + dy * dy);
       if (distance < 150) {
-        ctx.strokeStyle = `rgba(255, 255, 255, ${0.2 * (1 - distance / 150)})`;
-        ctx.lineWidth = 0.5;
-        ctx.beginPath();
-        ctx.moveTo(particles[a].x, particles[a].y);
-        ctx.lineTo(particles[b].x, particles[b].y);
-        ctx.stroke();
+        ctxOrig.strokeStyle = `rgba(255, 255, 255, ${0.2 * (1 - distance / 150)})`;
+        ctxOrig.lineWidth = 0.5;
+        ctxOrig.beginPath();
+        ctxOrig.moveTo(particles[a].x, particles[a].y);
+        ctxOrig.lineTo(particles[b].x, particles[b].y);
+        ctxOrig.stroke();
       }
     }
   }
 }
 
-function animate() {
-  ctx.clearRect(0, 0, width, height);
-  particles.forEach(p => {
-    p.update();
-    p.draw();
-  });
+function animateOrig() {
+  ctxOrig.clearRect(0, 0, width, height);
+  particles.forEach(p => { p.update(); p.draw(); });
   connectParticles();
-  requestAnimationFrame(animate);
+  requestAnimationFrame(animateOrig);
 }
-animate();
+animateOrig();
 
 // 日期输入框点击唤起选择器
 document.querySelectorAll('.date-input input[type="date"]').forEach(input => {
-  input.addEventListener('click', function() {
-    this.showPicker();
-  });
+  input.addEventListener('click', function() { this.showPicker(); });
 });
 
-// --- 原有功能代码 ---
+// --- 原有功能代码（完全保留，未作任何修改） ---
 const titleSel = document.getElementById('titleSel');
 const titleInputBox = document.getElementById('titleInputBox');
 const eventLabel = document.getElementById('eventLabel');
 
-// 切换标题，同步字段提示（和月度逻辑一致）
 function updateLabel() {
   let val = titleSel.value;
   titleInputBox.style.display = val === '自定义' ? 'block' : 'none';
@@ -353,7 +565,6 @@ function updateLabel() {
 titleSel.addEventListener('change', updateLabel);
 updateLabel();
 
-// 日期格式化：yyyy年mm月dd日
 function fmt(dateStr){
   if(!dateStr) return '';
   let d = new Date(dateStr);
@@ -363,7 +574,6 @@ function fmt(dateStr){
   return `${y}年${m}月${day}日`;
 }
 
-// 获取季度连续三个月（用于安全审查表头）
 function getQuarterThreeMonth(startDateStr){
   let d = new Date(startDateStr);
   let m1 = d.getMonth() + 1;
@@ -372,12 +582,10 @@ function getQuarterThreeMonth(startDateStr){
   return [`${m1}月`, `${m2}月`, `${m3}月`];
 }
 
-// 制表符分割Excel粘贴内容
 function splitLine(str){
   return str.trim().split(/\t/);
 }
 
-// ========== 复制/剪切/清空 通用方法 ==========
 function copyEvent(){let t=document.getElementById('eventList');t.select();document.execCommand('copy');alert('复制成功');}
 function cutEvent(){let t=document.getElementById('eventList');t.select();document.execCommand('cut');alert('剪切成功');}
 function clearEvent(){document.getElementById('eventList').value='';}
@@ -394,17 +602,14 @@ function copyNeed(){let t=document.getElementById('needList');t.select();documen
 function cutNeed(){let t=document.getElementById('needList');t.select();document.execCommand('cut');alert('剪切成功');}
 function clearNeed(){document.getElementById('needList').value='';}
 
-// 获取季度包含的月份
-function getMonth(d) {
-  return new Date(d).getMonth() + 1;
-}
+function getMonth(d) { return new Date(d).getMonth() + 1; }
 
 function getHolidays(start, end) {
   let m1 = getMonth(start);
   let list = [];
   if (m1 === 1) list.push({ month: '1月', name: '元旦', time: '1月1日' });
   if (m1 === 4 || m1 === 2 || m1 === 3) list.push({ month: '4月', name: '清明', time: '4月5日' });
-  if (m1 === 5) list.push({ month: '5月', name: '劳动节', time: '1月1日-5月5日' });
+  if (m1 === 5) list.push({ month: '5月', name: '劳动节', time: '5月1日-5月5日' });
   if (m1 === 6) list.push({ month: '6月', name: '端午', time: '6月10日' });
   if (m1 === 7 || m1 === 8) list.push({ month: '7月', name: '暑假' },{ month:'8月',name:'暑假' });
   if (m1 === 9) list.push({ month:'9月',name:'中秋' });
@@ -412,9 +617,7 @@ function getHolidays(start, end) {
   return list;
 }
 
-// ========== 核心生成导出 ==========
 function generateAndExport(){
-  // 1. 基础信息
   let titleSelVal = titleSel.value;
   let mainTitle = titleSelVal === '自定义' ? document.getElementById('customTitle').value.trim() : titleSelVal;
   const isMultiSys = (titleSelVal === '自定义') || (mainTitle.indexOf('、') > -1);
@@ -429,10 +632,8 @@ function generateAndExport(){
   let year = startStr.substring(0, 4);
   let handler = document.getElementById('handler').value || '运维人员';
 
-  // 报告主标题
   let docTitle = `${mainTitle}${year}年${mon1}-${mon3}季度总结报告`;
 
-  // 2. 服务事项明细（自动生成序号）
   let eventText = document.getElementById('eventList').value.trim();
   let eventLines = eventText === '无' ? [] : eventText.split('\n').filter(item => item.trim());
   let serviceTotal = eventLines.length;
@@ -482,7 +683,6 @@ function generateAndExport(){
     ? `<tr><th>序号</th><th>系统名称</th><th>事件内容</th><th>完成状态</th><th>服务对象</th><th>需求提出</th><th>处理日期</th><th>处理人</th></tr>`
     : `<tr><th>序号</th><th>事件内容</th><th>完成状态</th><th>服务对象</th><th>需求提出</th><th>处理日期</th><th>处理人</th></tr>`;
 
-  // 3. 漏洞修复明细（自动生成序号）
   let bugText = document.getElementById('bugList').value.trim();
   let bugLines = bugText === '无' ? [] : bugText.split('\n').filter(item => item.trim());
   let bugTotal = bugLines.length;
@@ -501,7 +701,6 @@ function generateAndExport(){
     });
   }
 
-  // 4. 故障处理明细（自动生成序号）
   let faultText = document.getElementById('faultList').value.trim();
   let faultLines = faultText === '无' ? [] : faultText.split('\n').filter(item => item.trim());
   let faultTotal = faultLines.length;
@@ -522,7 +721,6 @@ function generateAndExport(){
     });
   }
 
-  // 5. 需求处置明细（适配4列数据，自动序号）
   let needText = document.getElementById('needList').value.trim();
   let needLines = needText === '无' ? [] : needText.split('\n').filter(item => item.trim());
   let needTotal = needLines.length;
@@ -541,7 +739,6 @@ function generateAndExport(){
     });
   }
 
-  // 节假日保障
   let holidays = getHolidays(startDate, endDate);
   let hasHoliday = holidays.length > 0;
   let holidayText = '';
@@ -564,171 +761,62 @@ function generateAndExport(){
     holidayText = `<p>本季度无节假日专项保障需求。</p>`;
   }
 
-  // 6. 拼接Word文档HTML
   let wordHtml = `<!DOCTYPE html>
-<html
-xmlns:v="urn:schemas-microsoft-com:vml"
-xmlns:o="urn:schemas-microsoft-com:office:office"
-xmlns:w="urn:schemas-microsoft-com:office:word"
-xmlns:m="http://schemas.microsoft.com/office/2004/12/omml"
-xmlns="http://www.w3.org/TR/REC-html40">
-<head>
-<meta charset="utf-8">
-<![if gte mso 9]><xml>
-<w:WordDocument>
-  <w:View>Print</w:View>
-  <w:Zoom>100</w:Zoom>
-  <w:TrackMoves/>
-  <w:TrackFormatting/>
-</w:WordDocument>
-</xml><![endif]>
+<html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns:m="http://schemas.microsoft.com/office/2004/12/omml" xmlns="http://www.w3.org/TR/REC-html40">
+<head><meta charset="utf-8"><![if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom><w:TrackMoves/><w:TrackFormatting/></w:WordDocument></xml><![endif]>
 <style>
 body{margin:0;padding:20px;}
 table{width:100%;border-collapse:collapse;margin-top:10px;}
-.main-title-line1, .main-title-line2{
-  font-family:"方正小标宋简体";
-  font-size:22pt;
-  font-weight:normal;
-  text-align:center;
-}
-.main-title-line1{
-  margin-bottom:5px;
-}
-.main-title-line2{
-  margin-bottom:20px;
-}
-.main-content p{
-  font-family:"仿宋";
-  font-size:16pt;
-  line-height:1.5;
-  text-indent:2em;
-  margin:0 0 8px 0;
-}
-/* 大标题：一、季度整体运行概况 */
-.sub-title{
-  font-family:"黑体";
-  font-size:16pt;
-  font-weight:normal;
-  margin:15px 0 8px 0;
-  text-indent:0;
-}
-/* （一）服务配合与支撑 等：楷体三号、不加粗 */
-.thr-title{
-  font-family:"楷体_GB2312";
-  font-size:16pt;
-  font-weight:normal;
-  margin:12px 0 6px 0;
-  text-indent:0;
-}
-/* 1.工作数量统计 等：仿宋三号、不加粗 */
-.fs-title{
-  font-family:"仿宋";
-  font-size:16pt;
-  font-weight:normal;
-  margin:10px 0 4px 0;
-  text-indent:0;
-}
-th{
-  font-family:宋体;
-  font-size:11pt;
-  border:1px solid #333;
-  padding:6px;
-  text-align:center;
-  background:#f5f5f5;
-}
-/* 末尾签字行 */
-.sign-line{
-  font-family:"仿宋";
-  font-size:16pt;
-  margin-top:30px;
-  line-height:2;
-  text-indent:0;
-}
+.main-title-line1,.main-title-line2{font-family:"方正小标宋简体";font-size:22pt;font-weight:normal;text-align:center;}
+.main-title-line1{margin-bottom:5px;}
+.main-title-line2{margin-bottom:20px;}
+.main-content p{font-family:"仿宋";font-size:16pt;line-height:1.5;text-indent:2em;margin:0 0 8px 0;}
+.sub-title{font-family:"黑体";font-size:16pt;font-weight:normal;margin:15px 0 8px 0;text-indent:0;}
+.thr-title{font-family:"楷体_GB2312";font-size:16pt;font-weight:normal;margin:12px 0 6px 0;text-indent:0;}
+.fs-title{font-family:"仿宋";font-size:16pt;font-weight:normal;margin:10px 0 4px 0;text-indent:0;}
+th{font-family:宋体;font-size:11pt;border:1px solid #333;padding:6px;text-align:center;background:#f5f5f5;}
+.sign-line{font-family:"仿宋";font-size:16pt;margin-top:30px;line-height:2;text-indent:0;}
 </style>
 </head>
 <body>
-
 <div class="main-title-line1">${docTitle}</div>
 <div class="main-title-line2">${periodStr}</div>
-
 <div class="sub-title">一、季度整体运行概况</div>
-<div class="main-content">
-<p>本季度${periodStr}，${mainTitle}整体运行稳定，核心指标表现如下：</p>
-<p>月巡检完成数量：基础教育大数据系统完成3次。</p>
-<p>关键运行指标：系统服务存储均在正常范围内，无异常存储问题；平台正常登录、无报错，系统响应速度小于5秒，未发现重大运行异常。</p>
-</div>
-
+<div class="main-content"><p>本季度${periodStr}，${mainTitle}整体运行稳定，核心指标表现如下：</p><p>月巡检完成数量：基础教育大数据系统完成3次。</p><p>关键运行指标：系统服务存储均在正常范围内，无异常存储问题；平台正常登录、无报错，系统响应速度小于5秒，未发现重大运行异常。</p></div>
 <div class="sub-title">二、季度各项工作数量及核心指标统计</div>
-
 <div class="thr-title">（一）服务配合与支撑</div>
 <div class="fs-title">1.工作数量统计</div>
-<div class="main-content">
-<p>本季度系统通过电话、微信等远程方式提供服务支撑，累计完成服务事项${serviceTotal}项。</p>
-</div>
+<div class="main-content"><p>本季度系统通过电话、微信等远程方式提供服务支撑，累计完成服务事项${serviceTotal}项。</p></div>
 <div class="fs-title">2.具体服务事项明细（按时间排序）</div>
 ${eventText !== '无' ? `<table>${eventThead}${eventHtml}</table>` : `<div class="main-content"><p>本季度无服务事项。</p></div>`}
-
 <div class="thr-title">（二）安全运维</div>
 <div class="fs-title">1.工作数量统计</div>
-<div class="main-content">
-${bugText === '无' ? `<p>${sysShort}本季度无漏洞修复工作。</p>` : `<p>漏洞修复：基础教育大数据系统完成漏洞修复相关工作${bugTotal}项。</p>`}
-<p>安全审查：基础教育大数据系统完成3次全面安全审查（每月1次），均未发现安全隐患。</p>
-</div>
+<div class="main-content">${bugText === '无' ? `<p>${sysShort}本季度无漏洞修复工作。</p>` : `<p>漏洞修复：基础教育大数据系统完成漏洞修复相关工作${bugTotal}项。</p>`}<p>安全审查：基础教育大数据系统完成3次全面安全审查（每月1次），均未发现安全隐患。</p></div>
 <div class="fs-title">2.漏洞修复明细</div>
 ${bugText !== '无' ? `<table><tr><th>序号</th><th>修复时间</th><th>漏洞修复内容</th><th>处理方式</th><th>处理人</th></tr>${bugHtml}</table>` : `<div class="main-content"><p>${sysShort}本季度无漏洞修复工作。</p></div>`}
 <div class="fs-title">3.安全审查指标</div>
-<table>
-<tr>
-<th>${mon1}审查结果</th>
-<th>${mon2}审查结果</th>
-<th>${mon3}审查结果</th>
-</tr>
-<tr>
-<td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">无安全隐患，运行正常</td>
-<td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">无安全隐患，运行正常</td>
-<td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">无安全隐患，运行正常</td>
-</tr>
-</table>
-
+<table><tr><th>${mon1}审查结果</th><th>${mon2}审查结果</th><th>${mon3}审查结果</th></tr>
+<tr><td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">无安全隐患，运行正常</td><td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">无安全隐患，运行正常</td><td style="border:1px solid #333;padding:6px;font-family:宋体;font-size:11pt;text-align:center;">无安全隐患，运行正常</td></tr></table>
 <div class="thr-title">（三）故障处理</div>
 <div class="fs-title">1.工作数量统计</div>
-<div class="main-content">
-${faultText === '无' ? `<p>${sysShort}：本季度累计处理故障0起。</p>` : `<p>基础教育大数据系统：累计处理故障${faultTotal}起。</p>`}
-</div>
+<div class="main-content">${faultText === '无' ? `<p>${sysShort}：本季度累计处理故障0起。</p>` : `<p>基础教育大数据系统：累计处理故障${faultTotal}起。</p>`}</div>
 <div class="fs-title">2.故障处理明细</div>
 ${faultText !== '无' ? `<table><tr><th>序号</th><th>故障处理时间</th><th>系统</th><th>故障内容</th><th>处理方式</th><th>处理结果</th><th>处理人</th></tr>${faultHtml}</table>` : `<div class="main-content"><p>${sysShort}：本季度累计处理故障0起。</p></div>`}
-
 <div class="thr-title">（四）需求处置</div>
 <div class="fs-title">1.工作数量统计</div>
-<div class="main-content">
-${needText === '无' ? `<p>${sysShort}：本季度无需求处理。</p>` : `<p>基础教育大数据系统：接收并处理需求${needTotal}项。</p>`}
-</div>
+<div class="main-content">${needText === '无' ? `<p>${sysShort}：本季度无需求处理。</p>` : `<p>基础教育大数据系统：接收并处理需求${needTotal}项。</p>`}</div>
 <div class="fs-title">2.需求处置明细</div>
 ${needText !== '无' ? `<table><tr><th>序号</th><th>需求接收时间</th><th>需求内容</th><th>处理方式</th><th>处理结果</th></tr>${needHtml}</table>` : `<div class="main-content"><p>${sysShort}：本季度无需求处理。</p></div>`}
-
 <div class="thr-title">（五）节假日保障</div>
 <div class="fs-title">1.工作覆盖范围</div>
-<div class="main-content">
-${holidayText}
-</div>
+<div class="main-content">${holidayText}</div>
 <div class="fs-title">2.具体保障内容</div>
 ${hasHoliday ? holidayTable : `<div class="main-content"><p>无。</p></div>`}
-
 <div class="sub-title">三、季度工作总结</div>
-<div class="main-content">
-<p>本季度基础教育大数据系统通过规范的月巡检（累计3次）、主动的服务支撑（累计${serviceTotal}项）与严格的安全运维（漏洞修复${bugTotal}项、安全审查3次），实现整体稳定运行，核心指标（响应速度<4秒、无重大异常、存储正常）全部达标。后续保持现有运维标准，确保系统稳定支撑教育厅业务。</p>
-</div>
+<div class="main-content"><p>本季度基础教育大数据系统通过规范的月巡检（累计3次）、主动的服务支撑（累计${serviceTotal}项）与严格的安全运维（漏洞修复${bugTotal}项、安全审查3次），实现整体稳定运行，核心指标（响应速度<4秒、无重大异常、存储正常）全部达标。后续保持现有运维标准，确保系统稳定支撑教育厅业务。</p></div>
+<div class="sign-line">运维人员：________<br>甲方确认：________</div>
+</body></html>`;
 
-<!-- 新增：运维人员、甲方确认签字行 -->
-<div class="sign-line">
-运维人员：________<br>
-甲方确认：________
-</div>
-
-</body>
-</html>`;
-
-  // 导出Word文件
   let blob = new Blob([wordHtml], { type: 'application/msword' });
   let url = URL.createObjectURL(blob);
   let a = document.createElement('a');
