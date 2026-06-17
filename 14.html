@@ -2,334 +2,612 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<title>运维周报生成器</title>
+<title>运维周报生成器 · 赛博渐变毛玻璃版</title>
 <style>
 * {
-  box-sizing: border-box;
-  font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
-}
-body {
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', 'Inter', 'Microsoft YaHei', system-ui, sans-serif;
+}
+
+body {
   min-height: 100vh;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-  color: #e0e0e0;
+  background: #0b061a;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 3rem 2rem;
+  position: relative;
+  overflow-x: hidden;
 }
-.container {
-  max-width: 900px;
-  margin: 30px auto;
-  padding: 30px;
-  background: rgba(22, 33, 62, 0.7);
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3), 0 0 1px rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+
+/* 顶部全局渐变霓虹光晕（匹配原图顶部粉紫渐变） */
+.top-gradient-glow {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 420px;
+  background: radial-gradient(ellipse at top center, rgba(168, 85, 247, 0.35) 0%, rgba(236, 72, 153, 0.22) 40%, transparent 72%);
+  pointer-events: none;
+  z-index: 1;
 }
-h2 {
+
+/* Three.js 粒子画布背景 */
+#bg-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  background: radial-gradient(circle at 20% 30%, #0e0722, #05020e);
+  pointer-events: none;
+}
+
+/* 鼠标跟随光晕 */
+.mouse-glow {
+  position: fixed;
+  width: 540px;
+  height: 540px;
+  background: radial-gradient(circle, rgba(168, 85, 247, 0.18) 0%, rgba(236, 72, 153, 0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  transition: transform 0.06s linear;
+  will-change: transform;
+}
+
+/* 毛玻璃主容器 匹配原图卡片圆角与通透质感 */
+.glass-container {
+  position: relative;
+  z-index: 20;
+  width: 100%;
+  max-width: 1120px;
+  background: rgba(22, 12, 44, 0.38);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 28px;
+  border: 1px solid rgba(168, 85, 247, 0.22);
+  box-shadow: 0 24px 50px -14px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(168, 85, 247, 0.08) inset;
+  transition: transform 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+  padding: 2.6rem 2.4rem 2.8rem;
+}
+
+.glass-container:hover {
+  transform: translateY(-4px);
+  border-color: rgba(168, 85, 247, 0.48);
+  box-shadow: 0 32px 56px -12px rgba(168, 85, 247, 0.22), 0 0 0 1px rgba(168, 85, 247, 0.18) inset;
+}
+
+/* 标题区 原图大渐变柔和文字 */
+.title-section {
   text-align: center;
-  color: #fff;
-  margin-bottom: 30px;
-  font-size: 28px;
+  margin-bottom: 2.6rem;
+}
+
+h2 {
+  font-size: 2.2rem;
   font-weight: 700;
-  background: linear-gradient(90deg, #72edf2, #5151e5, #ee00ff);
+  background: linear-gradient(130deg, #ffffff, #c4b5fd, #f472b6);
   -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
   background-clip: text;
+  color: transparent;
+  letter-spacing: -0.4px;
+  margin-bottom: 0.6rem;
 }
-.item {
-  margin-bottom: 24px;
+
+.sub {
+  color: #a8a29e;
+  font-size: 0.86rem;
+  letter-spacing: 1.2px;
+  border-bottom: 1px dashed rgba(168, 85, 247, 0.4);
+  display: inline-block;
+  padding-bottom: 0.45rem;
 }
+
+/* 内嵌毛玻璃卡片 原图深色内嵌卡片风格 */
+.glass-card-item {
+  margin-bottom: 1.6rem;
+  background: rgba(30, 16, 58, 0.42);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  border: 1px solid rgba(168, 85, 247, 0.18);
+  padding: 1.4rem 1.6rem;
+  transition: all 0.28s ease;
+}
+
+.glass-card-item:hover {
+  border-color: rgba(236, 72, 153, 0.36);
+  background: rgba(36, 20, 66, 0.48);
+  box-shadow: 0 0 24px rgba(168, 85, 247, 0.07);
+}
+
+/* 表单标签 */
 label {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 0.6rem;
   font-weight: 500;
-  color: #a0a0ff;
-  font-size: 14px;
+  color: #c4b5fd;
+  font-size: 0.9rem;
+  letter-spacing: 0.5px;
 }
-input, textarea {
+
+/* 输入框 原图深色通透输入控件 */
+.glass-input, .glass-select, textarea {
   width: 100%;
-  padding: 12px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 8px;
-  font-size: 14px;
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
-  transition: all 0.3s ease;
-}
-select {
-  width: 100%;
-  padding: 12px 16px;
-  border: 1px solid rgba(114, 237, 242, 0.5);
-  border-radius: 8px;
-  font-size: 14px;
-  background: #1a1a2e;
-  color: #ffffff;
-  transition: all 0.3s ease;
-}
-select:focus {
+  padding: 0.9rem 1.1rem;
+  background: rgba(14, 6, 30, 0.68);
+  border: 1.5px solid rgba(168, 85, 247, 0.28);
+  border-radius: 16px;
+  font-size: 0.92rem;
+  color: #e7e5e4;
+  transition: all 0.28s ease;
   outline: none;
-  border-color: #72edf2;
-  box-shadow: 0 0 8px rgba(114, 237, 242, 0.5);
 }
-select option {
-  background: #1a1a2e;
-  color: #ffffff;
+
+.glass-select {
+  cursor: pointer;
 }
-input:focus, textarea:focus {
-  outline: none;
-  border-color: #72edf2;
-  box-shadow: 0 0 8px rgba(114, 237, 242, 0.5);
+
+.glass-input:focus, .glass-select:focus, textarea:focus {
+  border-color: #a855f7;
+  box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.18);
+  background: rgba(20, 10, 40, 0.76);
 }
+
+textarea {
+  font-family: 'Fira Code', monospace;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+::placeholder {
+  color: #78716c;
+}
+
+/* 日期双栏布局 */
 .date-row {
   display: flex;
-  gap: 12px;
+  gap: 1.2rem;
+  margin-bottom: 0;
 }
-.date-row .item {
+.date-row .glass-card-item {
   flex: 1;
+  margin-bottom: 0;
 }
-.btn-bar {
+
+/* 按钮行容器 */
+.btn-bar, .button-group {
   display: flex;
-  gap: 8px;
-  margin-bottom: 10px;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  margin: 0.9rem 0 0.6rem;
 }
-button {
-  padding: 8px 16px;
-  border: none;
-  border-radius: 8px;
+
+/* 基础霓虹按钮 匹配原图圆角渐变按钮 */
+.neon-btn {
+  position: relative;
+  background: rgba(26, 14, 48, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  padding: 0.6rem 1.4rem;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.84rem;
+  color: #e7e5e4;
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  transition: all 0.3s ease;
+  transition: all 0.32s cubic-bezier(0.2, 0, 0, 1);
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
 }
-.btn-blue {
-  background: linear-gradient(90deg, #5151e5, #72edf2);
+
+.neon-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(168, 85, 247, 0.32), transparent);
+  transition: left 0.55s ease;
+}
+
+.neon-btn:hover::before {
+  left: 100%;
+}
+
+.neon-btn:hover {
+  transform: translateY(-3px);
+  border-color: #c4b5fd;
+  box-shadow: 0 6px 18px rgba(168, 85, 247, 0.26);
   color: white;
 }
-.btn-blue:hover {
-  box-shadow: 0 0 15px rgba(114, 237, 242, 0.6);
-  transform: translateY(-2px);
+
+/* 按钮色系 对齐原图紫/粉/青渐变 */
+.btn-primary {
+  background: linear-gradient(98deg, rgba(168, 85, 247, 0.28), rgba(236, 72, 153, 0.16));
+  border-color: #a855f7;
 }
-.btn-green {
-  background: linear-gradient(90deg, #00b894, #55efc4);
-  color: white;
+.btn-success {
+  background: linear-gradient(98deg, rgba(34, 197, 94, 0.26), rgba(16, 185, 129, 0.14));
+  border-color: #10b981;
 }
-.btn-green:hover {
-  box-shadow: 0 0 15px rgba(0, 184, 148, 0.6);
-  transform: translateY(-2px);
+.btn-danger {
+  background: linear-gradient(98deg, rgba(239, 68, 68, 0.26), rgba(220, 38, 38, 0.14));
+  border-color: #ef4444;
 }
-.btn-gray {
-  background: linear-gradient(90deg, #636e72, #b2bec3);
-  color: white;
-}
-.btn-gray:hover {
-  box-shadow: 0 0 15px rgba(99, 110, 114, 0.6);
-  transform: translateY(-2px);
-}
-.btn-red {
-  background: linear-gradient(90deg, #d63031, #ff7675);
-  color: white;
-}
-.btn-red:hover {
-  box-shadow: 0 0 15px rgba(214, 48, 49, 0.6);
-  transform: translateY(-2px);
+.btn-warning {
+  background: linear-gradient(98deg, rgba(245, 158, 11, 0.26), rgba(249, 115, 22, 0.14));
+  border-color: #f59e0b;
 }
 .btn-purple {
-  background: linear-gradient(90deg, #9d50bb, #6e48aa);
-  color: #fff;
+  background: linear-gradient(98deg, rgba(192, 132, 252, 0.28), rgba(168, 85, 247, 0.16));
+  border-color: #c084fc;
 }
-.btn-purple:hover {
-  box-shadow: 0 0 15px rgba(157, 80, 187, 0.6);
-  transform: translateY(-2px);
+/* 主导出按钮 原图大渐变主CTA */
+.btn-export {
+  background: linear-gradient(98deg, #a855f7, #ec4899);
+  border: none;
+  padding: 0.8rem 2.4rem;
+  font-size: 1.05rem;
 }
-textarea {
-  resize: vertical;
-  min-height: 100px;
+.btn-export:hover {
+  box-shadow: 0 8px 24px rgba(168, 85, 247, 0.35);
 }
-::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+
+/* 生成按钮居中容器 */
+.generate-btn-wrap {
+  text-align: center;
+  margin-top: 1.4rem;
+}
+
+/* 滚动条适配暗紫主题 */
+::-webkit-scrollbar {
+  width: 7px;
+}
+::-webkit-scrollbar-track {
+  background: #150c2b;
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #a855f7;
+  border-radius: 8px;
+}
+
+/* 响应式适配移动端 */
+@media (max-width: 760px) {
+  body {
+    padding: 1.2rem;
+  }
+  .glass-container {
+    padding: 1.6rem 1.4rem 2rem;
+  }
+  h2 {
+    font-size: 1.7rem;
+  }
+  .date-row {
+    flex-direction: column;
+    gap: 1.2rem;
+  }
+  .neon-btn {
+    padding: 0.55rem 1rem;
+    font-size: 0.78rem;
+  }
 }
 </style>
 </head>
 <body>
-<div class="container">
-  <h2>运维周报生成器</h2>
+<!-- 顶部全局渐变光晕 匹配原图顶部粉紫渐变 -->
+<div class="top-gradient-glow"></div>
 
-  <div class="item">
-    <label>选择/自定义周报标题</label>
-    <select id="titleSel">
+<!-- Three.js 粒子画布 -->
+<canvas id="bg-canvas"></canvas>
+<div class="mouse-glow" id="mouseGlow"></div>
+
+<div class="glass-container">
+  <div class="title-section">
+    <h2>⚙️ 运维周报生成器</h2>
+    <div class="sub">毛玻璃 · 星云粒子 · 智能导出</div>
+  </div>
+
+  <!-- 标题选择 -->
+  <div class="glass-card-item">
+    <label>📌 选择/自定义周报标题</label>
+    <select id="titleSel" class="glass-select">
       <option value="教育厅机关智能化管理平台、学生体质健康监测数据管理平台、民办机构管理系统运维服务运维周报">教育厅机关智能化管理平台、学生体质健康监测数据管理平台、民办机构管理系统运维服务运维周报</option>
       <option value="教育厅基础教育大数据系统运维周报">教育厅基础教育大数据系统</option>
       <option value="内蒙古自治区大青山管理局协同办公系统运维服务项目周报">大青山管理局协同办公系统</option>
       <option value="自定义">手动自定义输入</option>
     </select>
-  </div>
-  <div class="item" id="titleInputBox" style="display:none;">
-    <input type="text" id="reportTitle" placeholder="请手动输入周报标题">
+    <div id="titleInputBox" style="display:none; margin-top: 0.8rem;">
+      <input type="text" id="reportTitle" class="glass-input" placeholder="请手动输入周报标题">
+    </div>
   </div>
 
-  <div class="item">
-    <label>周报模式切换</label>
-    <select id="modeSel">
+  <!-- 周报模式 -->
+  <div class="glass-card-item">
+    <label>🔁 周报模式切换</label>
+    <select id="modeSel" class="glass-select">
       <option value="single">单系统周报（隐藏系统名称列）</option>
       <option value="multi">多系统周报（自带系统名列，直接Excel复制即可）</option>
     </select>
   </div>
 
-  <div class="item" id="sysInputBox" style="display:none;">
-    <label>默认系统名称（备用）</label>
-    <input type="text" id="systemName" value="">
-  </div>
-
+  <!-- 日期双栏 -->
   <div class="date-row">
-    <div class="item">
-      <label>开始日期</label>
-      <input type="date" id="startDate">
+    <div class="glass-card-item">
+      <label>📅 开始日期</label>
+      <input type="date" id="startDate" class="glass-input">
     </div>
-    <div class="item">
-      <label>结束日期</label>
-      <input type="date" id="endDate">
+    <div class="glass-card-item">
+      <label>📅 结束日期</label>
+      <input type="date" id="endDate" class="glass-input">
     </div>
   </div>
 
-  <div class="item">
-    <label>报告人</label>
-    <input type="text" id="reportUser" value="乔鹏飞">
+  <!-- 报告人 / 协作人 -->
+  <div class="glass-card-item">
+    <label>👤 报告人</label>
+    <input type="text" id="reportUser" value="乔鹏飞" class="glass-input">
+  </div>
+  <div class="glass-card-item">
+    <label>🤝 协作人</label>
+    <input type="text" id="helper" value="于思雨" class="glass-input">
   </div>
 
-  <div class="item">
-    <label>协作人</label>
-    <input type="text" id="helper" value="于思雨">
-  </div>
-
-  <div class="item">
-    <label>本周主要工作内容（按行写，自动加序号）</label>
+  <!-- 本周主要工作内容 -->
+  <div class="glass-card-item">
+    <label>📝 本周主要工作内容（按行写，自动加序号）</label>
     <div class="btn-bar">
-      <button class="btn-green" onclick="copyWork()">复制</button>
-      <button class="btn-gray" onclick="cutWork()">剪切</button>
-      <button class="btn-red" onclick="clearWork()">清空</button>
-      <button class="btn-purple" onclick="localSummary()">自动润色总结（无网络版）</button>
+      <button class="neon-btn btn-success" onclick="copyWork()">📋 复制</button>
+      <button class="neon-btn btn-warning" onclick="cutWork()">✂️ 剪切</button>
+      <button class="neon-btn btn-danger" onclick="clearWork()">🗑️ 清空</button>
+      <button class="neon-btn btn-purple" onclick="localSummary()">✨ 自动润色总结</button>
     </div>
-    <textarea id="mainWork" rows="6" placeholder=""></textarea>
+    <textarea id="mainWork" rows="5" placeholder="" class="glass-input"></textarea>
   </div>
 
-  <div class="item">
-    <label>运维事件：多系统直接从Excel带系统名列整行复制粘贴，无需加任何符号</label>
+  <!-- 运维事件区域 -->
+  <div class="glass-card-item">
+    <label>📋 运维事件（多系统直接从Excel带系统名列整行复制粘贴，无需加任何符号）</label>
     <div class="btn-bar">
-      <button class="btn-green" onclick="copyEvent()">复制</button>
-      <button class="btn-gray" onclick="cutEvent()">剪切</button>
-      <button class="btn-red" onclick="clearEvent()">清空</button>
+      <button class="neon-btn btn-success" onclick="copyEvent()">📋 复制</button>
+      <button class="neon-btn btn-warning" onclick="cutEvent()">✂️ 剪切</button>
+      <button class="neon-btn btn-danger" onclick="clearEvent()">🗑️ 清空</button>
     </div>
-    <textarea id="eventList" rows="12" placeholder=""></textarea>
+    <textarea id="eventList" rows="10" placeholder="" class="glass-input"></textarea>
   </div>
 
-  <div class="item" style="text-align:center;">
-    <button class="btn-blue" onclick="generateAndExport()">生成并导出 Word 周报</button>
+  <!-- 生成导出按钮 -->
+  <div class="generate-btn-wrap">
+    <button class="neon-btn btn-export" onclick="generateAndExport()">📄 生成并导出 Word 周报</button>
   </div>
 </div>
 
-<script>
-document.getElementById('titleSel').addEventListener('change',function(){
-  let box = document.getElementById('titleInputBox');
-  box.style.display = this.value === '自定义' ? 'block' : 'none';
-});
-
-document.getElementById('modeSel').addEventListener('change',function(){
-  let sysBox = document.getElementById('sysInputBox');
-  sysBox.style.display = this.value === 'multi' ? 'none' : 'none';
-});
-
-function fmt(dateStr){
-  if(!dateStr) return '';
-  let d=new Date(dateStr);
-  let y=d.getFullYear();
-  let m=String(d.getMonth()+1).padStart(2,'0');
-  let d2=String(d.getDate()).padStart(2,'0');
-  return `${y}.${m}.${d2}`;
-}
-
-function copyWork(){
-  let t=document.getElementById('mainWork');
-  t.select();document.execCommand('copy');alert('复制成功');
-}
-function cutWork(){
-  let t=document.getElementById('mainWork');
-  t.select();document.execCommand('cut');alert('剪切成功');
-}
-function clearWork(){
-  document.getElementById('mainWork').value='';
-}
-
-function copyEvent(){
-  let t=document.getElementById('eventList');
-  t.select();document.execCommand('copy');alert('复制成功');
-}
-function cutEvent(){
-  let t=document.getElementById('eventList');
-  t.select();document.execCommand('cut');alert('剪切成功');
-}
-function clearEvent(){
-  document.getElementById('eventList').value='';
-}
-
-function splitLine(str){
-  return str.trim().split(/\s+/);
-}
-
-// ====================== 智能文件名 ======================
-function getFileName(titleSel, period) {
-  if (titleSel.includes('教育厅机关智能化管理平台、学生体质健康监测数据管理平台、民办机构管理系统')) {
-    return `教育厅3大系统运维周报（${period}）`;
-  }
-  if (titleSel.includes('教育厅基础教育大数据系统')) {
-    return `教育厅基础教育大数据系统运维周报（${period}）`;
-  }
-  if (titleSel.includes('内蒙古自治区大青山管理局协同办公系统')) {
-    return `大青山管理局协同办公系统运维周报（${period}）`;
-  }
-  return `运维周报（${period}）`;
-}
-
-// ====================== 本地模板化润色（无网络） ======================
-function localSummary() {
-  const eventText = document.getElementById('eventList').value.trim();
-  const mode = document.getElementById('modeSel').value;
-  if (!eventText) {
-    alert('请先粘贴运维事件内容！');
-    return;
-  }
-
-  const lines = eventText.split('\n').filter(x => x.trim());
-  const sysMap = {};
-
-  // 按系统分组
-  lines.forEach(line => {
-    const arr = splitLine(line);
-    const sysName = arr[0] || '未知系统';
-    const eventContent = arr.slice(1).join(' ');
-
-    if (!sysMap[sysName]) {
-      sysMap[sysName] = new Set();
+<!-- Three.js 动态粒子背景脚本 -->
+<script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
     }
-    sysMap[sysName].add(eventContent);
+  }
+</script>
+
+<script type="module">
+  import * as THREE from 'three';
+
+  const canvas = document.getElementById('bg-canvas');
+  const renderer = new THREE.WebGLRenderer({ canvas, alpha: false });
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x05020e);
+
+  const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera.position.set(0, 1.5, 14);
+  camera.lookAt(0, 0, 0);
+
+  // 主粒子群 (紫罗兰)
+  const particleCount = 2100;
+  const geom = new THREE.BufferGeometry();
+  const positions = new Float32Array(particleCount * 3);
+  for (let i = 0; i < particleCount; i++) {
+    positions[i*3] = (Math.random() - 0.5) * 38;
+    positions[i*3+1] = (Math.random() - 0.5) * 24;
+    positions[i*3+2] = (Math.random() - 0.5) * 30 - 8;
+  }
+  geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const particleMat = new THREE.PointsMaterial({ color: 0xa855f7, size: 0.09, transparent: true, opacity: 0.65, blending: THREE.AdditiveBlending });
+  const particleSys = new THREE.Points(geom, particleMat);
+  scene.add(particleSys);
+
+  // 第二层粒子 (青蓝)
+  const geom2 = new THREE.BufferGeometry();
+  const pos2 = new Float32Array(1400 * 3);
+  for (let i = 0; i < 1400; i++) {
+    pos2[i*3] = (Math.random() - 0.5) * 44;
+    pos2[i*3+1] = (Math.random() - 0.5) * 28;
+    pos2[i*3+2] = (Math.random() - 0.5) * 34 - 10;
+  }
+  geom2.setAttribute('position', new THREE.BufferAttribute(pos2, 3));
+  const mat2 = new THREE.PointsMaterial({ color: 0x06b6d4, size: 0.08, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending });
+  const particleSys2 = new THREE.Points(geom2, mat2);
+  scene.add(particleSys2);
+
+  // 第三层粒子 (粉晶)
+  const geom3 = new THREE.BufferGeometry();
+  const pos3 = new Float32Array(900 * 3);
+  for (let i = 0; i < 900; i++) {
+    pos3[i*3] = (Math.random() - 0.5) * 48;
+    pos3[i*3+1] = (Math.random() - 0.5) * 30;
+    pos3[i*3+2] = (Math.random() - 0.5) * 38 - 12;
+  }
+  geom3.setAttribute('position', new THREE.BufferAttribute(pos3, 3));
+  const mat3 = new THREE.PointsMaterial({ color: 0xec4899, size: 0.1, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending });
+  const particleSys3 = new THREE.Points(geom3, mat3);
+  scene.add(particleSys3);
+
+  // 装饰环
+  const ringCount = 380;
+  const ringGeo = new THREE.BufferGeometry();
+  const ringPositions = new Float32Array(ringCount * 3);
+  for (let i = 0; i < ringCount; i++) {
+    const angle = (i / ringCount) * Math.PI * 2;
+    const r = 5.2;
+    ringPositions[i*3] = Math.cos(angle) * r;
+    ringPositions[i*3+1] = Math.sin(angle) * r * 0.4;
+    ringPositions[i*3+2] = -1.8;
+  }
+  ringGeo.setAttribute('position', new THREE.BufferAttribute(ringPositions, 3));
+  const ringPoints = new THREE.Points(ringGeo, new THREE.PointsMaterial({ color: 0xc4b5fd, size: 0.09, blending: THREE.AdditiveBlending }));
+  scene.add(ringPoints);
+
+  scene.fog = new THREE.FogExp2(0x05020e, 0.008);
+
+  let targetCamX = 0, targetCamY = 0;
+  window.addEventListener('mousemove', (e) => {
+    let mx = (e.clientX / window.innerWidth) * 2 - 1;
+    let my = (e.clientY / window.innerHeight) * 2 - 1;
+    targetCamX = mx * 0.9;
+    targetCamY = my * 0.6;
   });
 
-  // 专业话术模板
-  const templates = {
-    '巡检': '常态化开展系统运维巡检，对应用服务、数据库、中间件等核心组件进行多轮排查，重点核查资源占用、连接稳定性及日志报错情况，未发现异常隐患。',
-    '检查': '全面校验系统各业务页面与核心功能入口，检查数据展示效果、业务操作响应速度，平台整体运行基线稳定，各项功能均正常可用。',
-    '安装': '部署安装主机防护程序，强化系统主机安全防护能力，提升整体安全防护等级。',
-    '默认': '完成系统日常运维工作，保障业务平稳有序开展。'
-  };
+  let time = 0;
+  function animate() {
+    requestAnimationFrame(animate);
+    time += 0.007;
+    particleSys.rotation.y = time * 0.06;
+    particleSys.rotation.x = Math.sin(time * 0.18) * 0.08;
+    particleSys2.rotation.y = time * 0.04;
+    particleSys3.rotation.x = time * 0.03;
+    ringPoints.rotation.z = time * 0.12;
+    camera.position.x += (targetCamX * 0.5 - camera.position.x) * 0.04;
+    camera.position.y += (targetCamY * 0.4 - camera.position.y) * 0.04;
+    camera.lookAt(0, 0, 0);
+    renderer.render(scene, camera);
+  }
 
-  let summary = [];
-  let totalIdx = 1;
+  function onResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  }
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  window.addEventListener('resize', onResize);
+  animate();
+</script>
 
-  // 多系统模式：按系统分类
-  if (mode === 'multi') {
-    for (let sys in sysMap) {
-      summary.push(`一、${sys}`);
-      const events = Array.from(sysMap[sys]);
-      events.forEach((event, idx) => {
+<!-- 鼠标光晕跟随 + 完整业务逻辑（所有原有功能100%保留无修改） -->
+<script>
+  // 鼠标光晕
+  const glow = document.getElementById('mouseGlow');
+  document.addEventListener('mousemove', (e) => {
+    glow.style.left = e.clientX + 'px';
+    glow.style.top = e.clientY + 'px';
+  });
+
+  // 标题自定义切换
+  const titleSel = document.getElementById('titleSel');
+  const titleInputBox = document.getElementById('titleInputBox');
+  titleSel.addEventListener('change', () => {
+    titleInputBox.style.display = titleSel.value === '自定义' ? 'block' : 'none';
+  });
+
+  // 模式切换（保留原逻辑无额外处理）
+  // ========== 工具函数 ==========
+  function fmt(dateStr) {
+    if (!dateStr) return '';
+    let d = new Date(dateStr);
+    let y = d.getFullYear();
+    let m = String(d.getMonth() + 1).padStart(2, '0');
+    let d2 = String(d.getDate()).padStart(2, '0');
+    return `${y}.${m}.${d2}`;
+  }
+
+  function splitLine(str) {
+    return str.trim().split(/\s+/);
+  }
+
+  function copyWork() {
+    let t = document.getElementById('mainWork');
+    t.select();
+    document.execCommand('copy');
+    alert('✅ 复制成功');
+  }
+  function cutWork() {
+    let t = document.getElementById('mainWork');
+    t.select();
+    document.execCommand('cut');
+    alert('✂️ 剪切成功');
+  }
+  function clearWork() {
+    document.getElementById('mainWork').value = '';
+  }
+  function copyEvent() {
+    let t = document.getElementById('eventList');
+    t.select();
+    document.execCommand('copy');
+    alert('✅ 复制成功');
+  }
+  function cutEvent() {
+    let t = document.getElementById('eventList');
+    t.select();
+    document.execCommand('cut');
+    alert('✂️ 剪切成功');
+  }
+  function clearEvent() {
+    document.getElementById('eventList').value = '';
+  }
+
+  // 本地润色总结 (无网络版)
+  function localSummary() {
+    const eventText = document.getElementById('eventList').value.trim();
+    const mode = document.getElementById('modeSel').value;
+    if (!eventText) {
+      alert('请先粘贴运维事件内容！');
+      return;
+    }
+    const lines = eventText.split('\n').filter(x => x.trim());
+    const sysMap = {};
+    lines.forEach(line => {
+      const arr = splitLine(line);
+      const sysName = arr[0] || '未知系统';
+      const eventContent = arr.slice(1).join(' ');
+      if (!sysMap[sysName]) sysMap[sysName] = new Set();
+      sysMap[sysName].add(eventContent);
+    });
+    const templates = {
+      '巡检': '常态化开展系统运维巡检，对应用服务、数据库、中间件等核心组件进行多轮排查，重点核查资源占用、连接稳定性及日志报错情况，未发现异常隐患。',
+      '检查': '全面校验系统各业务页面与核心功能入口，检查数据展示效果、业务操作响应速度，平台整体运行基线稳定，各项功能均正常可用。',
+      '安装': '部署安装主机防护程序，强化系统主机安全防护能力，提升整体安全防护等级。',
+      '默认': '完成系统日常运维工作，保障业务平稳有序开展。'
+    };
+    let summary = [];
+    let totalIdx = 1;
+    if (mode === 'multi') {
+      for (let sys in sysMap) {
+        summary.push(`一、${sys}`);
+        const events = Array.from(sysMap[sys]);
+        events.forEach(event => {
+          let text = templates['默认'];
+          if (event.includes('巡检')) text = templates['巡检'];
+          else if (event.includes('检查')) text = templates['检查'];
+          else if (event.includes('安装')) text = templates['安装'];
+          summary.push(`${totalIdx}. ${text}`);
+          totalIdx++;
+        });
+      }
+    } else {
+      const events = new Set();
+      lines.forEach(line => {
+        const arr = splitLine(line);
+        events.add(arr.join(' '));
+      });
+      Array.from(events).forEach(event => {
         let text = templates['默认'];
         if (event.includes('巡检')) text = templates['巡检'];
         else if (event.includes('检查')) text = templates['检查'];
@@ -338,153 +616,141 @@ function localSummary() {
         totalIdx++;
       });
     }
-  } else {
-    // 单系统模式：直接分条
-    const events = new Set();
-    lines.forEach(line => {
-      const arr = splitLine(line);
-      events.add(arr.join(' '));
-    });
-    Array.from(events).forEach((event, idx) => {
-      let text = templates['默认'];
-      if (event.includes('巡检')) text = templates['巡检'];
-      else if (event.includes('检查')) text = templates['检查'];
-      else if (event.includes('安装')) text = templates['安装'];
-      summary.push(`${totalIdx}. ${text}`);
-      totalIdx++;
-    });
+    document.getElementById('mainWork').value = summary.join('\n');
+    alert('✅ 已完成本地润色！无需联网');
   }
 
-  document.getElementById('mainWork').value = summary.join('\n');
-  alert('✅ 已完成本地润色！无需联网');
-}
-
-// ====================== 导出 ======================
-function generateAndExport(){
-  let titleSel = document.getElementById('titleSel').value;
-  let reportTitle = titleSel === '自定义' ? document.getElementById('reportTitle').value : titleSel;
-  let mode = document.getElementById('modeSel').value;
-
-  let start=document.getElementById('startDate').value;
-  let end=document.getElementById('endDate').value;
-  let period='';
-  if(start&&end){
-    period=fmt(start)+'-'+fmt(end);
+  // 生成文件名
+  function getFileName(titleSelText, period) {
+    if (titleSelText.includes('教育厅机关智能化管理平台')) return `教育厅3大系统运维周报（${period}）`;
+    if (titleSelText.includes('教育厅基础教育大数据系统')) return `教育厅基础教育大数据系统运维周报（${period}）`;
+    if (titleSelText.includes('大青山管理局协同办公系统')) return `大青山管理局协同办公系统运维周报（${period}）`;
+    return `运维周报（${period}）`;
   }
 
-  let reportUser=document.getElementById('reportUser').value;
-  let helper=document.getElementById('helper').value;
-  let mainWorkLines=document.getElementById('mainWork').value.trim().split('\n').filter(x=>x.trim());
-  let eventLines=document.getElementById('eventList').value.trim().split('\n').filter(x=>x.trim());
+  // 导出Word 【已修复默认页面视图】
+  function generateAndExport() {
+    let titleRaw = document.getElementById('titleSel').value;
+    let reportTitle = titleRaw === '自定义' ? document.getElementById('reportTitle').value : titleRaw;
+    let mode = document.getElementById('modeSel').value;
+    let start = document.getElementById('startDate').value;
+    let end = document.getElementById('endDate').value;
+    let period = (start && end) ? fmt(start) + '-' + fmt(end) : '';
+    let reportUser = document.getElementById('reportUser').value;
+    let helper = document.getElementById('helper').value;
+    let mainWorkLines = document.getElementById('mainWork').value.trim().split('\n').filter(x => x.trim());
+    let eventLines = document.getElementById('eventList').value.trim().split('\n').filter(x => x.trim());
 
-  let mainWorkHtml=mainWorkLines.map((line,i)=>`${i+1}. ${line}`).join('<br>');
+    let mainWorkHtml = mainWorkLines.map((line, i) => `${i+1}. ${line}`).join('<br>');
 
-  let eventRows='';
-  eventLines.forEach((line,idx)=>{
-    let arr = splitLine(line);
-    let sysName = '';
-    let eventText='',proposer='',handler='',dealTime='';
+    let eventRows = '';
+    eventLines.forEach((line, idx) => {
+      let arr = splitLine(line);
+      if (mode === 'multi') {
+        let sysName = arr[0] || '';
+        let eventText = arr[1] || '';
+        let proposer = arr[4] || '';
+        let handler = arr[7] || '';
+        let dealTime = arr[8] || '';
+        eventRows += `<tr>
+          <td style="text-align:center;font-size:12pt;">${idx+1}</td>
+          <td style="text-align:center;font-size:12pt;">${sysName}</td>
+          <td style="text-align:center;font-size:12pt;">${eventText}</td>
+          <td style="text-align:center;font-size:12pt;">${proposer}</td>
+          <td style="text-align:center;font-size:12pt;">${handler}</td>
+          <td style="text-align:center;font-size:12pt;">${dealTime}</td>
+        </tr>`;
+      } else {
+        let eventText = arr[0] || '';
+        let proposer = arr[3] || '';
+        let handler = arr[6] || '';
+        let dealTime = arr[7] || '';
+        eventRows += `<tr>
+          <td style="text-align:center;font-size:12pt;">${idx+1}</td>
+          <td style="text-align:center;font-size:12pt;">${eventText}</td>
+          <td style="text-align:center;font-size:12pt;">${proposer}</td>
+          <td style="text-align:center;font-size:12pt;">${handler}</td>
+          <td style="text-align:center;font-size:12pt;">${dealTime}</td>
+        </tr>`;
+      }
+    });
 
-    if(mode === 'multi'){
-      sysName = arr[0]||'';
-      eventText = arr[1]||'';
-      proposer  = arr[4]||'';
-      handler   = arr[7]||'';
-      dealTime  = arr[8]||'';
-
-      eventRows+=`<tr>
-        <td style="text-align:center;font-size:12pt;">${idx+1}</td>
-        <td style="text-align:center;font-size:12pt;">${sysName}</td>
-        <td style="text-align:center;font-size:12pt;">${eventText}</td>
-        <td style="text-align:center;font-size:12pt;">${proposer}</td>
-        <td style="text-align:center;font-size:12pt;">${handler}</td>
-        <td style="text-align:center;font-size:12pt;">${dealTime}</td>
-      </tr>`;
-    }else{
-      eventText = arr[0]||'';
-      proposer  = arr[3]||'';
-      handler   = arr[6]||'';
-      dealTime  = arr[7]||'';
-
-      eventRows+=`<tr>
-        <td style="text-align:center;font-size:12pt;">${idx+1}</td>
-        <td style="text-align:center;font-size:12pt;">${eventText}</td>
-        <td style="text-align:center;font-size:12pt;">${proposer}</td>
-        <td style="text-align:center;font-size:12pt;">${handler}</td>
-        <td style="text-align:center;font-size:12pt;">${dealTime}</td>
-      </tr>`;
+    let headHtml = '';
+    let colSpanVal = mode === 'multi' ? 6 : 5;
+    if (mode === 'multi') {
+      headHtml = `
+        <th style="font-size:12pt;text-align:center;">序号</th>
+        <th style="font-size:12pt;text-align:center;">系统名称</th>
+        <th style="font-size:12pt;text-align:center;">运维事件</th>
+        <th style="font-size:12pt;text-align:center;">提出人</th>
+        <th style="font-size:12pt;text-align:center;">处理人</th>
+        <th style="font-size:12pt;text-align:center;">处理时间</th>`;
+    } else {
+      headHtml = `
+        <th style="font-size:12pt;text-align:center;">序号</th>
+        <th style="font-size:12pt;text-align:center;">运维事件</th>
+        <th style="font-size:12pt;text-align:center;">提出人</th>
+        <th style="font-size:12pt;text-align:center;">处理人</th>
+        <th style="font-size:12pt;text-align:center;">处理时间</th>`;
     }
-  });
 
-  let headHtml = '';
-  let colSpanVal = mode === 'multi' ? 6 : 5;
-  if(mode === 'multi'){
-    headHtml = `
-    <th style="font-size:12pt;text-align:center;">序号</th>
-    <th style="font-size:12pt;text-align:center;">系统名称</th>
-    <th style="font-size:12pt;text-align:center;">运维事件</th>
-    <th style="font-size:12pt;text-align:center;">提出人</th>
-    <th style="font-size:12pt;text-align:center;">处理人</th>
-    <th style="font-size:12pt;text-align:center;">处理时间</th>`;
-  }else{
-    headHtml = `
-    <th style="font-size:12pt;text-align:center;">序号</th>
-    <th style="font-size:12pt;text-align:center;">运维事件</th>
-    <th style="font-size:12pt;text-align:center;">提出人</th>
-    <th style="font-size:12pt;text-align:center;">处理人</th>
-    <th style="font-size:12pt;text-align:center;">处理时间</th>`;
+    // ========== 关键修改：增加Word视图配置，强制页面视图Print ==========
+    let html = `<html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns:m="http://schemas.microsoft.com/office/2004/12/omml" xmlns="http://www.w3.org/TR/REC-html40">
+    <head>
+    <meta charset="utf-8">
+    <style>
+      body{font-family:宋体;} 
+      table{width:100%;border-collapse:collapse;} 
+      td,th{border:1px solid #000;padding:8px;font-family:宋体;} 
+      .title{font-size:22pt;font-weight:bold;text-align:center;} 
+      .period{font-size:14pt;font-weight:bold;text-align:center;}
+    </style>
+    <!-- 强制Word打开为页面视图 Print -->
+    <!--[if gte mso 9]>
+    <xml>
+      <w:WordDocument>
+        <w:View>Print</w:View>
+        <w:TrackMoves>false</w:TrackMoves>
+        <w:TrackFormatting/>
+      </w:WordDocument>
+    </xml>
+    <![endif]-->
+    </head>
+    <body>
+    <table>
+      <tr><td colspan="${colSpanVal}" class="title">${reportTitle}</td></tr>
+      <tr><td colspan="${colSpanVal}" class="period">报告周期：${period}</td></tr>
+      <tr>
+        <td colspan="${Math.floor(colSpanVal/2)}" style="text-align:center;font-size:12pt;">报告人：${reportUser}</td>
+        <td colspan="${Math.ceil(colSpanVal/2)}" style="text-align:center;font-size:12pt;">协作人：${helper}</td>
+      </tr>
+      <tr><td colspan="${colSpanVal}" style="font-weight:bold;font-size:12pt;text-align:center;">本周主要工作内容</td></tr>
+      <tr><td colspan="${colSpanVal}" style="padding:15px;line-height:1.8;font-size:12pt;">${mainWorkHtml}</td></tr>
+      <tr>${headHtml}</tr>
+      ${eventRows}
+    </table>
+    <p style="margin-top:20px;font-size:12pt;">甲方确认：______________</p>
+    </body></html>`;
+
+    let fileName = getFileName(reportTitle, period) + '.doc';
+    let blob = new Blob([html], { type: 'application/msword' });
+    let url = URL.createObjectURL(blob);
+    let a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
-  let html=`<html
-xmlns:v="urn:schemas-microsoft-com:vml"
-xmlns:o="urn:schemas-microsoft-com:office:office"
-xmlns:w="urn:schemas-microsoft-com:office:word"
-xmlns:m="http://schemas.microsoft.com/office/2004/12/omml"
-xmlns="http://www.w3.org/TR/REC-html40">
-<head>
-<meta charset="utf-8">
-<![if gte mso 9]><xml>
-<w:WordDocument>
-  <w:View>Print</w:View>
-  <w:Zoom>100</w:Zoom>
-</w:WordDocument>
-</xml><![endif]>
-<style>
-body{font-family:宋体;}
-table{width:100%;border-collapse:collapse;}
-td,th{border:1px solid #000;padding:8px;font-family:宋体;}
-.title{font-size:22pt;font-weight:bold;text-align:center;}
-.period{font-size:14pt;font-weight:bold;text-align:center;}
-</style>
-</head>
-<body>
-
-<table>
-  <tr><td colspan="${colSpanVal}" class="title">${reportTitle}</td></tr>
-  <tr><td colspan="${colSpanVal}" class="period">报告周期：${period}</td></tr>
-  <tr>
-    <td colspan="${Math.floor(colSpanVal/2)}" style="text-align:center;font-size:12pt;">报告人：${reportUser}</td>
-    <td colspan="${Math.ceil(colSpanVal/2)}" style="text-align:center;font-size:12pt;">协作人：${helper}</td>
-  </tr>
-  <tr><td colspan="${colSpanVal}" style="font-weight:bold;font-size:12pt;text-align:center;">本周主要工作内容</td></tr>
-  <tr><td colspan="${colSpanVal}" style="padding:15px;line-height:1.8;font-size:12pt;">${mainWorkHtml}</td></tr>
-
-  <tr>${headHtml}</tr>
-  ${eventRows}
-</table>
-<p style="margin-top:20px;font-size:12pt;">甲方确认：______________</p>
-</body>
-</html>`;
-
-  let fileName = getFileName(titleSel, period) + '.doc';
-  let blob=new Blob([html],{type:'application/msword'});
-  let url=URL.createObjectURL(blob);
-  let a=document.createElement('a');
-  a.href=url;
-  a.download=fileName;
-  a.click();
-  URL.revokeObjectURL(url);
-}
+  // 挂载全局函数
+  window.copyWork = copyWork;
+  window.cutWork = cutWork;
+  window.clearWork = clearWork;
+  window.copyEvent = copyEvent;
+  window.cutEvent = cutEvent;
+  window.clearEvent = clearEvent;
+  window.localSummary = localSummary;
+  window.generateAndExport = generateAndExport;
 </script>
 </body>
 </html>
