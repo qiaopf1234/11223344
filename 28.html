@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>绩效考核模板生成器 · 专业版</title>
+    <!-- ExcelJS & FileSaver -->
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+    <!-- Font Awesome 图标库 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', 'Microsoft YaHei', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        body {
+            min-height: 100vh;
+            background: linear-gradient(145deg, #f0f4ff 0%, #d9e2f0 100%);
+            padding: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .app-container {
+            max-width: 1440px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.55);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-radius: 40px;
+            padding: 30px 32px;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25), inset 0 1px 2px rgba(255,255,255,0.6);
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .header h1 {
+            font-size: 26px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #2d3b66, #5b6c9e);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: -0.5px;
+        }
+        .header h1 i {
+            margin-right: 10px;
+            color: #5b6c9e;
+            background: none;
+            -webkit-text-fill-color: #5b6c9e;
+        }
+        .header .badge {
+            background: rgba(91, 108, 158, 0.15);
+            padding: 6px 18px;
+            border-radius: 40px;
+            font-size: 13px;
+            color: #2d3b66;
+            font-weight: 500;
+            border: 1px solid rgba(91,108,158,0.15);
+        }
+        .main-grid {
+            display: grid;
+            grid-template-columns: 370px 1fr;
+            gap: 28px;
+        }
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-radius: 24px;
+            padding: 22px 24px;
+            border: 1px solid rgba(255,255,255,0.5);
+            box-shadow: 0 8px 20px -8px rgba(0,0,0,0.08);
+            transition: box-shadow 0.25s;
+        }
+        .card:hover {
+            box-shadow: 0 12px 28px -8px rgba(0,0,0,0.12);
+        }
+        .card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #2d3b66;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 0.3px;
+        }
+        .card-title i {
+            color: #5b6c9e;
+            width: 20px;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: #3d4a6b;
+            margin-bottom: 4px;
+        }
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid rgba(91, 108, 158, 0.2);
+            border-radius: 14px;
+            background: rgba(255,255,255,0.7);
+            font-size: 14px;
+            transition: all 0.2s;
+            outline: none;
+            color: #1e293b;
+            box-sizing: border-box;
+        }
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: #5b6c9e;
+            box-shadow: 0 0 0 3px rgba(91,108,158,0.15);
+            background: #ffffff;
+        }
+        .form-group input[readonly] {
+            background: rgba(240, 244, 255, 0.6);
+            cursor: not-allowed;
+        }
+        .sign-area {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            margin-top: 4px;
+        }
+        .sign-preview {
+            width: 100px;
+            height: 60px;
+            border: 2px dashed rgba(91,108,158,0.3);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.4);
+            font-size: 12px;
+            color: #6b7a9c;
+            overflow: hidden;
+        }
+        .sign-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        .sign-upload-btn {
+            display: inline-block;
+            padding: 6px 16px;
+            background: rgba(91,108,158,0.1);
+            border-radius: 40px;
+            font-size: 13px;
+            color: #2d3b66;
+            cursor: pointer;
+            border: 1px solid rgba(91,108,158,0.2);
+            transition: all 0.2s;
+        }
+        .sign-upload-btn:hover {
+            background: rgba(91,108,158,0.2);
+        }
+        .sign-upload-btn input[type="file"] {
+            display: none;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+        }
+        .table-wrapper table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .table-wrapper th,
+        .table-wrapper td {
+            border: 1px solid rgba(91, 108, 158, 0.15);
+            padding: 8px 12px;
+            vertical-align: middle;
+            background: rgba(255,255,255,0.3);
+        }
+        .table-wrapper th {
+            background: rgba(91, 108, 158, 0.08);
+            font-weight: 600;
+            color: #2d3b66;
+            text-align: center;
+        }
+        .table-wrapper textarea,
+        .table-wrapper input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            padding: 4px 0;
+            font-size: 13px;
+            resize: vertical;
+            outline: none;
+            font-family: inherit;
+        }
+        .table-wrapper textarea:focus,
+        .table-wrapper input:focus {
+            background: rgba(255,255,255,0.4);
+            border-radius: 4px;
+        }
+        .table-wrapper .readonly {
+            background: rgba(240, 244, 255, 0.3);
+            cursor: not-allowed;
+        }
+        .btn-sm {
+            padding: 4px 12px;
+            border: none;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .btn-sm.danger {
+            background: rgba(239, 68, 68, 0.15);
+            color: #b91c1c;
+        }
+        .btn-sm.danger:hover {
+            background: rgba(239, 68, 68, 0.25);
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+        .btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 40px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(91, 108, 158, 0.1);
+            color: #2d3b66;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #5b6c9e, #3d4a6b);
+            color: #fff;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px -6px rgba(91,108,158,0.4);
+        }
+        .btn-success {
+            background: linear-gradient(135deg, #2b8c6e, #1f6b54);
+            color: #fff;
+        }
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px -6px rgba(43,140,110,0.4);
+        }
+        .btn-warning {
+            background: linear-gradient(135deg, #d9a84c, #b8893a);
+            color: #fff;
+        }
+        .btn-warning:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px -6px rgba(217,168,76,0.4);
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid rgba(91,108,158,0.3);
+        }
+        .btn-outline:hover {
+            background: rgba(91,108,158,0.05);
+        }
+        .export-btn {
+            width: 100%;
+            padding: 14px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 40px;
+            background: linear-gradient(135deg, #2b8c6e, #1f6b54);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            transition: all 0.25s;
+            box-shadow: 0 8px 24px -6px rgba(43,140,110,0.3);
+            margin-top: 8px;
+        }
+        .export-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 14px 32px -8px rgba(43,140,110,0.4);
+        }
+        .export-btn i {
+            margin-right: 8px;
+        }
+        .score-table td:first-child {
+            text-align: center;
+        }
+        @media (max-width: 920px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+            .left-panel {
+                order: 2;
+            }
+            .right-panel {
+                order: 1;
+            }
+        }
+        @media (max-width: 600px) {
+            .app-container {
+                padding: 16px;
+            }
+            .header h1 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="header">
+        <h1><i class="fas fa-file-alt"></i>绩效考核模板生成器</h1>
+        <span class="badge"><i class="fas fa-check-circle" style="color:#2b8c6e;"></i> 精准行高列宽 1:1 还原</span>
+    </div>
+
+    <div class="main-grid">
+        <!-- 左栏 -->
+        <div class="left-panel">
+            <div class="card">
+                <div class="card-title"><i class="fas fa-user-cog"></i>基础信息</div>
+                <div class="form-group">
+                    <label>所属部门</label>
+                    <input id="dept" value="应用服务事业二部">
+                </div>
+                <div class="form-group">
+                    <label>乙方姓名</label>
+                    <input id="userName" value="乔鹏飞">
+                </div>
+                <div class="form-group">
+                    <label>甲方公司（固定）</label>
+                    <input id="companyA" value="内蒙古科电数据服务有限公司" readonly>
+                </div>
+                <div class="form-group" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                    <div>
+                        <label>考核开始</label>
+                        <input type="date" id="startDate">
+                    </div>
+                    <div>
+                        <label>考核结束</label>
+                        <input type="date" id="endDate">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><i class="fas fa-signature"></i>被考核人签名</div>
+                <div class="sign-area">
+                    <div class="sign-preview" id="signPreview">
+                        <img id="sign2Img" style="display:none;">
+                        <span id="sign2Tip">未上传</span>
+                    </div>
+                    <label class="sign-upload-btn">
+                        <i class="fas fa-cloud-upload-alt"></i> 上传图片
+                        <input type="file" accept="image/*" id="sign2File">
+                    </label>
+                </div>
+                <p style="font-size:12px; color:#6b7a9c; margin-top:8px;">支持 PNG/JPG，自动适配单元格大小</p>
+            </div>
+        </div>
+
+        <!-- 右栏 -->
+        <div class="right-panel">
+            <div class="card">
+                <div class="card-title"><i class="fas fa-tasks"></i>月度绩效考核表 · 任务管理</div>
+                <div class="table-wrapper">
+                    <table id="taskTable">
+                        <thead>
+                            <tr>
+                                <th style="width:6%;">序号</th>
+                                <th style="width:22%;">任务名称</th>
+                                <th style="width:32%;">关键结果</th>
+                                <th style="width:16%;">评分标准</th>
+                                <th style="width:10%;">占比分数</th>
+                                <th style="width:10%;">考核得分</th>
+                                <th style="width:4%;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="taskBody">
+                            <tr>
+                                <td class="operate">1</td>
+                                <td><textarea rows="2" class="readonly" readonly>教育厅基础教育大数据系统</textarea></td>
+                                <td><textarea rows="4" placeholder="填写本月运维、故障处理、版本迭代等工作内容"></textarea></td>
+                                <td><textarea rows="2" class="readonly" readonly>1.运维驻场工作，分值占比50%。2.按实际完成日常运维及问题处理。</textarea></td>
+                                <td><input value="45" class="readonly" readonly></td>
+                                <td><input></td>
+                                <td class="operate"><button class="btn-sm danger" onclick="delRow(this)"><i class="fas fa-trash-alt"></i></button></td>
+                            </tr>
+                            <tr>
+                                <td class="operate">2</td>
+                                <td><textarea rows="2" class="readonly" readonly>教育厅机关、民办、体质健康多系统运维</textarea></td>
+                                <td><textarea rows="4" placeholder="填写各平台巡检、台账、业务支撑工作"></textarea></td>
+                                <td><textarea rows="2" class="readonly" readonly>1.日常运维及问题处理。2.运维台账整理，响应及时性。</textarea></td>
+                                <td><input value="10" class="readonly" readonly></td>
+                                <td><input></td>
+                                <td class="operate"><button class="btn-sm danger" onclick="delRow(this)"><i class="fas fa-trash-alt"></i></button></td>
+                            </tr>
+                            <tr>
+                                <td class="operate">3</td>
+                                <td><textarea rows="2" class="readonly" readonly>大青山管理局OA协同办公系统</textarea></td>
+                                <td><textarea rows="4" placeholder="OA故障、账号、流程、打印设备维护记录"></textarea></td>
+                                <td><textarea rows="2" class="readonly" readonly>日常运维、流程故障快速处置，保障办公流转。</textarea></td>
+                                <td><input value="35" class="readonly" readonly></td>
+                                <td><input></td>
+                                <td class="operate"><button class="btn-sm danger" onclick="delRow(this)"><i class="fas fa-trash-alt"></i></button></td>
+                            </tr>
+                            <tr>
+                                <td class="operate">4</td>
+                                <td><textarea rows="2" class="readonly" readonly>司法厅电子公文协同办公系统</textarea></td>
+                                <td><textarea rows="4" placeholder="公文流程、签名、兼容性、账号管控等工作"></textarea></td>
+                                <td><textarea rows="2" class="readonly" readonly>流程运维、BUG反馈、公文标准化处理。</textarea></td>
+                                <td><input value="10" class="readonly" readonly></td>
+                                <td><input></td>
+                                <td class="operate"><button class="btn-sm danger" onclick="delRow(this)"><i class="fas fa-trash-alt"></i></button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="addTask()"><i class="fas fa-plus-circle"></i>新增任务行</button>
+                    <button class="btn btn-warning" onclick="unlockTask()"><i class="fas fa-unlock-alt"></i>解锁修改</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><i class="fas fa-minus-circle"></i>扣分项标准附表</div>
+                <div class="table-wrapper score-table">
+                    <table id="scoreTable">
+                        <thead>
+                            <tr>
+                                <th>序号</th>
+                                <th>其他考核项</th>
+                                <th>情形说明</th>
+                                <th>考核标准</th>
+                                <th>扣分值</th>
+                                <th>本次减分</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>1</td><td>工作纪律</td><td>无故迟到早退旷工</td><td>扣5分/次</td><td>5</td><td><input></td></tr>
+                            <tr><td>2</td><td>工作纪律</td><td>散播负面言论影响团队</td><td>扣20分/次</td><td>20</td><td><input></td></tr>
+                            <tr><td>3</td><td>工作纪律</td><td>泄露篡改用户数据</td><td>扣20分/次</td><td>20</td><td><input></td></tr>
+                            <tr><td>4</td><td>工作纪律</td><td>上班游戏吸烟</td><td>扣5分/次</td><td>5</td><td><input></td></tr>
+                            <tr><td>5</td><td>客户满意度</td><td>用户有效投诉</td><td>扣10分/次</td><td>10</td><td><input></td></tr>
+                            <tr><td>6</td><td>客户满意度</td><td>我方主要责任被甲方考核</td><td>扣20分/次</td><td>20</td><td><input></td></tr>
+                            <tr><td>7</td><td>文档规范</td><td>资料延迟缺失</td><td>扣5分/次</td><td>5</td><td></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title"><i class="fas fa-pen-fancy"></i>任务完成自我评价</div>
+                <textarea id="selfEval" rows="3" style="width:100%; border:1px solid rgba(91,108,158,0.2); border-radius:14px; padding:12px; background:rgba(255,255,255,0.5); font-family:inherit; font-size:14px;">加强专业技术操作，巩固所学技术知识，完善相关工作专业。</textarea>
+                <button class="export-btn" onclick="exportAllExcel()"><i class="fas fa-file-excel"></i> 一键导出完整 Excel（合约+考核）</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // =====================================================================
+    // 核心变量与函数
+    // =====================================================================
+    // ★★★ 在此处填写您签名图片的 Base64 编码（完整 data:image/png;base64,xxxx）★★★
+    let sign2Base64 = "data:image/png;base64,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";
+    let taskLock = true;
+
+    window.onload = function(){
+        initDate();
+        if(sign2Base64 && sign2Base64.startsWith("data:image/")){
+            document.getElementById("sign2Img").src = sign2Base64;
+            document.getElementById("sign2Img").style.display = "block";
+            document.getElementById("sign2Tip").style.display = "none";
+        }
+    }
+
+    function initDate(){
+        const today = new Date();
+        const y = today.getFullYear();
+        const m = today.getMonth();
+        const first = new Date(y, m, 1).toISOString().split('T')[0];
+        const last = new Date(y, m + 1, 0).toISOString().split('T')[0];
+        document.getElementById('startDate').value = first;
+        document.getElementById('endDate').value = last;
+    }
+
+    // 手动上传签名
+    document.getElementById('sign2File').onchange = function(e){
+        const file = e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = res=>{
+            sign2Base64 = res.target.result;
+            document.getElementById("sign2Img").src = sign2Base64;
+            document.getElementById("sign2Img").style.display = "block";
+            document.getElementById("sign2Tip").innerText = "已上传";
+        }
+    }
+
+    // 新增任务行
+    function addTask(){
+        const body = document.getElementById('taskBody');
+        const idx = body.children.length + 1;
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+    <td class="operate">${idx}</td>
+    <td><textarea rows="2" ${taskLock ? 'class="readonly" readonly' : ''}>自定义任务名称</textarea></td>
+    <td><textarea rows="4" placeholder="填写工作内容"></textarea></td>
+    <td><textarea rows="2" ${taskLock ? 'class="readonly" readonly' : ''}>按运维工作量评分</textarea></td>
+    <td><input value="10" ${taskLock ? 'class="readonly" readonly' : ''}></td>
+    <td><input></td>
+    <td class="operate"><button class="btn-sm danger" onclick="delRow(this)"><i class="fas fa-trash-alt"></i></button></td>
+        `;
+        body.appendChild(tr);
+    }
+
+    // 删除任务行
+    function delRow(btn){
+        const tr = btn.closest('tr');
+        if(document.querySelectorAll("#taskBody tr").length <= 1){
+            alert("至少保留一条任务！");
+            return;
+        }
+        tr.remove();
+        document.querySelectorAll("#taskBody tr").forEach((row,i)=>{
+            row.children[0].innerText = i+1;
+        })
+    }
+
+    // 解锁/锁定任务
+    function unlockTask(){
+        taskLock = !taskLock;
+        const texts = document.querySelectorAll("#taskBody textarea:not([placeholder])");
+        const inputs = document.querySelectorAll("#taskBody input.readonly");
+        if(taskLock){
+            texts.forEach(t=>{t.readOnly=true;t.classList.add('readonly')});
+            inputs.forEach(i=>{i.readOnly=true;i.classList.add('readonly')});
+            alert("已锁定，无法修改任务名称、分值");
+        }else{
+            texts.forEach(t=>{t.readOnly=false;t.classList.remove('readonly')});
+            inputs.forEach(i=>{i.readOnly=false;i.classList.remove('readonly')});
+            alert("已解锁，可修改任务基础信息");
+        }
+    }
+
+    // ---------- Base64 转 Uint8Array（兼容带前缀） ----------
+    function base64ToUint8(base64Str){
+        let raw = base64Str;
+        if (base64Str.startsWith('data:image/')) {
+            raw = base64Str.replace(/^data:image\/(png|jpeg);base64,/, '');
+        }
+        const binaryString = atob(raw);
+        const len = binaryString.length;
+        const bytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        return bytes;
+    }
+
+    // =====================================================================
+    // 导出函数（含签名图片精准嵌入）
+    // =====================================================================
+    async function exportAllExcel(){
+        const wb = new ExcelJS.Workbook();
+        const dept = document.getElementById('dept').value || "";
+        const userName = document.getElementById('userName').value || "";
+        const companyA = document.getElementById('companyA').value || "";
+        const startDate = document.getElementById('startDate').value || "";
+        const endDate = document.getElementById('endDate').value || "";
+        const contractDate = startDate;
+        const selfEval = document.getElementById('selfEval').value || "";
+
+        function toChineseDate(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return dateStr;
+            const year = parseInt(parts[0]);
+            const month = parseInt(parts[1]);
+            const day = parseInt(parts[2]);
+            return `${year}年${month}月${day}日`;
+        }
+
+        // ---------- Sheet1 绩效考核合约 ----------
+        const sheet1 = wb.addWorksheet("绩效考核合约");
+        sheet1.columns = [
+            {width: 11.26},
+            {width: 22.26},
+            {width: 5.76},
+            {width: 12.76},
+            {width: 13.51},
+            {width: 19.63}
+        ];
+
+        const defaultFont = {name: "宋体", size: 11, color: {argb: "FF000000"}};
+        const boldFont = {name: "宋体", size: 11, bold: true, color: {argb: "FF000000"}};
+        const redFont = {name: "宋体", size: 11, color: {argb: "FFFF0000"}};
+        const redBoldFont = {name: "宋体", size: 11, bold: true, color: {argb: "FFFF0000"}};
+
+        function setBorder(cell){
+            cell.border = {
+                top: {style: "thin", color: {argb: "FF000000"}},
+                left: {style: "thin", color: {argb: "FF000000"}},
+                right: {style: "thin", color: {argb: "FF000000"}},
+                bottom: {style: "thin", color: {argb: "FF000000"}}
+            };
+        }
+
+        function isCenterCell(row, col){
+            const centerList = [
+                [1,1], [2,1], [2,2], [2,4], [2,6],
+                [3,1], [3,2], [3,4], [3,6],
+                [6,1],
+                [17,1], [18,1], [18,2], [18,3], [18,5], [18,6]
+            ];
+            return centerList.some(([r,c]) => r===row && c===col);
+        }
+
+        function setCell(row, col, value, font, mergeCols = 0){
+            const cell = sheet1.getRow(row).getCell(col);
+            cell.value = value;
+            if(font) cell.font = font;
+            const isCenter = isCenterCell(row, col);
+            const h = isCenter ? 'center' : 'justify';
+            const v = isCenter ? 'middle' : 'middle';
+            cell.alignment = {horizontal: h, vertical: v, wrapText: true};
+            setBorder(cell);
+            if(mergeCols > 1){
+                sheet1.mergeCells(row, col, row, col + mergeCols - 1);
+            }
+        }
+
+        function setMergedRow(row, value, font){
+            sheet1.mergeCells(`A${row}:F${row}`);
+            setCell(row, 1, value, font);
+        }
+
+        const rowHeights1 = [22, 22, 24.75, 20.1, 15, 12, 15, 67, 14, 57, 12, 13, 20.1, 233, 20.1, 48, 26, 43];
+        sheet1.getRow(1).height = rowHeights1[0];
+        setMergedRow(1, "绩效考核合约", boldFont);
+
+        sheet1.getRow(2).height = rowHeights1[1];
+        setCell(2, 1, "名称", boldFont);
+        sheet1.mergeCells(2,2,2,3);
+        setCell(2, 2, "绩效考核合约", boldFont);
+        sheet1.mergeCells(2,4,2,5);
+        setCell(2, 4, "考核日期", boldFont);
+        setCell(2, 6, toChineseDate(contractDate), redBoldFont);
+
+        sheet1.getRow(3).height = rowHeights1[2];
+        setCell(3, 1, "甲方", boldFont);
+        sheet1.mergeCells(3,2,3,3);
+        setCell(3, 2, companyA, boldFont);
+        sheet1.mergeCells(3,4,3,5);
+        setCell(3, 4, "乙方", boldFont);
+        setCell(3, 6, userName, defaultFont);
+
+        sheet1.getRow(4).height = rowHeights1[3];
+        setMergedRow(4, "根据公司及部门年度经营目标与个人岗位要求，经双方充分协商，特制定本考核合约。", defaultFont);
+
+        sheet1.getRow(5).height = rowHeights1[4];
+        setMergedRow(5, "一、考核期限", boldFont);
+
+        sheet1.getRow(6).height = rowHeights1[5];
+        sheet1.mergeCells(`A6:F6`);
+        setCell(6, 1, `${toChineseDate(startDate)}—${toChineseDate(endDate)}`, redFont);
+
+        sheet1.getRow(7).height = rowHeights1[6];
+        setMergedRow(7, "二、双方的权利和义务", boldFont);
+
+        sheet1.getRow(8).height = rowHeights1[7];
+        const dutyText = "1、甲方拥有对乙方的监督考核权，并有指导、协助乙方展开工作的责任；\n2、乙方负责所在岗位的工作，要求保质保量地完成公司规定的相应工作，在工作上服从甲方的安排；\n3、乙方可向人力资源部以邮件形式对认定考核评分不合理的若干情况进行申诉，人力资源部会开展评分调查，及时对相关申诉予以处理；";
+        setMergedRow(8, dutyText, defaultFont);
+
+        sheet1.getRow(9).height = rowHeights1[8];
+        setMergedRow(9, "三、绩效工资核发", boldFont);
+
+        sheet1.getRow(10).height = rowHeights1[9];
+        const salaryText = "1、项目经理岗位按照项目周期发放绩效工资，项目周期内，按照月度绩效工资的70%发放，到项目交付月，补发周期内若干月的绩效补差；\n2、管理四类岗位、项目实施类岗位、技术运维类岗位、高级技术和业务咨询类岗位等按照季度考核发放绩效，季度内，按照绩效工资的70%发放，到季度末，补发季度内三个月的绩效补差；";
+        setMergedRow(10, salaryText, defaultFont);
+
+        sheet1.getRow(11).height = rowHeights1[10];
+        setMergedRow(11, "四、工作目标与考核", boldFont);
+
+        sheet1.getRow(12).height = rowHeights1[11];
+        setMergedRow(12, "详见附件：《绩效考核表》", boldFont);
+
+        sheet1.getRow(13).height = rowHeights1[12];
+        setMergedRow(13, "五、其他规定", boldFont);
+
+        sheet1.getRow(14).height = rowHeights1[13];
+        const otherText = "1、考核人在考核周期前，需要提前制定被考核人绩效指标，同时报部门负责人评定；\n2、部门负责人评定对考核人制定的绩效指标评定通过后，由考核人在考核周期前，提前做好绩效面谈（上周期考核结果面谈和本周期的工作计划或任务目标），让被考核者清晰周期内的工作安排；\n3、每次考核合约和绩效考核表都需打印、签字，后提交至人力资源部备案，存档；\n4、技术负责人需充分配合项目经理做好任务拆解和目标规划，项目经理需在季度下旬做好任务目标的维护和更新，避免出现任务目标脱轨；\n5、考核者需要有意识的拉开部门绩效分数层次，对同岗位多位员工进行对比式评价，同时，有需考核者具备公平、端正、严谨的考评思想，能够充分调动绩效激励机制，不鼓励“大锅饭”；\n6、原则上，公司年终评优人员的范围圈定，是依据绩效考核得分情况在部门内选取；\n7、被考核者要端正考核态度，对“任务完成情况自我评价分析”的评价结果，有意识的进行提高和改进；\n8、人力资源部会以部门为单位对绩效结果进行不定时抽查，对绩效结果多次、明显高出部门均分水平的，人力资源部会与相关考核部门的部门经理进行沟通、了解，并要求在公司例会上说明缘由；\n9、绩效分数低于70分的，即算作本考核周期内工作质量不合格，本周期绩效直接按0分处理，该环节由人力资源部执行；\n10、考核周期未结束员工申请离职的，人力资源部按50%绩效工资结算发放。";
+        setMergedRow(14, otherText, defaultFont);
+
+        sheet1.getRow(15).height = rowHeights1[14];
+        setMergedRow(15, "六、附则", boldFont);
+
+        sheet1.getRow(16).height = rowHeights1[15];
+        const appendixText = "1、考核结果作为兑现绩效工资的依据和制订工作计划的参考；\n2、本合约未尽事宜，情况发生时在征求总经理意见后，由公司另行研究确定解决办法；\n3、本合约解释权归公司人力资源部；";
+        setMergedRow(16, appendixText, defaultFont);
+
+        sheet1.getRow(17).height = rowHeights1[16];
+        setCell(17, 1, "相关说明", boldFont);
+        sheet1.mergeCells(17,2,17,6);
+        setCell(17, 2, "本合约附件考核指标表，签署本合约同时即为双方同意本考核期内岗位考核指标及权重。", defaultFont);
+
+        sheet1.getRow(18).height = rowHeights1[17];
+        setCell(18, 1, "所属部门", boldFont);
+        setCell(18, 2, dept, defaultFont);
+        setCell(18, 3, "考核人签字", boldFont);
+        setCell(18, 4, "", defaultFont);
+        setCell(18, 5, "被考核者签字", boldFont);
+        setCell(18, 6, "", defaultFont);
+
+        // ---------- 插入签名图片到 Sheet1 F18 ----------
+        if(sign2Base64 && sign2Base64.startsWith("data:image/")){
+            try {
+                const pure64 = sign2Base64.replace(/^data:image\/(png|jpeg);base64,/, '');
+                const ext = sign2Base64.includes("png") ? "png" : "jpeg";
+                const uint8 = base64ToUint8(pure64);
+                const imgId = wb.addImage({
+                    buffer: uint8.buffer,
+                    extension: ext
+                });
+                sheet1.addImage(imgId, {
+                    tl: { col: 5.5, row: 17.0 },
+                    br: { col: 6.0, row: 18.3 },
+                    editAs: 'oneCell'
+                });
+            } catch(e) {
+                console.warn("插入 Sheet1 签名图片失败:", e);
+            }
+        }
+
+        // ---------- Sheet2 月度绩效考核表 ----------
+        const sheet2 = wb.addWorksheet("月度绩效考核表");
+        sheet2.columns = [
+            {width: 8.63},
+            {width: 31.72},
+            {width: 81.49},
+            {width: 31.74},
+            {width: 14.63},
+            {width: 16.26}
+        ];
+
+        const rowHeights2 = [
+            31, 30, 21, 265, 363.75, 339, 409, 23, 38, 36, 36,
+            35, 35, 35, 35, 35, 35, 46, 46, 35, 75, 35, 35,
+            35, 35, 35, 35, 35, 62, 36, 35, 35, 35, 39
+        ];
+        for(let i=1; i<=rowHeights2.length; i++){
+            sheet2.getRow(i).height = rowHeights2[i-1];
+        }
+
+        function setBorder2(cell){
+            cell.border = {
+                top: {style: "thin", color: {argb: "FF000000"}},
+                left: {style: "thin", color: {argb: "FF000000"}},
+                right: {style: "thin", color: {argb: "FF000000"}},
+                bottom: {style: "thin", color: {argb: "FF000000"}}
+            };
+        }
+
+        function fillColor2(row, colStart, colEnd, color){
+            for(let c=colStart; c<=colEnd; c++){
+                const cell = sheet2.getRow(row).getCell(c);
+                cell.fill = {type: 'pattern', pattern:'solid', fgColor:{argb: color}};
+            }
+        }
+
+        function setCell2(row, col, value, font, alignH = 'left', alignV = 'middle', wrap = true){
+            const cell = sheet2.getRow(row).getCell(col);
+            cell.value = value;
+            if(font) cell.font = font;
+            cell.alignment = {horizontal: alignH, vertical: alignV, wrapText: wrap};
+            setBorder2(cell);
+        }
+
+        function mergeCell2(row, colStart, colEnd, value, font, alignH = 'left', alignV = 'middle'){
+            sheet2.mergeCells(row, colStart, row, colEnd);
+            setCell2(row, colStart, value, font, alignH, alignV);
+        }
+
+        function mergeRow2(row, value, font, alignH = 'center', alignV = 'middle'){
+            sheet2.mergeCells(row, 1, row, 6);
+            setCell2(row, 1, value, font, alignH, alignV);
+        }
+
+        const yaHei10 = {name: "微软雅黑", size: 10, color: {argb: "FF000000"}};
+        const yaHei10Bold = {name: "微软雅黑", size: 10, bold: true, color: {argb: "FF000000"}};
+        const yaHei9Bold = {name: "微软雅黑", size: 9, bold: true, color: {argb: "FF000000"}};
+        const song10 = {name: "宋体", size: 10, color: {argb: "FF000000"}};
+
+        // 行1 标题
+        mergeRow2(1, contractDate ? `${contractDate.slice(0,4)}年${contractDate.slice(5,7)}月绩效考核表` : "月度绩效考核表", 
+            {name: "微软雅黑", size: 14, bold: true}, 'center', 'middle');
+
+        // 行2
+        mergeCell2(2, 1, 2, "部门：" + dept, yaHei10Bold, 'left', 'middle');
+        setCell2(2, 3, "姓名：" + userName, yaHei10Bold, 'left', 'middle');
+        setCell2(2, 5, "考核日期：", yaHei10Bold, 'left', 'middle');
+        setCell2(2, 6, toChineseDate(contractDate), yaHei10Bold, 'left', 'middle');
+
+        // 行3 表头
+        const headers = ["序号", "任务名称", "关键结果", "评分标准", "占比分数", "考核得分"];
+        headers.forEach((h, idx) => {
+            setCell2(3, idx+1, h, yaHei9Bold, 'center', 'middle');
+        });
+        fillColor2(3, 1, 6, "FF92D050");
+
+        // 行4-7 任务数据
+        const taskRows = document.querySelectorAll("#taskBody tr");
+        const fixedD = {
+            4: "1.运维驻场工作，分值占比50%。\n2.按实际完成日常运维及问题处理。\n3.系统相关文档编写及核对整理。\n4.问题处理及时性和响应性。",
+            5: "1.日常运维及问题处理。\n2.系统相关文档编写及核对整理。\n3.问题处理及时性和响应性。",
+            6: "1.日常运维及问题处理。\n2.系统相关文档编写及核对整理。\n3.问题处理及时性和响应性。",
+            7: "1.运维驻场工作，分值占比42%。\n2.按实际完成日常运维及问题处理。\n3.系统相关文档编写及核对整理。\n4.问题处理及时性和响应性。"
+        };
+        let taskRow = 4;
+        taskRows.forEach((tr, index) => {
+            const inputs = tr.querySelectorAll("textarea,input");
+            const seq = tr.querySelector('td')?.innerText || (index+1);
+            setCell2(taskRow, 1, seq, yaHei10, 'center', 'middle');
+            setCell2(taskRow, 2, inputs[0]?.value || "", yaHei10, 'center', 'middle');
+            setCell2(taskRow, 3, inputs[1]?.value || "", yaHei10, 'left', 'top');
+            let dVal = inputs[2]?.value || "";
+            if (taskRow >= 4 && taskRow <= 7) {
+                dVal = fixedD[taskRow] || dVal;
+            }
+            setCell2(taskRow, 4, dVal, yaHei10, 'left', 'middle');
+            setCell2(taskRow, 5, inputs[3]?.value || "", yaHei10, 'center', 'middle');
+            setCell2(taskRow, 6, inputs[4]?.value || "", yaHei10, 'center', 'middle');
+            taskRow++;
+        });
+
+        // 行8
+        setCell2(8, 1, "", yaHei10);
+        setCell2(8, 2, "", yaHei10);
+        setCell2(8, 3, "", yaHei10);
+        setCell2(8, 4, "占比分数", yaHei9Bold, 'center', 'middle');
+        setCell2(8, 5, "占比分数", yaHei9Bold, 'center', 'middle');
+        setCell2(8, 6, "考核得分", yaHei9Bold, 'center', 'middle');
+        fillColor2(8, 1, 6, "FF87A2C2");
+
+        // 行9
+        setCell2(9, 1, "", yaHei10);
+        setCell2(9, 2, "", yaHei10);
+        setCell2(9, 3, "", yaHei10);
+        setCell2(9, 4, "", yaHei10);
+        setCell2(9, 5, 100, yaHei10, 'center', 'middle');
+        setCell2(9, 6, 0, yaHei10, 'center', 'middle');
+
+        // 行10 扣分表头
+        const scoreHeader = ["序号", "其他考核项", "情形说明", "考核标准", "占比", "减分项"];
+        scoreHeader.forEach((h, idx) => {
+            setCell2(10, idx+1, h, yaHei9Bold, 'center', 'middle');
+        });
+        fillColor2(10, 1, 6, "FF92D050");
+
+        // 行11-29 固定扣分数据
+        const fixedScore = [
+            ["工作纪律", "无故出现迟到、早退、旷工等情况。", "扣5分次"],
+            ["工作纪律", "引导其他人消极怠工，发表不当言论，对整个团队起到负面影响。", "扣 20分/次"],
+            ["工作纪律", "未经用户授权随意泄露、篡改、恶意损毁用户信息。", "扣 20分/次"],
+            ["工作纪律", "上班期间违反劳动纪律在办公室内吸烟、酗酒、吵闹、玩游戏等。", "扣5分/次"],
+            ["工作纪律", "办公区域及公共区域内私拉乱接电线或安装使用电器设备。", "扣5分/次"],
+            ["工作纪律", "私自更改系统底表业务数据或私自使用用户账号进行业务操作。", "扣20分次"],
+            ["工作纪律", "在未履行完集团公司、业主单位的审批手续前私自导出系统数据并提交第三方人员。", "扣10分/次"],
+            ["工作纪律", "违反安全纪律如个人办公终端或所负责设备存在弱口令、违规外联、引起病毒传播等情况，或发生人为引起的安全事件，末制定落实风险点控制措施的情况下，对运维对象进行版本升级、漏洞修复、数据操作。", "扣20分次"],
+            ["工作纪律", "末制定落实风险点控制措施的情况下，对运维对象进行版本升级、漏洞修复、数据操作。", "扣20分/次"],
+            ["工作纪律", "所负责工作出现异常情况，未第一时间与模块负责人、项目经理汇报。", "扣5分/次"],
+            ["工作纪律", "不能按时提交公司周报(提交时间为当周最后一个工作日晚上24:00 前)", "1、当月发生一次:扣5分/次;\n2、当月累计发生三次;扣 20 分;\n3、当月累计发生三次以上(不包括三次);本月绩效0分"],
+            ["工作态度", "工作态度消极，不能按时完成当天工作任务。", "扣10分/次"],
+            ["工作稳定性", "未提前一个月告知离职，没有及时发起公司离职流程，未经同意擅自离岗离职。", "扣10分/次"],
+            ["客户满意度", "未引起客户投诉，但影响面较大的质量问题", "扣5分/次"],
+            ["客户满意度", "发生用户因服务态度差、问题解决时效慢等情况投诉", "扣10分次"],
+            ["客户满意度", "因我方主要责任被客户考核", "扣20分/次"],
+            ["客户满意度", "因我方次要责任被客户考核", "扣10分次"],
+            ["文档规范性", "按照要求提交项目过程资料，及时性、完整性、准确性、真实性等方面存在问题，出现重新编写、修订", "扣5分/次"],
+            ["其他", "1)未在上述提及减分指标项的;\n2)受到用户书面表扬等提高公形象的，或经常加班完成临时性工作或紧急工作任务等加速公司业绩成进度的，或在运维工作中为公司挖掘项目机会，给公司带来项目价值的，经公司领导同意，可酌情加分。", "视实际情况而定"]
+        ];
+
+        let scoreRow = 11;
+        fixedScore.forEach(item => {
+            setCell2(scoreRow, 1, scoreRow - 10, yaHei10, 'center', 'middle');
+            setCell2(scoreRow, 2, item[0], yaHei10, 'left', 'middle');
+            setCell2(scoreRow, 3, item[1], yaHei10, 'left', 'middle');
+            setCell2(scoreRow, 4, item[2], yaHei10, 'left', 'middle');
+            setCell2(scoreRow, 5, "", yaHei10);
+            setCell2(scoreRow, 6, "", yaHei10);
+            scoreRow++;
+        });
+
+        // 行30
+        setCell2(30, 1, "", yaHei10);
+        setCell2(30, 2, "", yaHei10);
+        setCell2(30, 3, "", yaHei10);
+        setCell2(30, 4, "占比分数", yaHei9Bold, 'center', 'middle');
+        setCell2(30, 5, "占比分数", yaHei9Bold, 'center', 'middle');
+        setCell2(30, 6, "考核得分", yaHei9Bold, 'center', 'middle');
+        fillColor2(30, 1, 6, "FF87A2C2");
+
+        // 行31 合计
+        mergeCell2(31, 1, 4, "合计：", yaHei10Bold, 'center', 'middle');
+        setCell2(31, 5, "", yaHei10);
+        setCell2(31, 6, "", yaHei10);
+
+        // 行32 自我评价
+        mergeCell2(32, 1, 2, "任务完成情况自我评价分析", yaHei10Bold, 'center', 'middle');
+        mergeCell2(32, 3, 6, selfEval, yaHei10Bold, 'center', 'middle');
+
+        // 行33 签字栏
+        mergeCell2(33, 1, 2, "考核人签字：", yaHei10Bold, 'center', 'middle');
+        setCell2(33, 3, "", yaHei10);
+        mergeCell2(33, 4, 4, "被考核者签字：", yaHei10Bold, 'center', 'middle');
+        setCell2(33, 5, "", yaHei10);
+        setCell2(33, 6, "", yaHei10);
+
+        // 行34 备注
+        mergeRow2(34, "注：如经部门决定被考核人于本季度参与上述未列出的其他任务，致使上述某一任务或某几项任务出现延期未完成等情况，本考核表将对任务列表进行调整", 
+            song10, 'left', 'middle');
+
+        // ---------- 插入签名图片到 Sheet2 E33 ----------
+        if(sign2Base64 && sign2Base64.startsWith("data:image/")){
+            try {
+                const pure64 = sign2Base64.replace(/^data:image\/(png|jpeg);base64,/, '');
+                const ext = sign2Base64.includes("png") ? "png" : "jpeg";
+                const uint8 = base64ToUint8(pure64);
+                const imgId = wb.addImage({
+                    buffer: uint8.buffer,
+                    extension: ext
+                });
+                sheet2.addImage(imgId, {
+                    tl: { col: 4.5, row: 32.0 },
+                    br: { col: 5.0, row: 33.0 },
+                    editAs: 'oneCell'
+                });
+            } catch(e) {
+                console.warn("插入 Sheet2 签名图片失败:", e);
+            }
+        }
+
+        // ===== 导出 =====
+        const buf = await wb.xlsx.writeBuffer();
+        const blob = new Blob([buf], {type:"application/octet-stream"});
+        saveAs(blob, `${contractDate ? contractDate.slice(0,4)+"年"+contractDate.slice(5,7)+"月" : "月度"}绩效考核_${userName}.xlsx`);
+    }
+</script>
+</body>
+</html>
