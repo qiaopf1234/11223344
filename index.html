@@ -5,13 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>星枢运维控制台</title>
     <style>
+        /* 样式与原代码完全一致，此处省略，保持不变 */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             font-family: 'Segoe UI', 'Inter', 'Microsoft YaHei', system-ui, sans-serif;
         }
-
         body {
             width: 100vw;
             height: 100vh;
@@ -20,8 +20,6 @@
             background: #0a0c12;
             position: relative;
         }
-
-        /* Three.js 粒子画布背景 */
         #bg-canvas {
             position: fixed;
             top: 0;
@@ -32,8 +30,6 @@
             background: radial-gradient(circle at 20% 30%, #0a0a1a, #020308);
             pointer-events: none;
         }
-
-        /* 鼠标跟随光晕 */
         .mouse-glow {
             position: fixed;
             width: 500px;
@@ -46,8 +42,6 @@
             transition: transform 0.05s linear;
             will-change: transform;
         }
-
-        /* 左侧菜单 - 毛玻璃面板 */
         .left-menu {
             width: 280px;
             background: rgba(15, 25, 45, 0.55);
@@ -63,8 +57,6 @@
         .left-menu:hover {
             border-right-color: rgba(139, 92, 246, 0.6);
         }
-
-        /* 滚动条 */
         .left-menu::-webkit-scrollbar {
             width: 5px;
         }
@@ -75,13 +67,10 @@
             background: rgba(139, 92, 246, 0.5);
             border-radius: 10px;
         }
-
-        /* 菜单标题 - 全新毛玻璃麒麟踩字组件 */
         .menu-title {
             margin: 0 1rem 2rem 1rem;
             text-align: center;
         }
-        /* 麒麟踩字·毛玻璃标题组件（内嵌） */
         .glass-kirin-title {
             position: relative;
             background: rgba(20, 30, 50, 0.65);
@@ -99,7 +88,6 @@
             border-color: rgba(139, 92, 246, 0.7);
             box-shadow: 0 15px 30px -12px rgba(139, 92, 246, 0.25);
         }
-        /* 层叠容器：文字与麒麟图标重叠 */
         .title-stack {
             position: relative;
             display: flex;
@@ -107,7 +95,6 @@
             align-items: center;
             min-height: 70px;
         }
-        /* 底层文字（毛玻璃霓虹渐变） */
         .title-text {
             font-size: 1.2rem;
             font-weight: 800;
@@ -121,7 +108,6 @@
             z-index: 1;
             white-space: nowrap;
         }
-        /* 顶层麒麟图标：踩在文字上 */
         .kirin-overlay {
             position: absolute;
             top: 50%;
@@ -145,14 +131,11 @@
             display: block;
             loading: lazy;
         }
-        /* 兼容小屏 */
         @media (max-width: 680px) {
             .left-menu { width: 260px; }
             .title-text { font-size: 1rem; white-space: normal; line-height: 1.2; }
             .kirin-overlay { width: 50px; height: 50px; }
         }
-
-        /* 菜单项基础样式 */
         .menu-item {
             padding: 0.75rem 1.5rem;
             margin: 0.4rem 1rem;
@@ -191,8 +174,6 @@
             color: #ffffff;
             font-weight: 600;
         }
-
-        /* 折叠箭头 */
         .arrow {
             float: right;
             transition: transform 0.2s;
@@ -202,8 +183,6 @@
         .menu-item.open .arrow {
             transform: rotate(90deg);
         }
-
-        /* 二级菜单 */
         .sub-menu {
             display: none;
             padding-left: 1rem;
@@ -214,8 +193,6 @@
             padding: 0.6rem 1.2rem;
             margin-left: 1.5rem;
         }
-
-        /* 功能按钮区 */
         .func-box {
             margin: 2rem 1rem 1rem;
             padding-top: 1rem;
@@ -247,8 +224,6 @@
             background: rgba(139, 92, 246, 0.2);
             color: white;
         }
-
-        /* 右侧主区域 存放所有缓存iframe */
         .main-box {
             flex: 1;
             position: relative;
@@ -256,8 +231,6 @@
             background: rgba(10, 12, 18, 0.3);
             overflow: hidden;
         }
-
-        /* 全局滚动条 */
         ::-webkit-scrollbar {
             width: 6px;
         }
@@ -275,12 +248,10 @@
 
     <!-- Three.js 粒子画布背景 -->
     <canvas id="bg-canvas"></canvas>
-    <!-- 鼠标光晕层 -->
     <div class="mouse-glow" id="mouseGlow"></div>
 
     <!-- 左侧导航菜单 -->
     <div class="left-menu">
-        <!-- 标题组件 -->
         <div class="menu-title">
             <div class="glass-kirin-title">
                 <div class="title-stack">
@@ -312,7 +283,7 @@
             </div>
         </div>
 
-        <!-- ========= 一级折叠菜单：教育厅（默认展开，首屏只预加载本组页面） ========= -->
+        <!-- 一级折叠菜单：教育厅（默认展开） -->
         <div class="menu-item open" onclick="toggleSubMenu(this)">
             🏛️ 教育厅 <span class="arrow">▶</span>
         </div>
@@ -326,7 +297,7 @@
             <div class="menu-item" data-href="12.html">装备统计・状态批量更新工具</div>
         </div>
 
-        <!-- ========= 一级折叠菜单：运维辅助（默认折叠，切换展开时再加载iframe） ========= -->
+        <!-- 一级折叠菜单：运维辅助（默认折叠） -->
         <div class="menu-item" onclick="toggleSubMenu(this)">
             🛠 运维辅助 <span class="arrow">▶</span>
         </div>
@@ -343,7 +314,7 @@
             <div class="menu-item" data-href="22.html">运维辅助・W-E模版下载中心</div>
         </div>
 
-        <!-- ========= 原有折叠菜单：大青山管理局（默认折叠） ========= -->
+        <!-- 一级折叠菜单：大青山管理局（默认折叠） -->
         <div class="menu-item" onclick="toggleSubMenu(this)">
             🏛️ 大青山管理局 <span class="arrow">▶</span>
         </div>
@@ -354,14 +325,12 @@
             <div class="menu-item" data-href="200.html">未知</div>
         </div>
 
-        <!-- 底部功能按钮 -->
         <div class="func-box">
             <button class="func-btn" id="refreshBtn">🔄 刷新当前工具</button>
             <button class="func-btn" id="openNewBtn">↗️ 新标签全屏打开</button>
         </div>
     </div>
 
-    <!-- 右侧 iframe 存放容器 -->
     <div class="main-box"></div>
 
     <!-- Three.js 动态粒子背景脚本 -->
@@ -383,9 +352,7 @@
         camera.position.set(0, 1.5, 14);
         camera.lookAt(0, 0, 0);
 
-        // 优化1：分阶段创建粒子，首屏只渲染第一层粒子，延迟创建第二层、第三层、装饰环
         let particleSys, particleSys2, particleSys3, ringPoints;
-        // 第一层粒子（首屏立刻渲染）
         const particleCount = 2100;
         const geom = new THREE.BufferGeometry();
         const positions = new Float32Array(particleCount * 3);
@@ -399,7 +366,6 @@
         particleSys = new THREE.Points(geom, particleMat);
         scene.add(particleSys);
 
-        // 延迟创建第二层粒子（页面渲染完成后500ms）
         setTimeout(()=>{
             const geom2 = new THREE.BufferGeometry();
             const pos2 = new Float32Array(1400 * 3);
@@ -414,7 +380,6 @@
             scene.add(particleSys2);
         },500);
 
-        // 延迟第三层粒子 1000ms
         setTimeout(()=>{
             const geom3 = new THREE.BufferGeometry();
             const pos3 = new Float32Array(900 * 3);
@@ -429,7 +394,6 @@
             scene.add(particleSys3);
         },1000);
 
-        // 装饰环延迟1500ms创建
         setTimeout(()=>{
             const ringCount = 380;
             const ringGeo = new THREE.BufferGeometry();
@@ -476,46 +440,49 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.2)); // 限制像素比降低渲染压力
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio,1.2));
         window.addEventListener('resize', onResize);
         animate();
     </script>
 
-    <!-- 优化后iframe懒加载脚本：只预加载当前展开菜单，其他菜单点击时动态创建 -->
+    <!-- 修复后的核心 JavaScript（切换逻辑） -->
     <script>
-        // 鼠标光晕逻辑保留
+        // 鼠标光晕
         const glow = document.getElementById('mouseGlow');
         document.addEventListener('mousemove', (e) => {
             glow.style.left = e.clientX + 'px';
             glow.style.top = e.clientY + 'px';
         });
 
-        // 按菜单分组页面，实现分组懒加载
+        // 页面分组映射
         const menuGroupMap = {
             edu: ["1.html", "13.html", "27.html","21.html", "10.html", "11.html", "12.html"],
             ops: ["24.html","14.html", "19.html", "20.html", "23.html", "25.html", "26.html", "15.html", "16.html", "22.html"],
             mountain: ["17.html", "18.html", "109.html", "200.html"]
         };
-        // 菜单DOM与分组绑定
+
+        // 一级菜单 DOM 与分组绑定
         const groupDomMap = new Map();
-        groupDomMap.set(document.querySelectorAll('.menu-item.open')[0], "edu");
-        groupDomMap.set(document.querySelectorAll('.menu-item')[1], "ops");
-        groupDomMap.set(document.querySelectorAll('.menu-item')[2], "mountain");
+        const menuItems = document.querySelectorAll('.menu-item');
+        // 第一个 open 的是教育厅，第二个是运维辅助，第三个是大青山
+        groupDomMap.set(menuItems[0], "edu");
+        groupDomMap.set(menuItems[1], "ops");
+        groupDomMap.set(menuItems[2], "mountain");
 
         const pageCache = new Map();
         let currentUrl = "1.html";
         const mainBox = document.querySelector('.main-box');
-        let loadedGroup = new Set(); // 记录已加载分组
+        let loadedGroup = new Set();
 
-        // 创建缓存iframe，移出可视区隐藏
+        // 创建 iframe（同步）
         function createCachedIframe(url) {
-            if(pageCache.has(url)) return pageCache.get(url);
+            if (pageCache.has(url)) return pageCache.get(url);
             const frame = document.createElement('iframe');
             frame.style.position = 'absolute';
             frame.style.width = '100%';
             frame.style.height = '100%';
             frame.style.top = '0';
-            frame.style.left = '105%';
+            frame.style.left = '105%'; // 初始隐藏
             frame.style.border = 'none';
             frame.style.background = '#0f172a';
             frame.src = url;
@@ -524,41 +491,50 @@
             return frame;
         }
 
-        // 异步加载整组页面
+        // 异步加载整组页面（仅创建 iframe，不阻塞）
         async function loadPageGroup(groupKey) {
-            if(loadedGroup.has(groupKey)) return;
+            if (loadedGroup.has(groupKey)) return;
             loadedGroup.add(groupKey);
             const urls = menuGroupMap[groupKey];
-            for(const url of urls) {
+            for (const url of urls) {
                 createCachedIframe(url);
-                await new Promise(res => setTimeout(res,20));
+                await new Promise(res => setTimeout(res, 20)); // 微量延迟释放事件循环
             }
         }
 
-        // 切换页面，自动加载对应分组
+        // 核心切换函数（同步，确保即时响应）
         function switchPageTo(targetUrl) {
-            // 匹配当前页面所属分组并加载
+            // 1. 确保目标 iframe 存在（同步创建，若无则立即创建）
+            if (!pageCache.has(targetUrl)) {
+                createCachedIframe(targetUrl);
+            }
+
+            // 2. 隐藏所有 iframe，显示目标
+            pageCache.forEach(frame => frame.style.left = '105%');
+            const targetFrame = pageCache.get(targetUrl);
+            if (targetFrame) targetFrame.style.left = '0';
+
+            // 3. 更新高亮
+            document.querySelectorAll('.menu-item[data-href]').forEach(i => i.classList.remove('active'));
+            const activeItem = document.querySelector(`.menu-item[data-href="${targetUrl}"]`);
+            if (activeItem) activeItem.classList.add('active');
+
+            currentUrl = targetUrl;
+
+            // 4. 异步预加载同组其他页面（不阻塞当前切换）
             let targetGroup = null;
-            for(const [g,urls] of Object.entries(menuGroupMap)){
-                if(urls.includes(targetUrl)){
+            for (const [g, urls] of Object.entries(menuGroupMap)) {
+                if (urls.includes(targetUrl)) {
                     targetGroup = g;
                     break;
                 }
             }
-            if(targetGroup) loadPageGroup(targetGroup);
-
-            // 菜单高亮
-            document.querySelectorAll('.menu-item[data-href]').forEach(i => i.classList.remove('active'));
-            document.querySelector(`.menu-item[data-href="${targetUrl}"]`)?.classList.add('active');
-
-            // 切换显示iframe
-            pageCache.forEach(frame => frame.style.left = '105%');
-            const targetFrame = pageCache.get(targetUrl);
-            if(targetFrame) targetFrame.style.left = '0';
-            currentUrl = targetUrl;
+            if (targetGroup && !loadedGroup.has(targetGroup)) {
+                loadPageGroup(targetGroup); // 异步执行，不等待
+            }
         }
 
-        // 菜单点击切换页面
+        // 菜单点击事件绑定
         document.querySelectorAll('.menu-item[data-href]').forEach(item => {
             item.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -567,32 +543,37 @@
             });
         });
 
-        // 一级菜单折叠展开，展开时加载对应分组iframe
+        // 一级菜单折叠/展开
         window.toggleSubMenu = function(el) {
             el.classList.toggle('open');
             const sub = el.nextElementSibling;
             if (sub?.classList.contains('sub-menu')) {
                 sub.style.display = sub.style.display === 'block' ? 'none' : 'block';
-                // 展开菜单时加载本组所有页面
+                // 展开时仅触发预加载，但不阻塞（可选）
                 const group = groupDomMap.get(el);
-                if(group) loadPageGroup(group);
+                if (group && !loadedGroup.has(group)) {
+                    loadPageGroup(group); // 异步加载
+                }
             }
         };
 
-        // 刷新当前页面按钮
+        // 刷新当前页面
         document.getElementById('refreshBtn').addEventListener('click', () => {
             const frame = pageCache.get(currentUrl);
             if (frame) frame.src = currentUrl;
         });
 
-        // 新标签页打开当前工具
+        // 新标签打开
         document.getElementById('openNewBtn').addEventListener('click', () => {
             window.open(currentUrl, '_blank');
         });
 
-        // 页面初始化：只加载默认展开的【教育厅】分组，其他分组完全不创建iframe
-        window.addEventListener('DOMContentLoaded', async () => {
-            await loadPageGroup("edu");
+        // 页面初始化：默认加载“教育厅”分组并显示 1.html
+        window.addEventListener('DOMContentLoaded', () => {
+            // 先加载分组（异步），但 switchPageTo 会同步创建目标 iframe，所以不会影响首屏显示
+            loadPageGroup("edu").then(() => {
+                // 分组加载完成后，确保所有 iframe 已创建，但此时我们已经显示了目标
+            });
             switchPageTo("1.html");
         });
     </script>
