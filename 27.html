@@ -1,743 +1,1234 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8">
-<title>一体化政务区划变更清单自动填充工具</title>
-<style>
-* {
-  box-sizing: border-box;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
-}
-body {
-  margin: 0;
-  padding: 20px;
-  min-height: 100vh;
-  background: #0b0b0f;
-  color: #e0e0e0;
-  overflow-x: hidden;
-  position: relative;
-}
-#particles-canvas {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  pointer-events: none;
-}
-.wrap {
-  max-width: 1920px;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: 480px 1fr;
-  gap: 24px;
-  position: relative;
-  z-index: 1;
-}
-.panel {
-  background: rgba(15, 15, 25, 0.75);
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  padding: 24px;
-}
-h2 {
-  text-align: center;
-  margin: 0 0 24px;
-  font-size: 24px;
-  background: linear-gradient(90deg, #8a8aff, #a78bfa, #c084fc);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-.form-item {
-  margin-bottom: 16px;
-}
-label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 14px;
-  opacity: 0.9;
-}
-input, textarea, select {
-  width: 100%;
-  padding: 10px 14px;
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 8px;
-  background: rgba(255,255,255,0.05);
-  color: #fff;
-  font-size: 14px;
-}
-select option {
-  background-color: #1a1a28;
-  color: #ffffff;
-}
-textarea {
-  min-height: 70px;
-  resize: vertical;
-}
-input:focus, textarea:focus, select:focus {
-  outline: none;
-  border-color: #8a8aff;
-  box-shadow: 0 0 0 3px rgba(138,138,255,0.2);
-}
-.btn {
-  width: 100%;
-  padding: 12px;
-  border: none;
-  border-radius: 8px;
-  font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
-  margin-top: 8px;
-  background: linear-gradient(90deg, #8a8aff, #a78bfa);
-  color: #fff;
-}
-.btn:hover {
-  box-shadow: 0 0 16px rgba(138,138,255,0.4);
-}
-.btn-add {
-  background: linear-gradient(90deg, #10b981, #059669);
-  margin-top: 16px;
-}
-.btn-add:hover {
-  box-shadow: 0 0 16px rgba(16, 185, 129, 0.4);
-}
-.btn-clear {
-  background: linear-gradient(90deg, #f59e0b, #d97706);
-  margin-top: 8px;
-}
-.btn-clear:hover {
-  box-shadow: 0 0 16px rgba(245, 158, 11, 0.4);
-}
-.search-box {
-  display: flex;
-  gap:8px;
-}
-.search-box input {
-  flex:1;
-}
-.school-list {
-  max-height: 320px;
-  overflow-y: auto;
-  margin:12px 0;
-  border:1px solid rgba(255,255,255,0.1);
-  border-radius:8px;
-}
-.school-item {
-  padding:8px 12px;
-  border-bottom:1px solid rgba(255,255,255,0.05);
-  cursor:pointer;
-  font-size:13px;
-}
-.school-item:hover {
-  background:rgba(138,138,255,0.15);
-}
-.selected-list {
-  max-height: 280px;
-  overflow-y: auto;
-  margin:12px 0;
-  border:1px solid rgba(255,255,255,0.1);
-  border-radius:8px;
-  background: rgba(255,255,255,0.02);
-}
-.selected-item {
-  padding:10px 12px;
-  border-bottom:1px solid rgba(255,255,255,0.05);
-  display: flex;
-  flex-direction: column;
-  gap:4px;
-  font-size:13px;
-}
-.selected-item:last-child {
-  border-bottom: none;
-}
-.selected-item .item-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
-.selected-item .school-name {
-  flex:1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-weight: 500;
-}
-.selected-item .item-note {
-  color: #fcd34d;
-  font-size:12px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.selected-item .btn-del {
-  padding:4px 8px;
-  border: none;
-  border-radius: 4px;
-  background: #ef4444;
-  color: #fff;
-  font-size:12px;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-.selected-item .btn-del:hover {
-  background: #dc2626;
-}
-.preview-box {
-  background: #fff;
-  color: #000;
-  padding: 0;
-  border-radius: 12px;
-  overflow: hidden;
-  max-height: 80vh;
-  overflow-y: auto;
-}
-.preview-title-row1 {
-  font-family: "方正小标宋简体";
-  font-size:20pt;
-  text-align:center;
-  font-weight:normal;
-  color:#000;
-  line-height: 1.5;
-  padding: 0;
-  margin: 0;
-}
-.preview-title-row1 .red-bold {
-  color:#ff0000;
-  font-weight:bold;
-}
-.preview-title-row2 {
-  font-family:"方正仿宋_GBK";
-  font-size:11pt;
-  font-weight:normal;
-  text-align:center;
-  color:#000;
-  padding: 0;
-  margin: 0;
-}
-.preview-table {
-  width:100%;
-  border-collapse:collapse;
-  font-family:"宋体";
-  font-size:11pt;
-  font-weight:normal;
-  table-layout: fixed;
-  margin: 0;
-  padding: 0;
-}
-.preview-table td {
-  border:1px solid #000;
-  padding:8px 6px;
-  vertical-align:middle;
-  word-break: break-all;
-  line-height: 1.4;
-}
-.preview-table col:nth-child(1){width:22.38%;}
-.preview-table col:nth-child(2){width:31.63%;}
-.preview-table col:nth-child(3){width:28.25%;}
-.preview-table col:nth-child(4){width:16.13%;}
-.preview-table col:nth-child(5){width:32.38%;}
-.preview-table col:nth-child(6){width:28%;}
-.preview-table col:nth-child(7){width:8.75%;}
-.preview-table col:nth-child(8){width:9.38%;}
-.preview-table col:nth-child(9){width:8.63%;}
-.preview-table col:nth-child(10){width:36.38%;}
-.preview-table thead td {
-  text-align:center;
-  font-weight:normal;
-}
-.preview-table tbody td {
-  text-align:left;
-}
-.preview-table tbody td .text-red {
-  color:#ff0000;
-  font-weight:bold;
-}
-.import-tip {
-  font-size:12px;
-  color:#ccc;
-  margin:6px 0 12px;
-}
-.load-tip{
-  color:#8cf;
-  font-size:13px;
-  margin-bottom:10px;
-}
-</style>
-<!-- ExcelJS、FileSaver、XLSX（仅读取台账） -->
-<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <meta charset="UTF-8">
+    <title>一体化政务区划变更清单自动填充工具</title>
+    <style>
+        /* ===== 全局重置 & 基础 ===== */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        html,
+        body {
+            width: 100%;
+            min-height: 100vh;
+            background: #08080e;
+            color: #e8e8f0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* ===== Three.js 粒子星云背景 ===== */
+        #three-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* ===== 鼠标跟随光晕 ===== */
+        #glow {
+            position: fixed;
+            width: 520px;
+            height: 520px;
+            border-radius: 50%;
+            background: radial-gradient(circle at center, rgba(138, 138, 255, 0.13) 0%, rgba(34, 211, 238, 0.07) 40%, rgba(244, 114, 182, 0.04) 70%, transparent 100%);
+            pointer-events: none;
+            z-index: 1;
+            transform: translate(-50%, -50%);
+            will-change: transform;
+            transition: opacity 0.2s;
+            mix-blend-mode: screen;
+        }
+
+        /* ===== 主容器 ===== */
+        .wrap {
+            max-width: 1920px;
+            margin: 0 auto;
+            padding: 24px;
+            display: grid;
+            grid-template-columns: 480px 1fr;
+            gap: 28px;
+            position: relative;
+            z-index: 2;
+            min-height: 100vh;
+            align-items: start;
+        }
+
+        /* ===== 毛玻璃卡片 ===== */
+        .panel {
+            background: rgba(12, 12, 28, 0.55);
+            backdrop-filter: blur(24px) saturate(1.2);
+            -webkit-backdrop-filter: blur(24px) saturate(1.2);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+            padding: 28px 26px;
+            transition: border-color 0.3s, box-shadow 0.4s;
+        }
+        .panel:hover {
+            border-color: rgba(138, 138, 255, 0.15);
+            box-shadow: 0 16px 56px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+        }
+
+        /* ===== 标题 ===== */
+        .panel h2 {
+            text-align: center;
+            margin: 0 0 22px 0;
+            font-size: 22px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            background: linear-gradient(135deg, #a78bfa, #67e8f9, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 40px rgba(138, 138, 255, 0.15);
+        }
+
+        /* ===== 表单元素 ===== */
+        .form-item {
+            margin-bottom: 18px;
+        }
+        .form-item label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.8);
+            letter-spacing: 0.3px;
+        }
+
+        input,
+        textarea,
+        select {
+            width: 100%;
+            padding: 10px 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.04);
+            color: #f0f0f8;
+            font-size: 14px;
+            transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
+            outline: none;
+            font-family: inherit;
+        }
+        input::placeholder,
+        textarea::placeholder {
+            color: rgba(255, 255, 255, 0.25);
+        }
+        input:focus,
+        textarea:focus,
+        select:focus {
+            border-color: #8a8aff;
+            box-shadow: 0 0 0 4px rgba(138, 138, 255, 0.12), inset 0 0 0 1px rgba(138, 138, 255, 0.05);
+            background: rgba(255, 255, 255, 0.06);
+        }
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a8aff' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            cursor: pointer;
+        }
+        select option {
+            background: #16162a;
+            color: #f0f0f8;
+        }
+        textarea {
+            min-height: 68px;
+            resize: vertical;
+        }
+        input[readonly] {
+            cursor: default;
+            opacity: 0.7;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* ===== 按钮 ===== */
+        .btn {
+            width: 100%;
+            padding: 12px 18px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+            background: linear-gradient(135deg, #8a8aff, #a78bfa);
+            color: #fff;
+            transition: transform 0.2s, box-shadow 0.3s, opacity 0.2s;
+            letter-spacing: 0.3px;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at center, rgba(255, 255, 255, 0.08) 0%, transparent 70%);
+            opacity: 0;
+            transition: opacity 0.4s;
+            pointer-events: none;
+        }
+        .btn:hover::after {
+            opacity: 1;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 28px rgba(138, 138, 255, 0.35);
+        }
+        .btn:active {
+            transform: translateY(0px);
+            box-shadow: 0 4px 16px rgba(138, 138, 255, 0.25);
+        }
+
+        .btn-add {
+            background: linear-gradient(135deg, #10b981, #059669);
+            margin-top: 16px;
+        }
+        .btn-add:hover {
+            box-shadow: 0 8px 28px rgba(16, 185, 129, 0.35);
+        }
+
+        .btn-clear {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            margin-top: 8px;
+        }
+        .btn-clear:hover {
+            box-shadow: 0 8px 28px rgba(245, 158, 11, 0.35);
+        }
+
+        /* ===== 搜索框 ===== */
+        .search-box {
+            display: flex;
+            gap: 8px;
+        }
+        .search-box input {
+            flex: 1;
+        }
+
+        /* ===== 学校列表 ===== */
+        .school-list {
+            max-height: 280px;
+            overflow-y: auto;
+            margin: 10px 0 6px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .school-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        .school-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .school-list::-webkit-scrollbar-thumb {
+            background: rgba(138, 138, 255, 0.3);
+            border-radius: 4px;
+        }
+
+        .school-item {
+            padding: 10px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            cursor: pointer;
+            font-size: 13px;
+            transition: background 0.2s, padding-left 0.2s;
+            color: rgba(255, 255, 255, 0.85);
+        }
+        .school-item:last-child {
+            border-bottom: none;
+        }
+        .school-item:hover {
+            background: rgba(138, 138, 255, 0.12);
+            padding-left: 20px;
+            color: #fff;
+        }
+
+        /* ===== 已选列表 ===== */
+        .selected-list {
+            max-height: 260px;
+            overflow-y: auto;
+            margin: 10px 0 6px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.02);
+        }
+        .selected-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        .selected-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .selected-list::-webkit-scrollbar-thumb {
+            background: rgba(138, 138, 255, 0.3);
+            border-radius: 4px;
+        }
+
+        .selected-item {
+            padding: 12px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            font-size: 13px;
+        }
+        .selected-item:last-child {
+            border-bottom: none;
+        }
+        .selected-item .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+        .selected-item .school-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            font-weight: 500;
+            color: #e8e8f0;
+        }
+        .selected-item .item-note {
+            color: #fcd34d;
+            font-size: 12px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .selected-item .btn-del {
+            padding: 4px 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(239, 68, 68, 0.7);
+            color: #fff;
+            font-size: 12px;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: background 0.2s, transform 0.15s;
+        }
+        .selected-item .btn-del:hover {
+            background: #ef4444;
+            transform: scale(1.04);
+        }
+
+        /* ===== 提示文字 ===== */
+        .import-tip {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.4);
+            margin: 6px 0 4px;
+            line-height: 1.5;
+        }
+        .load-tip {
+            color: rgba(138, 200, 255, 0.8);
+            font-size: 13px;
+            margin-bottom: 14px;
+            padding: 8px 14px;
+            border-radius: 10px;
+            background: rgba(138, 138, 255, 0.06);
+            border: 1px solid rgba(138, 138, 255, 0.06);
+            text-align: center;
+        }
+
+        /* ===== 预览区域 ===== */
+        .preview-box {
+            background: rgba(255, 255, 255, 0.95);
+            color: #000;
+            padding: 0;
+            border-radius: 14px;
+            overflow: hidden;
+            max-height: 82vh;
+            overflow-y: auto;
+            box-shadow: 0 4px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .preview-box::-webkit-scrollbar {
+            width: 4px;
+        }
+        .preview-box::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+        }
+        .preview-box::-webkit-scrollbar-thumb {
+            background: rgba(138, 138, 255, 0.4);
+            border-radius: 4px;
+        }
+
+        /* 预览表格样式（保留原有，微调适配） */
+        .preview-title-row1 {
+            font-family: "方正小标宋简体", "SimSun", serif;
+            font-size: 20pt;
+            text-align: center;
+            font-weight: normal;
+            color: #000;
+            line-height: 1.5;
+            padding: 0;
+            margin: 0;
+        }
+        .preview-title-row1 .red-bold {
+            color: #ff0000;
+            font-weight: bold;
+        }
+        .preview-title-row2 {
+            font-family: "方正仿宋_GBK", "FangSong", serif;
+            font-size: 11pt;
+            font-weight: normal;
+            text-align: center;
+            color: #000;
+            padding: 0;
+            margin: 0;
+        }
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-family: "宋体", "SimSun", serif;
+            font-size: 11pt;
+            font-weight: normal;
+            table-layout: fixed;
+            margin: 0;
+            padding: 0;
+        }
+        .preview-table td {
+            border: 1px solid #000;
+            padding: 8px 6px;
+            vertical-align: middle;
+            word-break: break-all;
+            line-height: 1.4;
+        }
+        .preview-table col:nth-child(1) {
+            width: 22.38%;
+        }
+        .preview-table col:nth-child(2) {
+            width: 31.63%;
+        }
+        .preview-table col:nth-child(3) {
+            width: 28.25%;
+        }
+        .preview-table col:nth-child(4) {
+            width: 16.13%;
+        }
+        .preview-table col:nth-child(5) {
+            width: 32.38%;
+        }
+        .preview-table col:nth-child(6) {
+            width: 28%;
+        }
+        .preview-table col:nth-child(7) {
+            width: 8.75%;
+        }
+        .preview-table col:nth-child(8) {
+            width: 9.38%;
+        }
+        .preview-table col:nth-child(9) {
+            width: 8.63%;
+        }
+        .preview-table col:nth-child(10) {
+            width: 36.38%;
+        }
+        .preview-table thead td {
+            text-align: center;
+            font-weight: normal;
+        }
+        .preview-table tbody td {
+            text-align: left;
+        }
+        .preview-table tbody td .text-red {
+            color: #ff0000;
+            font-weight: bold;
+        }
+
+        /* ===== 计数 ===== */
+        #selectedCount {
+            color: #a78bfa;
+            font-weight: 700;
+        }
+
+        /* ===== 响应式 ===== */
+        @media (max-width: 1100px) {
+            .wrap {
+                grid-template-columns: 1fr;
+                padding: 16px;
+            }
+            .panel {
+                padding: 20px 18px;
+            }
+            .preview-box {
+                max-height: 60vh;
+            }
+        }
+        @media (max-width: 600px) {
+            .wrap {
+                padding: 12px;
+                gap: 16px;
+            }
+            .panel {
+                padding: 16px 14px;
+                border-radius: 16px;
+            }
+            .panel h2 {
+                font-size: 18px;
+            }
+            .btn {
+                font-size: 14px;
+                padding: 10px 14px;
+            }
+            .preview-title-row1 {
+                font-size: 14pt;
+            }
+            .preview-title-row2 {
+                font-size: 9pt;
+            }
+            .preview-table {
+                font-size: 9pt;
+            }
+            .preview-table td {
+                padding: 4px 3px;
+            }
+            #glow {
+                width: 300px;
+                height: 300px;
+            }
+        }
+
+        /* ===== 加载状态 ===== */
+        .loading-dots::after {
+            content: '...';
+            animation: dots 1.2s steps(3, end) infinite;
+        }
+        @keyframes dots {
+            0% {
+                content: '';
+            }
+            33% {
+                content: '.';
+            }
+            66% {
+                content: '..';
+            }
+            100% {
+                content: '...';
+            }
+        }
+
+        /* ===== 兼容旧版预览标题 ===== */
+        .preview-box .preview-title-row1 {
+            padding: 0;
+        }
+        .preview-box .preview-title-row2 {
+            padding: 0;
+        }
+
+        /* 让表格在毛玻璃背景下更清晰 */
+        .preview-box {
+            background: #ffffff;
+            color: #000;
+        }
+        .preview-box .preview-table td {
+            border-color: #222;
+        }
+        .preview-box .preview-table thead td {
+            background: #f5f5f8;
+        }
+
+        /* 选中数量高亮 */
+        #selectedCount {
+            font-size: 16px;
+        }
+    </style>
+
+    <!-- 业务库 -->
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js">
+    </script>
+
+    <!-- Three.js 核心 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js">
+    </script>
 </head>
 <body>
-<canvas id="particles-canvas"></canvas>
-<div class="wrap">
-  <!-- 左侧操作面板 -->
-  <div class="panel">
-    <h2>学校台账查询 & 表单填充</h2>
-    <div class="load-tip" id="githubLoadTip">正在自动加载GitHub云端学校台账...</div>
-    <div class="form-item">
-      <label>手动覆盖：上传本地学校行政信息Excel台账</label>
-      <input type="file" id="excelFile" accept=".xlsx,.xls">
-      <div class="import-tip">表格列：B=组织机构全称 C=统一社会信用代码 D=所属区划编码 E=上级组织机构编码 F=所属区划名称 G=组织机构类型</div>
+
+    <!-- ===== Three.js 粒子星云背景容器 ===== -->
+    <div id="three-bg"></div>
+
+    <!-- ===== 鼠标跟随光晕 ===== -->
+    <div id="glow"></div>
+
+    <!-- ===== 主布局 ===== -->
+    <div class="wrap">
+
+        <!-- 左面板 -->
+        <div class="panel">
+            <h2>学校台账查询 &amp; 表单填充</h2>
+            <div class="load-tip" id="githubLoadTip">⏳ 正在自动加载GitHub云端学校台账...</div>
+
+            <div class="form-item">
+                <label>手动覆盖：上传本地学校行政信息Excel台账</label>
+                <input type="file" id="excelFile" accept=".xlsx,.xls">
+                <div class="import-tip">表格列：B=组织机构全称 C=统一社会信用代码 D=所属区划编码 E=上级组织机构编码 F=所属区划名称 G=组织机构类型</div>
+            </div>
+
+            <div class="form-item">
+                <label>2. 搜索学校名称</label>
+                <div class="search-box">
+                    <input id="searchKey" placeholder="输入学校名称检索">
+                </div>
+                <div class="school-list" id="schoolListBox"></div>
+            </div>
+
+            <div class="form-item">
+                <label>3. 旧学校名称（备注修改前名称）</label>
+                <input id="oldSchoolName" placeholder="">
+            </div>
+
+            <div class="form-item">
+                <label>4. 操作类型</label>
+                <select id="operateType">
+                    <option value="修改">修改（默认）</option>
+                    <option value="新增">新增</option>
+                </select>
+            </div>
+
+            <div class="form-item">
+                <label>当前选中学校（自动回填来源）</label>
+                <input id="curSchoolShow" readonly placeholder="点击上方列表学校自动填充">
+            </div>
+
+            <button class="btn btn-add" onclick="addToList()">添加到待导出列表</button>
+            <button class="btn btn-clear" onclick="clearList()">清空待导出列表</button>
+
+            <div class="form-item">
+                <label>待导出学校列表（共 <span id="selectedCount">0</span> 条）</label>
+                <div class="selected-list" id="selectedListBox"></div>
+            </div>
+
+            <button class="btn" onclick="exportExcel()">导出Excel区划变更清单</button>
+        </div>
+
+        <!-- 右面板 -->
+        <div class="panel">
+            <h2>实时表格预览</h2>
+            <div class="preview-box" id="previewWrap">
+                <div style="height:63.75px;display:flex;align-items:center;justify-content:center;border:1px solid #000;border-bottom:none;">
+                    <p class="preview-title-row1">
+                        全区一体化政务服务平台系统区划变更清单<br>
+                        <span class="red-bold">变更/新增统一社会信用代码填写此表（如有多条数据请分条填写）</span>
+                    </p>
+                </div>
+                <div style="height:44.25px;display:flex;align-items:center;justify-content:center;border:1px solid #000;border-top:none;border-bottom:none;">
+                    <p class="preview-title-row2">
+                        具体填报联系人（必填）：&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;乔鹏飞&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;联系电话（必填）：&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;18148340753
+                    </p>
+                </div>
+                <table class="preview-table">
+                    <colgroup>
+                        <col><col><col><col><col><col><col><col><col><col>
+                    </colgroup>
+                    <thead>
+                        <tr style="height:129px;">
+                            <td>统一社会信用代码（必填）</td>
+                            <td>组织机构全称（必填）</td>
+                            <td>组织机构简称（必填）</td>
+                            <td>所属区划编码必填（必填）</td>
+                            <td>上级组织机构编码必填（必填：统一填写上级政务服务局）</td>
+                            <td>所属行政区划（必填格式为：盟市——市/区/直属部门——镇/直属部门）</td>
+                            <td>组织机构类型</td>
+                            <td>虚拟部门</td>
+                            <td>新增/修改</td>
+                            <td>备注（修改请备注修改前和修改后）</td>
+                        </tr>
+                    </thead>
+                    <tbody id="previewTableBody">
+                        <tr>
+                            <td colspan="10" style="text-align:center;color:#999;">暂无数据，请点击左侧按钮添加学校</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
     </div>
-    <div class="form-item">
-      <label>2. 搜索学校名称</label>
-      <div class="search-box">
-        <input id="searchKey" placeholder="输入学校名称检索">
-      </div>
-      <div class="school-list" id="schoolListBox"></div>
-    </div>
-    <div class="form-item">
-      <label>3. 旧学校名称（备注修改前名称）</label>
-      <input id="oldSchoolName" placeholder="例：扎鲁特旗蒙古族第二中学">
-    </div>
-    <div class="form-item">
-      <label>4. 操作类型</label>
-      <select id="operateType">
-        <option value="修改">修改（默认）</option>
-        <option value="新增">新增</option>
-      </select>
-    </div>
-    <div class="form-item">
-      <label>当前选中学校（自动回填来源）</label>
-      <input id="curSchoolShow" readonly placeholder="点击上方列表学校自动填充">
-    </div>
-    <button class="btn btn-add" onclick="addToList()">添加到待导出列表</button>
-    <button class="btn btn-clear" onclick="clearList()">清空待导出列表</button>
-    <div class="form-item">
-      <label>待导出学校列表（共<span id="selectedCount">0</span>条）</label>
-      <div class="selected-list" id="selectedListBox"></div>
-    </div>
-    <button class="btn" onclick="exportExcel()">导出Excel区划变更清单</button>
-  </div>
 
-  <!-- 右侧实时预览 -->
-  <div class="panel">
-    <h2>实时表格预览（所见即所得）</h2>
-    <div class="preview-box" id="previewWrap">
-      <div style="height:63.75px;display:flex;align-items:center;justify-content:center;border:1px solid #000;border-bottom:none;">
-        <p class="preview-title-row1">
-          全区一体化政务服务平台系统区划变更清单<br>
-          <span class="red-bold">变更/新增统一社会信用代码填写此表（如有多条数据请分条填写）</span>
-        </p>
-      </div>
-      <div style="height:44.25px;display:flex;align-items:center;justify-content:center;border:1px solid #000;border-top:none;border-bottom:none;">
-        <p class="preview-title-row2">
-          具体填报联系人（必填）：&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;乔鹏飞&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;联系电话（必填）：&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;18148340753
-        </p>
-      </div>
-      <table class="preview-table">
-        <colgroup>
-          <col><col><col><col><col><col><col><col><col><col>
-        </colgroup>
-        <thead>
-          <tr style="height:129px;">
-            <td>统一社会信用代码（必填）</td>
-            <td>组织机构全称（必填）</td>
-            <td>组织机构简称（必填）</td>
-            <td>所属区划编码必填（必填）</td>
-            <td>上级组织机构编码必填（必填：统一填写上级政务服务局）</td>
-            <td>所属行政区划（必填格式为：盟市——市/区/直属部门——镇/直属部门）</td>
-            <td>组织机构类型</td>
-            <td>虚拟部门</td>
-            <td>新增/修改</td>
-            <td>备注（修改请备注修改前和修改后）</td>
-          </tr>
-        </thead>
-        <tbody id="previewTableBody">
-          <tr>
-            <td colspan="10" style="text-align:center;color:#999;">暂无数据，请点击左侧按钮添加学校</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
+    <script>
+        // ================================================================
+        // 1. Three.js 动态粒子星云背景（替换原有 canvas 粒子）
+        // ================================================================
+        (function initThreeParticles() {
+            const container = document.getElementById('three-bg');
+            if (!container) return;
 
-<script>
-// 粒子背景动画
-const canvas = document.getElementById('particles-canvas');
-const ctx = canvas.getContext('2d');
-let width, height, particles = [];
-function resizeCanvas(){
-  width = canvas.width = window.innerWidth;
-  height = canvas.height = window.innerHeight;
-}
-resizeCanvas();
-window.addEventListener('resize', resizeCanvas);
-class Particle{
-  constructor(){this.reset()}
-  reset(){
-    this.x = Math.random()*width;
-    this.y = Math.random()*height;
-    this.size = Math.random()*1.5+0.5;
-    this.speedX = (Math.random()-0.5)*0.3;
-    this.speedY = (Math.random()-0.5)*0.3;
-    this.opacity = Math.random()*0.5+0.2;
-  }
-  update(){
-    this.x += this.speedX;
-    this.y += this.speedY;
-    if(this.x<0||this.x>width||this.y<0||this.y>height) this.reset();
-  }
-  draw(){
-    ctx.fillStyle = `rgba(138,138,255,${this.opacity})`;
-    ctx.beginPath();
-    ctx.arc(this.x,this.y,this.size,0,Math.PI*2);
-    ctx.fill();
-  }
-}
-for(let i=0;i<80;i++) particles.push(new Particle());
-function connectParticles(){
-  for(let a=0;a<particles.length;a++){
-    for(let b=a;b<particles.length;b++){
-      let dx = particles[a].x - particles[b].x;
-      let dy = particles[a].y - particles[b].y;
-      let dis = Math.sqrt(dx*dx+dy*dy);
-      if(dis<120){
-        ctx.strokeStyle = `rgba(138,138,255,${0.15*(1-dis/120)})`;
-        ctx.lineWidth = 0.5;
-        ctx.beginPath();
-        ctx.moveTo(particles[a].x,particles[a].y);
-        ctx.lineTo(particles[b].x,particles[b].y);
-        ctx.stroke();
-      }
-    }
-  }
-}
-function animate(){
-  ctx.clearRect(0,0,width,height);
-  particles.forEach(p=>{p.update();p.draw()});
-  connectParticles();
-  requestAnimationFrame(animate);
-}
-animate();
+            const scene = new THREE.Scene();
+            // 使用更深的背景色，与毛玻璃融合
+            scene.background = new THREE.Color(0x08080e);
 
-// 全局变量
-let schoolDataList = [];
-let currentSelectSchool = null;
-let selectedSchoolsList = [];
-const GITHUB_EXCEL_RAW_URL = "./school_list.xlsx";
+            const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 30;
 
-// 页面加载自动读取云端台账
-window.addEventListener('load', async function(){
-  const tipDom = document.getElementById('githubLoadTip');
-  try{
-    tipDom.innerText = "⏳ 正在加载云端台账，请稍候...";
-    const res = await fetch(GITHUB_EXCEL_RAW_URL);
-    if(!res.ok) throw new Error(`文件请求失败，状态码：${res.status}`);
-    const arrayBuf = await res.arrayBuffer();
-    const workbook = XLSX.read(arrayBuf, {type:'array'});
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const jsonData = XLSX.utils.sheet_to_json(sheet, {header:1});
-    parseExcelData(jsonData);
-    tipDom.innerText = `✅ 云端台账加载完成，共${schoolDataList.length}条学校数据`;
-    renderSearchList();
-  }catch(err){
-    tipDom.innerText = `⚠️ 云端自动加载失败，请手动上传本地Excel文件；错误：${err.message}`;
-    console.error("Excel读取异常详情：",err);
-  }
-})
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setClearColor(0x08080e, 1);
+            container.appendChild(renderer.domElement);
 
-// 解析台账数据
-function parseExcelData(jsonData){
-  schoolDataList = [];
-  for(let i=1; i<jsonData.length; i++){
-    const row = jsonData[i];
-    if(!row[1]) continue;
-    schoolDataList.push({
-      fullName: row[1] || '',
-      creditCode: row[2] || '',
-      areaCode: row[3] || '',
-      superCode: row[4] || '',
-      areaName: row[5] || '',
-      orgType: row[6] || ''
-    })
-  }
-}
+            // ---- 粒子参数 ----
+            const PARTICLE_COUNT = 3800;
+            const geometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(PARTICLE_COUNT * 3);
+            const colors = new Float32Array(PARTICLE_COUNT * 3);
+            const sizes = new Float32Array(PARTICLE_COUNT);
 
-// 本地文件上传
-document.getElementById('excelFile').addEventListener('change', function(e){
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = function(ev){
-    const data = new Uint8Array(ev.target.result);
-    const workbook = XLSX.read(data, {type:'array'});
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const jsonData = XLSX.utils.sheet_to_json(sheet, {header:1});
-    parseExcelData(jsonData);
-    document.getElementById('githubLoadTip').innerText = `✅ 本地文件覆盖成功，共${schoolDataList.length}条学校数据`;
-    alert(`成功导入${schoolDataList.length}条学校台账数据！`);
-    renderSearchList();
-  }
-  reader.readAsArrayBuffer(file);
-})
+            // 紫青粉三色
+            const palette = [
+                new THREE.Color(0x8a8aff), // 紫
+                new THREE.Color(0xa78bfa),
+                new THREE.Color(0x67e8f9), // 青
+                new THREE.Color(0x22d3ee),
+                new THREE.Color(0xf472b6), // 粉
+                new THREE.Color(0xec4899),
+            ];
 
-// 搜索过滤
-const searchInput = document.getElementById('searchKey');
-searchInput.addEventListener('input', renderSearchList);
-function renderSearchList(){
-  const keyword = searchInput.value.trim().toLowerCase();
-  const box = document.getElementById('schoolListBox');
-  box.innerHTML = '';
-  const filterList = schoolDataList.filter(item => item.fullName.toLowerCase().includes(keyword));
-  if(filterList.length ===0){
-    box.innerHTML = '<div style="padding:10px;text-align:center;color:#aaa;">无匹配学校，请更换关键词或重新导入台账</div>';
-    return;
-  }
-  filterList.slice(0,100).forEach(school=>{
-    const div = document.createElement('div');
-    div.className = 'school-item';
-    div.innerText = school.fullName;
-    div.onclick = ()=> fillFormBySchool(school);
-    box.appendChild(div);
-  })
-}
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                // 分布在半径 40 的球体内，略微扁平
+                const radius = 20 + Math.random() * 20;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.acos(2 * Math.random() - 1);
+                positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+                positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta) * 0.6;
+                positions[i * 3 + 2] = radius * Math.cos(phi) * 0.8;
 
-// 点击选中学校，实时刷新预览
-function fillFormBySchool(school){
-  currentSelectSchool = school;
-  document.getElementById('curSchoolShow').value = school.fullName;
-  renderPreviewTable();
-}
+                const col = palette[Math.floor(Math.random() * palette.length)].clone();
+                // 随机亮度变化
+                col.multiplyScalar(0.7 + Math.random() * 0.5);
+                colors[i * 3] = col.r;
+                colors[i * 3 + 1] = col.g;
+                colors[i * 3 + 2] = col.b;
 
-// 修改旧名称实时刷新预览
-document.getElementById('oldSchoolName').addEventListener('input', function(){
-  renderPreviewTable();
-})
+                sizes[i] = 0.08 + Math.random() * 0.25;
+            }
 
-// 生成备注文本
-function generateNote(oldName, newName){
-  if(!oldName || !newName) return '';
-  return `将原${oldName}修改为${newName}`;
-}
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+            geometry.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
 
-// 添加列表（移除成功弹窗）
-function addToList(){
-  if(!currentSelectSchool){
-    alert('请先加载学校台账并点击选择一所学校！');
-    return;
-  }
-  const oldName = document.getElementById('oldSchoolName').value.trim();
-  const operate = document.getElementById('operateType').value;
-  const note = generateNote(oldName, currentSelectSchool.fullName);
-  const itemId = `${currentSelectSchool.creditCode}_${operate}_${Date.now()}`;
-  selectedSchoolsList.push({
-    id: itemId,
-    school: currentSelectSchool,
-    oldName: oldName,
-    operate: operate,
-    note: note
-  });
-  renderSelectedList();
-  renderPreviewTable();
-  updateSelectedCount();
-}
+            // ---- 粒子材质 ----
+            const textureCanvas = document.createElement('canvas');
+            textureCanvas.width = 64;
+            textureCanvas.height = 64;
+            const tCtx = textureCanvas.getContext('2d');
+            const gradient = tCtx.createRadialGradient(32, 32, 0, 32, 32, 32);
+            gradient.addColorStop(0, 'rgba(255,255,255,1)');
+            gradient.addColorStop(0.3, 'rgba(255,255,255,0.9)');
+            gradient.addColorStop(1, 'rgba(255,255,255,0)');
+            tCtx.fillStyle = gradient;
+            tCtx.fillRect(0, 0, 64, 64);
+            const spriteTexture = new THREE.CanvasTexture(textureCanvas);
 
-// 渲染已选列表
-function renderSelectedList(){
-  const box = document.getElementById('selectedListBox');
-  box.innerHTML = '';
-  if(selectedSchoolsList.length === 0){
-    box.innerHTML = '<div style="padding:10px;text-align:center;color:#aaa;">暂无待导出学校，请点击上方按钮添加</div>';
-    return;
-  }
-  selectedSchoolsList.forEach(item=>{
-    const div = document.createElement('div');
-    div.className = 'selected-item';
-    div.innerHTML = `
-      <div class="item-header">
-        <span class="school-name">${item.school.fullName}（${item.operate}）</span>
-        <button class="btn-del" onclick="deleteSelectedItem('${item.id}')">删除</button>
-      </div>
-      ${item.note ? `<div class="item-note">${item.note}</div>` : ''}
-    `;
-    box.appendChild(div);
-  })
-}
+            const material = new THREE.PointsMaterial({
+                size: 0.4,
+                map: spriteTexture,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                transparent: true,
+                opacity: 0.85,
+                vertexColors: true,
+                sizeAttenuation: true,
+            });
 
-// 删除单条
-function deleteSelectedItem(itemId){
-  selectedSchoolsList = selectedSchoolsList.filter(item => item.id !== itemId);
-  renderSelectedList();
-  renderPreviewTable();
-  updateSelectedCount();
-}
+            const particles = new THREE.Points(geometry, material);
+            scene.add(particles);
 
-// 清空列表
-function clearList(){
-  if(selectedSchoolsList.length === 0){
-    alert('列表已为空，无需清空！');
-    return;
-  }
-  if(confirm('确定要清空所有待导出数据吗？')){
-    selectedSchoolsList = [];
-    renderSelectedList();
-    renderPreviewTable();
-    updateSelectedCount();
-  }
-}
+            // ---- 辅助：少量大星点 ----
+            const bigGeo = new THREE.BufferGeometry();
+            const bigPos = new Float32Array(200 * 3);
+            const bigCol = new Float32Array(200 * 3);
+            for (let i = 0; i < 200; i++) {
+                const r = 30 + Math.random() * 30;
+                const th = Math.random() * Math.PI * 2;
+                const ph = Math.acos(2 * Math.random() - 1);
+                bigPos[i * 3] = r * Math.sin(ph) * Math.cos(th);
+                bigPos[i * 3 + 1] = r * Math.sin(ph) * Math.sin(th) * 0.5;
+                bigPos[i * 3 + 2] = r * Math.cos(ph) * 0.7;
+                const c = palette[Math.floor(Math.random() * palette.length)].clone();
+                c.multiplyScalar(0.6 + Math.random() * 0.4);
+                bigCol[i * 3] = c.r;
+                bigCol[i * 3 + 1] = c.g;
+                bigCol[i * 3 + 2] = c.b;
+            }
+            bigGeo.setAttribute('position', new THREE.BufferAttribute(bigPos, 3));
+            bigGeo.setAttribute('color', new THREE.BufferAttribute(bigCol, 3));
+            const bigMat = new THREE.PointsMaterial({
+                size: 0.8,
+                map: spriteTexture,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false,
+                transparent: true,
+                opacity: 0.5,
+                vertexColors: true,
+                sizeAttenuation: true,
+            });
+            const bigPoints = new THREE.Points(bigGeo, bigMat);
+            scene.add(bigPoints);
 
-// 更新数量
-function updateSelectedCount(){
-  document.getElementById('selectedCount').innerText = selectedSchoolsList.length;
-}
+            // ---- 鼠标交互（旋转视角） ----
+            let mouseX = 0,
+                mouseY = 0;
+            let targetRotX = 0,
+                targetRotY = 0;
+            document.addEventListener('mousemove', (e) => {
+                mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+                mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
+                targetRotX = mouseX * 0.15;
+                targetRotY = mouseY * 0.08;
+            });
+            // 触摸支持
+            document.addEventListener('touchmove', (e) => {
+                const touch = e.touches[0];
+                if (touch) {
+                    mouseX = (touch.clientX / window.innerWidth) * 2 - 1;
+                    mouseY = -(touch.clientY / window.innerHeight) * 2 + 1;
+                    targetRotX = mouseX * 0.15;
+                    targetRotY = mouseY * 0.08;
+                }
+            }, { passive: true });
 
-// 实时预览表格渲染
-function renderPreviewTable(){
-  const tbody = document.getElementById('previewTableBody');
-  tbody.innerHTML = '';
-  if(selectedSchoolsList.length === 0){
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="10" style="text-align:center;color:#999;">暂无数据，请点击上方按钮添加学校</td>
-      </tr>
-    `;
-    return;
-  }
-  selectedSchoolsList.forEach(item=>{
-    const school = item.school;
-    const tr = document.createElement('tr');
-    tr.style.height = '129px';
-    let noteHtml = '';
-    if(item.note){
-      noteHtml = item.note.replace('将原', '将原<span class="text-red">').replace('修改为', '</span>修改为<span class="text-red">') + '</span>';
-    }
-    tr.innerHTML = `
-      <td>${school.creditCode}</td>
-      <td>${school.fullName}</td>
-      <td>${school.fullName}</td>
-      <td>${school.areaCode}</td>
-      <td>${school.superCode}</td>
-      <td>${school.areaName}</td>
-      <td>${school.orgType}</td>
-      <td>否</td>
-      <td>${item.operate}</td>
-      <td>${noteHtml}</td>
-    `;
-    tbody.appendChild(tr);
-  })
-}
+            // ---- 窗口自适应 ----
+            function onResize() {
+                const w = window.innerWidth;
+                const h = window.innerHeight;
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+                renderer.setSize(w, h);
+            }
+            window.addEventListener('resize', onResize);
 
-// ExcelJS导出核心函数
-async function exportExcel(){
-  if(selectedSchoolsList.length === 0){
-    alert('请先添加至少一所学校到待导出列表！');
-    return;
-  }
-  const headers = [
-    "统一社会信用代码（必填）",
-    "组织机构全称（必填）",
-    "组织机构简称（必填）",
-    "所属区划编码必填（必填）",
-    "上级组织机构编码必填（必填：统一填写上级政务服务局）",
-    "所属行政区划（必填格式为：盟市——市/区/直属部门——镇/直属部门）",
-    "组织机构类型",
-    "虚拟部门",
-    "新增/修改",
-    "备注（修改请备注修改前和修改后）"
-  ];
-  const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet("部门机构报备");
-  // 列宽
-  sheet.columns = [
-    { width: 22.38 },
-    { width: 31.63 },
-    { width: 28.25 },
-    { width: 16.13 },
-    { width: 32.38 },
-    { width: 28 },
-    { width: 8.75 },
-    { width: 9.38 },
-    { width: 8.63 },
-    { width: 36.38 }
-  ];
-  // 第1行 标题合并
-  const row1 = sheet.getRow(1);
-  row1.height = 63.75;
-  sheet.mergeCells('A1:J1');
-  const cellA1 = row1.getCell('A');
-  cellA1.value = {
-    richText: [
-      { text: "全区一体化政务服务平台系统区划变更清单", font: { name: "方正小标宋简体", size: 20, color: { argb: "00000000" } } },
-      { text: "\n", font: { name: "方正小标宋简体", size: 20 } },
-      { text: "变更/新增统一社会信用代码填写此表（如有多条数据请分条填写）", font: { name: "方正小标宋简体", size: 20, bold: true, color: { argb: "FFFF0000" } } }
-    ]
-  };
-  cellA1.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
-  cellA1.border = { top:{style:"thin"},left:{style:"thin"},right:{style:"thin"},bottom:{style:"thin"} };
-  // 第2行 联系人
-  const row2 = sheet.getRow(2);
-  row2.height = 44.25;
-  sheet.mergeCells('A2:J2');
-  const cellA2 = row2.getCell('A');
-  cellA2.value = "具体填报联系人（必填）：       乔鹏飞         联系电话（必填）：       18148340753";
-  cellA2.font = { name: "方正仿宋_GBK", size: 11, color: { argb: "00000000" } };
-  cellA2.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
-  cellA2.border = { top:{style:"thin"},left:{style:"thin"},right:{style:"thin"},bottom:{style:"thin"} };
-  // 第3行表头
-  const row3 = sheet.getRow(3);
-  row3.height = 129;
-  headers.forEach((text, idx)=>{
-    const cell = row3.getCell(idx+1);
-    cell.value = text;
-    cell.font = { name: "宋体", size: 11, color: { argb: "00000000" } };
-    cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
-    cell.border = { top:{style:"thin"},left:{style:"thin"},right:{style:"thin"},bottom:{style:"thin"} };
-  })
-  // 数据行
-  const startDataRow = 4;
-  selectedSchoolsList.forEach((item, rIdx)=>{
-    const curRow = sheet.getRow(startDataRow + rIdx);
-    curRow.height = 129;
-    const school = item.school;
-    const rowData = [
-      school.creditCode,
-      school.fullName,
-      school.fullName,
-      school.areaCode,
-      school.superCode,
-      school.areaName,
-      school.orgType,
-      "否",
-      item.operate,
-      item.note
-    ];
-    rowData.forEach((val, cIdx)=>{
-      const cell = curRow.getCell(cIdx + 1);
-      if(cIdx === 9 && val && item.oldName && school.fullName){
-        cell.value = {
-          richText: [
-            { text: "将原", font: { name: "宋体", size: 11, color: { argb: "00000000" } } },
-            { text: item.oldName, font: { name: "宋体", size: 11, color: { argb: "FFFF0000" } } },
-            { text: "修改为", font: { name: "宋体", size: 11, color: { argb: "00000000" } } },
-            { text: school.fullName, font: { name: "宋体", size: 11, color: { argb: "FFFF0000" } } }
-          ]
-        };
-      } else {
-        cell.value = val;
-        cell.font = { name: "宋体", size: 11, color: { argb: "00000000" } };
-      }
-      cell.alignment = { vertical: "middle", horizontal: "left", wrapText: true };
-      cell.border = { top:{style:"thin"},left:{style:"thin"},right:{style:"thin"},bottom:{style:"thin"} };
-    });
-  });
-  // 导出下载
-  const buffer = await workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { type: "application/octet-stream" });
-  saveAs(blob, `区划变更清单_共${selectedSchoolsList.length}条数据.xlsx`);
-}
+            // ---- 动画循环 ----
+            let currentRotX = 0,
+                currentRotY = 0;
 
-// 页面初始化
-window.addEventListener('load', function(){
-  renderPreviewTable();
-  updateSelectedCount();
-})
-</script>
+            function animate() {
+                requestAnimationFrame(animate);
+
+                // 平滑跟随鼠标
+                currentRotX += (targetRotX - currentRotX) * 0.04;
+                currentRotY += (targetRotY - currentRotY) * 0.04;
+
+                // 粒子自转
+                particles.rotation.y += 0.0006;
+                particles.rotation.x += 0.00015;
+                bigPoints.rotation.y += 0.0008;
+                bigPoints.rotation.x += 0.0002;
+
+                // 相机轻微跟随鼠标
+                camera.position.x = currentRotX * 3;
+                camera.position.y = currentRotY * 2;
+                camera.lookAt(0, 0, 0);
+
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            // 清理（页面关闭时不需要，但保留）
+            window.addEventListener('beforeunload', () => {
+                renderer.dispose();
+            });
+        })();
+
+
+        // ================================================================
+        // 2. 鼠标跟随光晕特效
+        // ================================================================
+        (function initGlow() {
+            const glow = document.getElementById('glow');
+            if (!glow) return;
+            let x = 0,
+                y = 0;
+            let targetX = 0,
+                targetY = 0;
+
+            document.addEventListener('mousemove', (e) => {
+                targetX = e.clientX;
+                targetY = e.clientY;
+            });
+            document.addEventListener('touchmove', (e) => {
+                const touch = e.touches[0];
+                if (touch) {
+                    targetX = touch.clientX;
+                    targetY = touch.clientY;
+                }
+            }, { passive: true });
+
+            function smoothGlow() {
+                x += (targetX - x) * 0.06;
+                y += (targetY - y) * 0.06;
+                glow.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
+                requestAnimationFrame(smoothGlow);
+            }
+            // 初始位置居中
+            x = window.innerWidth / 2;
+            y = window.innerHeight / 2;
+            targetX = x;
+            targetY = y;
+            glow.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%)`;
+            smoothGlow();
+
+            // 窗口resize时保持光晕位置合理
+            window.addEventListener('resize', () => {
+                // 不做特殊处理，平滑跟随
+            });
+        })();
+
+
+        // ================================================================
+        // 3. 原有业务逻辑（完整保留，未作任何修改）
+        // ================================================================
+
+        // 全局变量
+        let schoolDataList = [];
+        let currentSelectSchool = null;
+        let selectedSchoolsList = [];
+        const GITHUB_EXCEL_RAW_URL = "./school_list.xlsx";
+
+        // 页面加载自动读取云端台账
+        window.addEventListener('load', async function() {
+            const tipDom = document.getElementById('githubLoadTip');
+            try {
+                tipDom.innerText = "⏳ 正在加载云端台账，请稍候...";
+                const res = await fetch(GITHUB_EXCEL_RAW_URL);
+                if (!res.ok) throw new Error(`文件请求失败，状态码：${res.status}`);
+                const arrayBuf = await res.arrayBuffer();
+                const workbook = XLSX.read(arrayBuf, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                parseExcelData(jsonData);
+                tipDom.innerText = `✅ 云端台账加载完成，共${schoolDataList.length}条学校数据`;
+                renderSearchList();
+            } catch (err) {
+                tipDom.innerText =
+                    `⚠️ 云端自动加载失败，请手动上传本地Excel文件；错误：${err.message}`;
+                console.error("Excel读取异常详情：", err);
+            }
+        })
+
+        // 解析台账数据
+        function parseExcelData(jsonData) {
+            schoolDataList = [];
+            for (let i = 1; i < jsonData.length; i++) {
+                const row = jsonData[i];
+                if (!row[1]) continue;
+                schoolDataList.push({
+                    fullName: row[1] || '',
+                    creditCode: row[2] || '',
+                    areaCode: row[3] || '',
+                    superCode: row[4] || '',
+                    areaName: row[5] || '',
+                    orgType: row[6] || ''
+                })
+            }
+        }
+
+        // 本地文件上传
+        document.getElementById('excelFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                const data = new Uint8Array(ev.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                parseExcelData(jsonData);
+                document.getElementById('githubLoadTip').innerText =
+                    `✅ 本地文件覆盖成功，共${schoolDataList.length}条学校数据`;
+                alert(`成功导入${schoolDataList.length}条学校台账数据！`);
+                renderSearchList();
+            }
+            reader.readAsArrayBuffer(file);
+        })
+
+        // 搜索过滤
+        const searchInput = document.getElementById('searchKey');
+        searchInput.addEventListener('input', renderSearchList);
+
+        function renderSearchList() {
+            const keyword = searchInput.value.trim().toLowerCase();
+            const box = document.getElementById('schoolListBox');
+            box.innerHTML = '';
+            const filterList = schoolDataList.filter(item => item.fullName.toLowerCase().includes(keyword));
+            if (filterList.length === 0) {
+                box.innerHTML =
+                '<div style="padding:10px;text-align:center;color:#aaa;">无匹配学校，请更换关键词或重新导入台账</div>';
+                return;
+            }
+            filterList.slice(0, 100).forEach(school => {
+                const div = document.createElement('div');
+                div.className = 'school-item';
+                div.innerText = school.fullName;
+                div.onclick = () => fillFormBySchool(school);
+                box.appendChild(div);
+            })
+        }
+
+        // 点击选中学校，实时刷新预览
+        function fillFormBySchool(school) {
+            currentSelectSchool = school;
+            document.getElementById('curSchoolShow').value = school.fullName;
+            renderPreviewTable();
+        }
+
+        // 修改旧名称实时刷新预览
+        document.getElementById('oldSchoolName').addEventListener('input', function() {
+            renderPreviewTable();
+        })
+
+        // 生成备注文本
+        function generateNote(oldName, newName) {
+            if (!oldName || !newName) return '';
+            return `将原${oldName}修改为${newName}`;
+        }
+
+        // 添加列表
+        function addToList() {
+            if (!currentSelectSchool) {
+                alert('请先加载学校台账并点击选择一所学校！');
+                return;
+            }
+            const oldName = document.getElementById('oldSchoolName').value.trim();
+            const operate = document.getElementById('operateType').value;
+            const note = generateNote(oldName, currentSelectSchool.fullName);
+            const itemId = `${currentSelectSchool.creditCode}_${operate}_${Date.now()}`;
+            selectedSchoolsList.push({
+                id: itemId,
+                school: currentSelectSchool,
+                oldName: oldName,
+                operate: operate,
+                note: note
+            });
+            renderSelectedList();
+            renderPreviewTable();
+            updateSelectedCount();
+        }
+
+        // 渲染已选列表
+        function renderSelectedList() {
+            const box = document.getElementById('selectedListBox');
+            box.innerHTML = '';
+            if (selectedSchoolsList.length === 0) {
+                box.innerHTML = '<div style="padding:10px;text-align:center;color:#aaa;">暂无待导出学校，请点击上方按钮添加</div>';
+                return;
+            }
+            selectedSchoolsList.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'selected-item';
+                div.innerHTML = `
+              <div class="item-header">
+                <span class="school-name">${item.school.fullName}（${item.operate}）</span>
+                <button class="btn-del" onclick="deleteSelectedItem('${item.id}')">删除</button>
+              </div>
+              ${item.note ? `<div class="item-note">${item.note}</div>` : ''}
+            `;
+                box.appendChild(div);
+            })
+        }
+
+        // 删除单条
+        function deleteSelectedItem(itemId) {
+            selectedSchoolsList = selectedSchoolsList.filter(item => item.id !== itemId);
+            renderSelectedList();
+            renderPreviewTable();
+            updateSelectedCount();
+        }
+
+        // 清空列表
+        function clearList() {
+            if (selectedSchoolsList.length === 0) {
+                alert('列表已为空，无需清空！');
+                return;
+            }
+            if (confirm('确定要清空所有待导出数据吗？')) {
+                selectedSchoolsList = [];
+                renderSelectedList();
+                renderPreviewTable();
+                updateSelectedCount();
+            }
+        }
+
+        // 更新数量
+        function updateSelectedCount() {
+            document.getElementById('selectedCount').innerText = selectedSchoolsList.length;
+        }
+
+        // 实时预览表格渲染
+        function renderPreviewTable() {
+            const tbody = document.getElementById('previewTableBody');
+            tbody.innerHTML = '';
+            if (selectedSchoolsList.length === 0) {
+                tbody.innerHTML = `
+              <tr>
+                <td colspan="10" style="text-align:center;color:#999;">暂无数据，请点击上方按钮添加学校</td>
+              </tr>
+            `;
+                return;
+            }
+            selectedSchoolsList.forEach(item => {
+                const school = item.school;
+                const tr = document.createElement('tr');
+                tr.style.height = '129px';
+                let noteHtml = '';
+                if (item.note) {
+                    noteHtml = item.note.replace('将原', '将原<span class="text-red">').replace('修改为',
+                        '</span>修改为<span class="text-red">') + '</span>';
+                }
+                tr.innerHTML = `
+              <td>${school.creditCode}</td>
+              <td>${school.fullName}</td>
+              <td>${school.fullName}</td>
+              <td>${school.areaCode}</td>
+              <td>${school.superCode}</td>
+              <td>${school.areaName}</td>
+              <td>${school.orgType}</td>
+              <td>否</td>
+              <td>${item.operate}</td>
+              <td>${noteHtml}</td>
+            `;
+                tbody.appendChild(tr);
+            })
+        }
+
+        // ExcelJS导出核心函数
+        async function exportExcel() {
+            if (selectedSchoolsList.length === 0) {
+                alert('请先添加至少一所学校到待导出列表！');
+                return;
+            }
+            const headers = [
+                "统一社会信用代码（必填）",
+                "组织机构全称（必填）",
+                "组织机构简称（必填）",
+                "所属区划编码必填（必填）",
+                "上级组织机构编码必填（必填：统一填写上级政务服务局）",
+                "所属行政区划（必填格式为：盟市——市/区/直属部门——镇/直属部门）",
+                "组织机构类型",
+                "虚拟部门",
+                "新增/修改",
+                "备注（修改请备注修改前和修改后）"
+            ];
+            const workbook = new ExcelJS.Workbook();
+            const sheet = workbook.addWorksheet("部门机构报备");
+            // 列宽
+            sheet.columns = [
+                { width: 22.38 },
+                { width: 31.63 },
+                { width: 28.25 },
+                { width: 16.13 },
+                { width: 32.38 },
+                { width: 28 },
+                { width: 8.75 },
+                { width: 9.38 },
+                { width: 8.63 },
+                { width: 36.38 }
+            ];
+            // 第1行 标题合并
+            const row1 = sheet.getRow(1);
+            row1.height = 63.75;
+            sheet.mergeCells('A1:J1');
+            const cellA1 = row1.getCell('A');
+            cellA1.value = {
+                richText: [
+                    { text: "全区一体化政务服务平台系统区划变更清单", font: { name: "方正小标宋简体", size: 20,
+                            color: { argb: "00000000" } } },
+                    { text: "\n", font: { name: "方正小标宋简体", size: 20 } },
+                    { text: "变更/新增统一社会信用代码填写此表（如有多条数据请分条填写）", font: { name: "方正小标宋简体",
+                            size: 20, bold: true, color: { argb: "FFFF0000" } } }
+                ]
+            };
+            cellA1.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+            cellA1.border = { top: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" },
+            bottom: { style: "thin" } };
+            // 第2行 联系人
+            const row2 = sheet.getRow(2);
+            row2.height = 44.25;
+            sheet.mergeCells('A2:J2');
+            const cellA2 = row2.getCell('A');
+            cellA2.value = "具体填报联系人（必填）：       乔鹏飞         联系电话（必填）：       18148340753";
+            cellA2.font = { name: "方正仿宋_GBK", size: 11, color: { argb: "00000000" } };
+            cellA2.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+            cellA2.border = { top: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" },
+            bottom: { style: "thin" } };
+            // 第3行表头
+            const row3 = sheet.getRow(3);
+            row3.height = 129;
+            headers.forEach((text, idx) => {
+                const cell = row3.getCell(idx + 1);
+                cell.value = text;
+                cell.font = { name: "宋体", size: 11, color: { argb: "00000000" } };
+                cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+                cell.border = { top: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" },
+                    bottom: { style: "thin" } };
+            })
+            // 数据行
+            const startDataRow = 4;
+            selectedSchoolsList.forEach((item, rIdx) => {
+                const curRow = sheet.getRow(startDataRow + rIdx);
+                curRow.height = 129;
+                const school = item.school;
+                const rowData = [
+                    school.creditCode,
+                    school.fullName,
+                    school.fullName,
+                    school.areaCode,
+                    school.superCode,
+                    school.areaName,
+                    school.orgType,
+                    "否",
+                    item.operate,
+                    item.note
+                ];
+                rowData.forEach((val, cIdx) => {
+                    const cell = curRow.getCell(cIdx + 1);
+                    if (cIdx === 9 && val && item.oldName && school.fullName) {
+                        cell.value = {
+                            richText: [
+                                { text: "将原", font: { name: "宋体", size: 11,
+                                        color: { argb: "00000000" } } },
+                                { text: item.oldName, font: { name: "宋体", size: 11,
+                                        color: { argb: "FFFF0000" } } },
+                                { text: "修改为", font: { name: "宋体", size: 11,
+                                        color: { argb: "00000000" } } },
+                                { text: school.fullName, font: { name: "宋体", size: 11,
+                                        color: { argb: "FFFF0000" } } }
+                            ]
+                        };
+                    } else {
+                        cell.value = val;
+                        cell.font = { name: "宋体", size: 11, color: { argb: "00000000" } };
+                    }
+                    cell.alignment = { vertical: "middle", horizontal: "left", wrapText: true };
+                    cell.border = { top: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" },
+                        bottom: { style: "thin" } };
+                });
+            });
+            // 导出下载
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: "application/octet-stream" });
+            saveAs(blob, `区划变更清单_共${selectedSchoolsList.length}条数据.xlsx`);
+        }
+
+        // 页面初始化
+        window.addEventListener('load', function() {
+            renderPreviewTable();
+            updateSelectedCount();
+        })
+    </script>
+
 </body>
 </html>
