@@ -3,7 +3,7 @@ const axios = require('axios');
 
 const app = express();
 
-// CORS 设置
+// CORS
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -14,14 +14,23 @@ app.use((req, res, next) => {
   next();
 });
 
+// 健康检查接口（用于测试服务是否正常）
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// 腾讯文档代理接口
 app.get('/api/tencent-doc', async (req, res) => {
   const clientId = process.env.CLIENT_ID;
   const accessToken = process.env.ACCESS_TOKEN;
   const openId = process.env.OPEN_ID || '';
 
   const { fileId, sheetId, range } = req.query;
-  if (!clientId || !accessToken || !fileId || !sheetId) {
-    return res.status(400).json({ error: 'Missing required parameters or env vars' });
+  if (!clientId || !accessToken) {
+    return res.status(500).json({ error: 'Missing CLIENT_ID or ACCESS_TOKEN env vars' });
+  }
+  if (!fileId || !sheetId) {
+    return res.status(400).json({ error: 'Missing fileId or sheetId' });
   }
 
   const rangeParam = range || 'A1:Z1000';
@@ -56,8 +65,9 @@ app.get('/api/tencent-doc', async (req, res) => {
   }
 });
 
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok' });
+// 根路径响应，防止 404
+app.get('/', (req, res) => {
+  res.send('Proxy server is running.');
 });
 
 module.exports = app;
