@@ -1,3 +1,5 @@
+// Vercel 函数最大执行时间设置为 30 秒（Vercel Hobby 计划最大 10 秒，但可以尝试）
+// 或者通过 vercel.json 设置，但 Hobby 计划限制 10 秒，所以只能优化代码。
 const express = require('express');
 const axios = require('axios');
 
