@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>验收申请表 · 霓虹粒子毛玻璃工具</title>
+    <script src="https://cdn.jsdelivr.net/npm/html-docx-js@0.3.1/dist/html-docx.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+    <!-- Three.js 粒子动态背景 -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        /* ===== 全局重置 & 暗黑霓虹基底 完全匹配参考图配色 ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+            background: #0a0d0f;
+            font-family: 'Inter', 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            position: relative;
+            overflow-x: hidden;
+        }
+        /* 粒子画布层 底层固定 */
+        #particleBg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+        }
+        /* 参考图同款大渐变圆弧装饰光晕 */
+        body::before {
+            content: '';
+            position: fixed;
+            width: 65vw;
+            height: 85vh;
+            top: 0;
+            right: 0;
+            border-radius: 100% 0 0 100%;
+            background: radial-gradient(ellipse at center, #89e85280 0%, #27803960 45%, transparent 75%);
+            pointer-events: none;
+            z-index: 0;
+            filter: blur(8px);
+        }
+        body::after {
+            content: '';
+            position: fixed;
+            width: 35vw;
+            height: 40vh;
+            bottom: 0;
+            left: 0;
+            border-radius: 0 100% 100% 0;
+            background: radial-gradient(ellipse at center, #74dd4070 0%, #1e6d3050 50%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+            filter: blur(6px);
+        }
+
+        /* ===== 外层Mac窗口容器 复刻原图窗口边框 ===== */
+        .window-shell {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 1480px;
+            border-radius: 24px;
+            border: 1px solid rgba(138, 232, 82, 0.2);
+            background: rgba(12, 16, 19, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 0 60px rgba(104, 224, 50, 0.12), 0 20px 60px rgba(0,0,0,0.6);
+            overflow: hidden;
+        }
+        /* 窗口顶部标题栏 原图圆点控制按钮 */
+        .window-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            border-bottom: 1px solid rgba(138, 232, 82, 0.15);
+        }
+        .window-dots {
+            display: flex;
+            gap: 8px;
+        }
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.25);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .window-title-text {
+            font-size: 13px;
+            color: #b8e994;
+            letter-spacing: 0.5px;
+            opacity: 0.75;
+        }
+        .window-corner-icon {
+            width: 20px;
+            height: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3px;
+        }
+        .window-corner-icon span {
+            background: rgba(138, 232, 82, 0.5);
+        }
+        /* 窗口底部装饰条 */
+        .window-footer-bar {
+            padding: 10px 20px;
+            border-top: 1px solid rgba(138, 232, 82, 0.15);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* ===== 主内容区域 ===== */
+        .app {
+            display: flex;
+            gap: 28px;
+            max-width: 1440px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        /* ===== 深色霓虹毛玻璃卡片 全局替换原有glass-card ===== */
+        .glass-card {
+            background: rgba(22, 28, 32, 0.65);
+            backdrop-filter: blur(22px);
+            -webkit-backdrop-filter: blur(22px);
+            border-radius: 24px;
+            padding: 28px 30px;
+            border: 1px solid rgba(138, 232, 82, 0.22);
+            box-shadow: 0 20px 48px -12px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(138, 232, 82, 0.08);
+            transition: transform 0.2s ease, box-shadow 0.3s ease;
+        }
+        .glass-card:hover {
+            box-shadow: 0 28px 60px -16px rgba(0, 0, 0, 0.55), 0 0 24px rgba(104, 224, 50, 0.15);
+            transform: translateY(-2px);
+        }
+
+        /* ===== 左侧配置面板 ===== */
+        .config-panel {
+            width: 420px;
+            flex-shrink: 0;
+            height: fit-content;
+            position: sticky;
+            top: 28px;
+        }
+        .config-panel .panel-title {
+            text-align: center;
+            font-size: 26px;
+            font-weight: 700;
+            margin-bottom: 28px;
+            letter-spacing: -0.4px;
+            background: linear-gradient(135deg, #bcf876, #68e032);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .config-panel .panel-title span {
+            font-size: 30px;
+            filter: drop-shadow(0 0 8px #89e852);
+        }
+
+        /* 表单元素 深色霓虹适配 */
+        .form-item {
+            margin-bottom: 20px;
+        }
+        .form-item label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #b8e994;
+            letter-spacing: 0.3px;
+            text-transform: uppercase;
+            opacity: 0.9;
+        }
+        .form-item input,
+        .form-item select,
+        .form-item textarea {
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 16px;
+            font-size: 14px;
+            background: rgba(40, 50, 56, 0.6);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), 0 0 0 1px rgba(138, 232, 82, 0.18);
+            transition: all 0.2s ease;
+            outline: none;
+            font-family: inherit;
+            color: #eaffd8;
+        }
+        .form-item input::placeholder,
+        .form-item textarea::placeholder {
+            color: rgba(184, 233, 148, 0.45);
+        }
+        .form-item input:focus,
+        .form-item select:focus,
+        .form-item textarea:focus {
+            background: rgba(52, 66, 73, 0.75);
+            box-shadow: 0 0 0 3px rgba(104, 224, 50, 0.22), 0 0 0 1px #89e852, 0 0 12px rgba(104, 224, 50, 0.15);
+        }
+        .form-item textarea {
+            resize: vertical;
+            min-height: 64px;
+        }
+        .form-item select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2389e852' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 16px center;
+            padding-right: 40px;
+        }
+
+        /* 按钮组 霓虹渐变按钮 */
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 28px;
+        }
+        .btn {
+            flex: 1;
+            padding: 14px 20px;
+            border: none;
+            border-radius: 40px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #68e032, #309912);
+            color: #081006;
+            box-shadow: 0 4px 16px rgba(104, 224, 50, 0.3);
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 28px rgba(104, 224, 50, 0.45), 0 0 18px rgba(104, 224, 50, 0.2);
+        }
+        .btn-secondary {
+            background: rgba(30, 40, 45, 0.6);
+            backdrop-filter: blur(4px);
+            color: #b8e994;
+            border: 1px solid rgba(138, 232, 82, 0.25);
+        }
+        .btn-secondary:hover {
+            background: rgba(44, 56, 62, 0.75);
+            transform: translateY(-2px);
+            box-shadow: 0 0 12px rgba(104, 224, 50, 0.12);
+        }
+
+        /* ===== 右侧预览面板 深色文档预览 ===== */
+        .preview-panel {
+            flex: 1;
+            min-height: 800px;
+            padding: 40px 50px;
+            background: rgba(16, 22, 26, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 24px;
+            border: 1px solid rgba(138, 232, 82, 0.2);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3), inset 0 1px 0 rgba(138, 232, 82, 0.06);
+            font-family: "SimSun", serif;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        .preview-panel:hover {
+            box-shadow: 0 12px 40px rgba(0,0,0,0.4), 0 0 16px rgba(104, 224, 50, 0.1);
+        }
+        .preview-panel::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(0deg, rgba(138, 232, 82, 0.02) 0px, rgba(138, 232, 82, 0.02) 2px, transparent 2px, transparent 4px);
+            pointer-events: none;
+            border-radius: 24px;
+        }
+
+        /* 预览文字样式 文档文字浅绿适配深色背景 */
+        .preview-title {
+            font-family: "方正小标宋简体", "SimSun", serif;
+            font-size: 22pt;
+            text-align: center;
+            font-weight: normal;
+            line-height: 1.8;
+            margin: 0;
+            color: #eaffd8;
+        }
+        .preview-para {
+            font-family: "仿宋", "FangSong", "SimSun", serif;
+            font-size: 16pt;
+            font-weight: normal;
+            text-indent: 32pt;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            color: #e0f5c8;
+        }
+        .preview-sign {
+            font-family: "仿宋", "FangSong", "SimSun", serif;
+            font-size: 16pt;
+            font-weight: normal;
+            line-height: 2;
+            padding-left: 3em;
+            color: #e0f5c8;
+        }
+        .preview-sign .sign-item {
+            margin: 0;
+            line-height: 2;
+        }
+        .preview-sign .underline {
+            border-bottom: 1px solid #b8e994;
+            display: inline-block;
+            min-width: 150px;
+        }
+        .preview-sign .sign-item .spread {
+            letter-spacing: 0.30em;
+        }
+        .preview-panel br {
+            display: block;
+            content: "";
+            margin: 0;
+        }
+
+        /* ===== 滚动条 霓虹绿美化 ===== */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.2);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #68e032;
+            border-radius: 20px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #89e852;
+        }
+
+        /* ===== 响应式布局 保留原有逻辑仅适配深色样式 ===== */
+        @media (max-width: 1024px) {
+            .app {
+                flex-direction: column;
+            }
+            .config-panel {
+                width: 100%;
+                position: static;
+            }
+            .preview-panel {
+                min-height: 500px;
+                padding: 28px 24px;
+            }
+        }
+        @media (max-width: 600px) {
+            body { padding: 12px; }
+            .window-header { padding: 10px 14px; }
+            .app { padding: 16px; gap: 20px; }
+            .glass-card { padding: 20px; }
+            .btn-group { flex-direction: column; }
+            .preview-panel { padding: 20px 16px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- 动态粒子背景画布 -->
+    <canvas id="particleBg"></canvas>
+    <!-- 复刻原图Mac窗口外壳 -->
+    <div class="window-shell">
+        <!-- 窗口顶部控制栏 -->
+        <div class="window-header">
+            <div class="window-dots">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+            <div class="window-title-text">Design Works 2021-2022</div>
+            <div class="window-corner-icon">
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+        <!-- 核心业务区域 完全保留原有结构 -->
+        <div class="app">
+            <!-- ===== 左侧配置面板 ===== -->
+            <div class="config-panel glass-card">
+                <div class="panel-title">
+                    <span>📄</span> 验收申请表
+                </div>
+                <div class="form-item">
+                    <label>项目标题</label>
+                    <textarea id="titleInput">教育厅部分系统运维服务教育厅内蒙古基础教育大数据服务平台运维服务（第3包）</textarea>
+                </div>
+                <div class="form-item">
+                    <label>验收类型</label>
+                    <select id="typeSelect">
+                        <option value="终期">终期</option>
+                        <option value="中期">中期</option>
+                    </select>
+                </div>
+                <div class="form-item">
+                    <label>合同编号</label>
+                    <input type="text" id="contractInput" value="x2024-298">
+                </div>
+                <div class="form-item">
+                    <label>申请单位</label>
+                    <input type="text" id="applyUnitInput" value="内蒙古科电数据服务有限公司">
+                </div>
+                <div class="form-item">
+                    <label>审批单位</label>
+                    <input type="text" id="auditUnitInput" value="内蒙古自治区大数据中心">
+                </div>
+                <div class="form-item">
+                    <label>申请日期</label>
+                    <input type="date" id="dateInput" value="2026-06-17">
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" id="exportWordBtn">📥 导出 Word</button>
+                    <button class="btn btn-secondary" id="resetBtn">↺ 重置</button>
+                </div>
+            </div>
+
+            <!-- ===== 右侧预览面板 ===== -->
+            <div class="preview-panel" id="previewWrap"></div>
+        </div>
+        <!-- 窗口底部装饰条 -->
+        <div class="window-footer-bar">
+            <div class="window-dots">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+            <div class="window-title-text">Design Works 2021-2022</div>
+            <div class="window-corner-icon">
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ===================== 新增：Three.js 动态粒子物理背景（不干扰原有业务代码） =====================
+        (function initParticleScene() {
+            const canvas = document.getElementById('particleBg');
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+            // 粒子几何体
+            const particleCount = 350;
+            const geo = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+            const velocities = new Float32Array(particleCount * 3);
+            for(let i=0; i<particleCount; i++) {
+                const i3 = i * 3;
+                // 随机分布全屏
+                positions[i3] = (Math.random() - 0.5) * window.innerWidth * 1.2;
+                positions[i3+1] = (Math.random() - 0.5) * window.innerHeight * 1.2;
+                positions[i3+2] = Math.random() * 400 - 200;
+                // 缓慢漂浮速度
+                velocities[i3] = (Math.random() - 0.5) * 0.3;
+                velocities[i3+1] = (Math.random() - 0.5) * 0.3;
+                velocities[i3+2] = (Math.random() - 0.5) * 0.1;
+            }
+            geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            // 霓虹绿粒子材质
+            const mat = new THREE.PointsMaterial({
+                color: 0x89e852,
+                size: 3,
+                transparent: true,
+                opacity: 0.4,
+                blending: THREE.AdditiveBlending,
+                depthWrite: false
+            });
+            const particles = new THREE.Points(geo, mat);
+            scene.add(particles);
+            camera.position.z = 350;
+
+            // 动画循环
+            function animateParticles() {
+                requestAnimationFrame(animateParticles);
+                const posArr = geo.attributes.position.array;
+                for(let i=0; i<particleCount; i++) {
+                    const i3 = i * 3;
+                    posArr[i3] += velocities[i3];
+                    posArr[i3+1] += velocities[i3+1];
+                    posArr[i3+2] += velocities[i3+2];
+                    // 边界回弹
+                    if(Math.abs(posArr[i3]) > window.innerWidth * 0.6) velocities[i3] *= -1;
+                    if(Math.abs(posArr[i3+1]) > window.innerHeight * 0.6) velocities[i3+1] *= -1;
+                }
+                geo.attributes.position.needsUpdate = true;
+                renderer.render(scene, camera);
+            }
+            animateParticles();
+
+            // 窗口大小自适应
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            })
+        })();
+
+        // ========== 下方原有全部业务逻辑完全无修改 100%保留 ==========
+        const titleInput = document.getElementById('titleInput');
+        const typeSelect = document.getElementById('typeSelect');
+        const contractInput = document.getElementById('contractInput');
+        const applyUnitInput = document.getElementById('applyUnitInput');
+        const auditUnitInput = document.getElementById('auditUnitInput');
+        const dateInput = document.getElementById('dateInput');
+
+        const previewWrap = document.getElementById('previewWrap');
+        const exportWordBtn = document.getElementById('exportWordBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        function getShortName(fullTitle) {
+            let short = fullTitle.replace("教育厅部分系统运维服务", "");
+            short = short.replace(/（第\d+包）/g, "").trim();
+            return short;
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            return parts[0] + '年' + parseInt(parts[1]) + '月' + parseInt(parts[2]) + '日';
+        }
+
+        function renderPreview() {
+            const fullTitle = titleInput.value.trim();
+            const checkType = typeSelect.value;
+            const contractNo = contractInput.value.trim();
+            const applyUnit = applyUnitInput.value.trim();
+            const auditUnit = auditUnitInput.value.trim();
+            const dateVal = dateInput.value;
+            const fDate = formatDate(dateVal);
+            const shortProName = getShortName(fullTitle);
+            const dashTitle = fullTitle.replace("教育厅部分系统运维服务", "教育厅部分系统运维服务-");
+
+            const para1 = `${auditUnit}：`;
+            const para2 = `${dashTitle}，合同编号：${contractNo}，按照合同约定现具备${checkType}验收条件，现申请${shortProName}项目${checkType}验收。`;
+            const para3 = `特此申请！`;
+
+            const html = `
+                <br><br>
+                <div class="preview-title">${fullTitle}项目${checkType}验收申请</div>
+                <br><br><br><br><br>
+                <div class="preview-para">${para1}</div>
+                <br>
+                <div class="preview-para">${para2}</div>
+                <br>
+                <div class="preview-para">${para3}</div>
+                <br><br><br><br><br>
+                <div class="preview-sign">
+                    <div class="sign-item">申请单位：<span class="underline">${applyUnit}</span></div>
+                    <div class="sign-item">申请日期：<span class="underline">${fDate}</span></div>
+                    <div class="sign-item">审批单位：<span class="underline">${auditUnit}</span></div>
+                    <div class="sign-item">审批意见：<span class="underline"></span></div>
+                    <div class="sign-item"><span class="spread">审批人：</span><span class="underline"></span></div>
+                </div>
+            `;
+
+            previewWrap.innerHTML = html;
+        }
+
+        function exportToWord() {
+            const fullTitle = titleInput.value.trim();
+            const checkType = typeSelect.value;
+            const contractNo = contractInput.value.trim();
+            const applyUnit = applyUnitInput.value.trim();
+            const auditUnit = auditUnitInput.value.trim();
+            const dateVal = dateInput.value;
+            const fDate = formatDate(dateVal);
+            const shortProName = getShortName(fullTitle);
+            const dashTitle = fullTitle.replace("教育厅部分系统运维服务", "教育厅部分系统运维服务-");
+
+            const para1 = `${auditUnit}：`;
+            const para2 = `${dashTitle}，合同编号：${contractNo}，按照合同约定现具备${checkType}验收条件，现申请${shortProName}项目${checkType}验收。`;
+            const para3 = `特此申请！`;
+
+            const htmlContent = `
+            <html xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns:m="http://schemas.microsoft.com/office/2004/12/omml" xmlns="http://www.w3.org/TR/REC-html40">
+            <head>
+                <meta charset="utf-8">
+                <!--[if gte mso 9]>
+                <xml>
+                    <w:WordDocument>
+                        <w:View>Print</w:View>
+                        <w:Zoom>100</w:Zoom>
+                    </w:WordDocument>
+                </xml>
+                <![endif]-->
+                <style>
+                    body { margin: 0; padding: 0; }
+                    .preview-title {
+                        font-family: "方正小标宋简体","SimSun",serif;
+                        font-size: 22pt;
+                        text-align: center;
+                        font-weight: normal;
+                        line-height: 1.8;
+                        margin: 0;
+                    }
+                    .preview-para {
+                        font-family: "仿宋","FangSong",serif;
+                        font-size: 16pt;
+                        font-weight: normal;
+                        text-indent: 32pt;
+                        line-height: 1.6;
+                        margin: 0;
+                        padding: 0;
+                    }
+                    .sign-table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        border: none;
+                    }
+                    .sign-table td {
+                        border: none;
+                        padding: 0;
+                        padding-left: 3em;
+                        vertical-align: top;
+                        font-family: "仿宋","FangSong",serif;
+                        font-size: 16pt;
+                        font-weight: normal;
+                        line-height: 2;
+                    }
+                    .sign-item {
+                        margin: 0;
+                        line-height: 2;
+                    }
+                    .underline {
+                        border-bottom: 1px solid #000;
+                        display: inline-block;
+                        min-width: 150px;
+                    }
+                    .spread {
+                        letter-spacing: 0.25em;
+                    }
+                    br { display: block; content: ""; margin: 0; }
+                </style>
+            </head>
+            <body style="font-family: '仿宋','FangSong',serif; margin: 0; padding: 0;">
+
+                <br><br>
+                <div class="preview-title">${fullTitle}项目${checkType}验收申请</div>
+                <br><br><br><br><br>
+                <div class="preview-para">${para1}</div>
+                <br>
+                <div class="preview-para">${para2}</div>
+                <br>
+                <div class="preview-para">${para3}</div>
+                <br><br><br><br><br>
+                <table class="sign-table">
+                    <tr>
+                        <td>
+                            <div class="sign-item">申请单位：<span class="underline">${applyUnit}</span></div>
+                            <div class="sign-item">申请日期：<span class="underline">${fDate}</span></div>
+                            <div class="sign-item">审批单位：<span class="underline">${auditUnit}</span></div>
+                            <div class="sign-item">审批意见：<span class="underline"></span></div>
+                            <div class="sign-item"><span class="spread">审批人：</span><span class="underline"></span></div>
+                        </td>
+                    </tr>
+                </table>
+
+            </body>
+            </html>`;
+
+            const options = {
+                margins: {
+                    top: 1440,
+                    bottom: 1440,
+                    left: 1080,
+                    right: 1080
+                }
+            };
+
+            try {
+                const blob = htmlDocx.asBlob(htmlContent, options);
+                const fileName = `${fullTitle}${checkType}验收申请表.docx`;
+                saveAs(blob, fileName);
+            } catch (e) {
+                alert('导出失败：' + e.message);
+            }
+        }
+
+        // 事件绑定
+        const allInputs = [titleInput, typeSelect, contractInput, applyUnitInput, auditUnitInput, dateInput];
+        allInputs.forEach(el => el.addEventListener('input', renderPreview));
+
+        exportWordBtn.addEventListener('click', exportToWord);
+
+        resetBtn.addEventListener('click', () => {
+            titleInput.value = "教育厅部分系统运维服务教育厅内蒙古基础教育大数据服务平台运维服务（第3包）";
+            typeSelect.value = "终期";
+            contractInput.value = "x2024-298";
+            applyUnitInput.value = "内蒙古科电数据服务有限公司";
+            auditUnitInput.value = "内蒙古自治区大数据中心";
+            dateInput.value = "2026-06-17";
+            renderPreview();
+        });
+
+        renderPreview();
+    </script>
+</body>
+</html>
