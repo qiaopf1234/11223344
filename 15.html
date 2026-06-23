@@ -2,17 +2,9 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>批量账号生成工具 · 赛博毛玻璃版</title>
+    <title>批量账号生成工具（教育系统版）</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.128.0/build/three.module.js"
-            }
-        }
-    </script>
     <script>
         tailwind.config = {
             theme: {
@@ -20,494 +12,268 @@
                     colors: {
                         primary: '#7C3AED',
                         secondary: '#4F46E5',
+                        glass: 'rgba(255, 255, 255, 0.15)',
+                        'glass-border': 'rgba(255, 255, 255, 0.2)',
                     }
                 }
             }
         }
     </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .glass-effect {
+                background: rgba(255, 255, 255, 0.15);
+                backdrop-filter: blur(10px);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+            }
+            .btn-hover {
+                transition: all 0.2s ease;
+            }
+            .btn-hover:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3);
+            }
+        }
+    </style>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', 'Inter', system-ui, sans-serif;
-        }
         body {
-            background: #0a0c12;
+            background: linear-gradient(135deg, #7C3AED 0%, #4F46E5 100%);
             min-height: 100vh;
-            position: relative;
-            overflow-x: auto;
+            color: #fff;
         }
-        /* Three.js 粒子画布背景 */
-        #bg-canvas {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
-            background: radial-gradient(circle at 20% 30%, #0a0a1a, #020308);
-            pointer-events: none;
-        }
-        /* 鼠标跟随光晕 */
-        .mouse-glow {
-            position: fixed;
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, rgba(139, 92, 246, 0.2) 0%, rgba(6, 182, 212, 0) 70%);
-            border-radius: 50%;
-            pointer-events: none;
-            transform: translate(-50%, -50%);
-            z-index: 999;
-            transition: transform 0.05s linear;
-            will-change: transform;
-        }
-        /* 毛玻璃卡片样式 */
-        .glass-card {
-            background: rgba(15, 25, 45, 0.55);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid rgba(139, 92, 246, 0.35);
-            border-radius: 2rem;
-            transition: all 0.3s ease;
-            box-shadow: 0 20px 35px -12px rgba(0, 0, 0, 0.3);
-        }
-        .glass-card:hover {
-            transform: translateY(-3px);
-            border-color: rgba(139, 92, 246, 0.7);
-            box-shadow: 0 25px 40px -12px rgba(139, 92, 246, 0.25);
-        }
-        /* 霓虹流光按钮 */
-        .neon-btn {
-            position: relative;
-            background: rgba(15, 23, 42, 0.8);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(139, 92, 246, 0.5);
-            border-radius: 2rem;
-            padding: 0.7rem 1rem;
-            font-weight: 600;
-            color: #e0e7ff;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            overflow: hidden;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-        .neon-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.4), transparent);
-            transition: left 0.5s ease;
-        }
-        .neon-btn:hover::before {
-            left: 100%;
-        }
-        .neon-btn:hover {
-            transform: translateY(-2px);
-            border-color: #a78bfa;
-            box-shadow: 0 6px 16px rgba(139, 92, 246, 0.3);
-            color: white;
-        }
-        /* 表单控件毛玻璃 */
-        .glass-input, .glass-select, textarea {
-            background: rgba(10, 18, 30, 0.7);
-            border: 1.5px solid rgba(139, 92, 246, 0.4);
-            border-radius: 1rem;
-            padding: 0.7rem 1rem;
-            color: #e2e8f0;
-            font-size: 0.9rem;
-            outline: none;
-            transition: all 0.2s;
-            width: 100%;
-        }
-        .glass-input:focus, .glass-select:focus, textarea:focus {
-            border-color: #a78bfa;
-            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3);
-            background: rgba(20, 35, 55, 0.9);
-        }
-        .glass-select {
-            cursor: pointer;
+        .custom-select {
             appearance: none;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23a78bfa' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-color: rgba(255, 255, 255, 0.2);
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
             background-repeat: no-repeat;
-            background-position: right 1rem center;
-            background-size: 1rem;
+            background-position: right 0.5rem center;
+            background-size: 1em;
+            color: #fff !important;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding-right: 2rem;
         }
-        textarea {
-            resize: vertical;
-            font-family: monospace;
+        .custom-select option {
+            background-color: #7C3AED;
+            color: #fff;
         }
-        /* 表格样式 */
-        .result-table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        .result-table th, .result-table td {
-            padding: 0.75rem 1rem;
-            text-align: left;
-            border-bottom: 1px solid rgba(139, 92, 246, 0.2);
-        }
-        .result-table th {
-            color: #a78bfa;
-            font-weight: 600;
-        }
-        /* 滚动条美化 */
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #0f172a; border-radius: 6px; }
-        ::-webkit-scrollbar-thumb { background: #8b5cf6; border-radius: 6px; }
-        /* 响应式 */
-        @media (max-width: 768px) {
-            .glass-card { padding: 1rem; }
-            .neon-btn { padding: 0.5rem 0.8rem; font-size: 0.8rem; }
+        input, textarea {
+            color: #fff !important;
+            background-color: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
     </style>
 </head>
-<body>
-
-    <!-- Three.js 粒子画布背景 -->
-    <canvas id="bg-canvas"></canvas>
-    <!-- 鼠标光晕层 -->
-    <div class="mouse-glow" id="mouseGlow"></div>
-
-    <div class="max-w-6xl mx-auto px-4 py-6 relative z-10">
+<body class="p-4 md:p-8">
+    <div class="max-w-5xl mx-auto">
         <header class="text-center mb-8">
-            <h1 class="text-3xl md:text-4xl font-bold bg-gradient-to-r from-blue-300 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
+            <h1 class="text-3xl md:text-4xl font-bold mb-2">
                 <i class="fa fa-user-circle"></i> 批量账号生成工具
             </h1>
-            <p class="text-gray-300">前缀+分类码+5位流水号 · 本地永久连续不重复 · 毛玻璃粒子版</p>
+            <p class="opacity-80">前缀+分类码+5位流水号 · 本地永久连续不重复</p>
         </header>
 
-        <!-- 配置区毛玻璃卡片 -->
-        <div class="glass-card p-6 md:p-8 mb-8">
-            <h2 class="text-xl font-bold mb-5 flex items-center gap-2 text-purple-300">
-                <i class="fa fa-sliders-h"></i> 生成规则配置
-            </h2>
+        <!-- 配置区 -->
+        <div class="glass-effect rounded-2xl p-6 md:p-8 mb-8">
+            <h2 class="text-xl font-bold mb-4">一、生成规则配置</h2>
 
-            <!-- 第一行：前缀 + 分类码（两列响应式） -->
+            <!-- 第一行：前缀、分类码 -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                    <label class="block mb-2 text-gray-300">前缀</label>
+                    <label class="block mb-2 opacity-90">前缀</label>
                     <div class="flex gap-2">
-                        <input id="prefix" class="glass-input flex-1" placeholder="例：xfgl_" value="xfgl_">
-                        <select id="prefixSel" class="glass-select w-32"></select>
-                        <button onclick="add('prefix')" class="neon-btn bg-green-600/30 border-green-500/50"><i class="fa fa-plus"></i></button>
+                        <input id="prefix" value="xfgl_" class="flex-1 rounded px-3 py-2">
+                        <select id="prefixSel" class="custom-select rounded px-2"></select>
+                        <button onclick="add('prefix')" class="bg-green-500 px-3 rounded"><i class="fa fa-plus"></i></button>
                     </div>
                 </div>
                 <div>
-                    <label class="block mb-2 text-gray-300">分类码</label>
+                    <label class="block mb-2 opacity-90">分类码</label>
                     <div class="flex gap-2">
-                        <input id="typeCode" class="glass-input flex-1" placeholder="例：jyj" value="">
-                        <select id="typeCodeSel" class="glass-select w-32"></select>
-                        <button onclick="add('typeCode')" class="neon-btn bg-green-600/30 border-green-500/50"><i class="fa fa-plus"></i></button>
+                        <input id="typeCode" placeholder="jyj" class="flex-1 rounded px-3 py-2">
+                        <select id="typeCodeSel" class="custom-select rounded px-2"></select>
+                        <button onclick="add('typeCode')" class="bg-green-500 px-3 rounded"><i class="fa fa-plus"></i></button>
                     </div>
                 </div>
             </div>
 
-            <!-- 第二行：后缀模板 + 每个单位生成数量 -->
+            <!-- 第二行：后缀、数量（和上面布局完全统一，宽度一样） -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                    <label class="block mb-2 text-gray-300">后缀模板（用N代表序号）</label>
+                    <label class="block mb-2 opacity-90">后缀模板（用N代表序号）</label>
                     <div class="flex gap-2">
-                        <input id="suffix" class="glass-input flex-1" placeholder="例：_N" value="">
-                        <select id="suffixSel" class="glass-select w-32"></select>
-                        <button onclick="add('suffix')" class="neon-btn bg-green-600/30 border-green-500/50"><i class="fa fa-plus"></i></button>
+                        <input id="suffix" placeholder="例：_N" class="flex-1 rounded px-3 py-2">
+                        <select id="suffixSel" class="custom-select rounded px-2"></select>
+                        <button onclick="add('suffix')" class="bg-green-500 px-3 rounded"><i class="fa fa-plus"></i></button>
                     </div>
                 </div>
                 <div>
-                    <label class="block mb-2 text-gray-300">每个单位生成数量</label>
-                    <input id="countPerUnit" type="number" min="1" value="1" class="glass-input">
+                    <label class="block mb-2 opacity-90">每个单位生成数量</label>
+                    <input id="countPerUnit" type="number" min="1" value="1" class="w-full rounded px-3 py-2">
                 </div>
             </div>
 
-            <!-- 第三行：单位列表 + 手机号列表（两列等高） -->
+            <!-- 文本域：单位、手机号 -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                    <label class="block mb-2 text-gray-300">单位列表（每行一个）</label>
-                    <textarea id="unitList" rows="5" class="glass-input" placeholder=""></textarea>
+                    <label class="block mb-2 opacity-90">单位列表（每行一个）</label>
+                    <textarea id="unitList" class="w-full h-32 rounded p-3"></textarea>
                 </div>
                 <div>
-                    <label class="block mb-2 text-gray-300">手机号列表（和单位一一对应，留空则复用）</label>
-                    <textarea id="phoneList" rows="5" class="glass-input" placeholder=""></textarea>
+                    <label class="block mb-2 opacity-90">手机号列表（和单位一一对应，留空则复用）</label>
+                    <textarea id="phoneList" class="w-full h-32 rounded p-3"></textarea>
                 </div>
             </div>
 
-            <!-- 按钮组：自适应换行 -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <button onclick="generate()" class="neon-btn bg-gradient-to-r from-green-600 to-emerald-500 border-green-400/50">
-                    <i class="fa fa-magic"></i> 一键生成
+            <!-- 按钮区 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button onclick="generate()" class="bg-green-600 py-3 rounded font-bold btn-hover">
+                    <i class="fa fa-magic"></i> 一键生成账号
                 </button>
-                <button onclick="exportCSV()" class="neon-btn bg-gradient-to-r from-indigo-600 to-blue-500 border-indigo-400/50">
+                <button onclick="exportCSV()" class="bg-indigo-600 py-3 rounded font-bold btn-hover">
                     <i class="fa fa-download"></i> 导出CSV
                 </button>
-                <button onclick="clearAll()" class="neon-btn bg-gradient-to-r from-red-600 to-rose-500 border-red-400/50">
+                <button onclick="clearAll()" class="bg-red-500 py-3 rounded font-bold btn-hover">
                     <i class="fa fa-trash"></i> 清空内容
                 </button>
-                <button onclick="resetSerial()" class="neon-btn bg-gradient-to-r from-orange-600 to-amber-500 border-orange-400/50">
-                    <i class="fa fa-refresh"></i> 重置流水号
+                <button onclick="resetSerial()" class="bg-red-700 py-3 rounded font-bold btn-hover">
+                    <i class="fa fa-refresh"></i> 重置流水号（从1开始）
                 </button>
             </div>
         </div>
 
-        <!-- 结果预览区 -->
-        <div class="glass-card p-6 md:p-8">
-            <h2 class="text-xl font-bold mb-4 flex items-center gap-2 text-purple-300">
-                <i class="fa fa-table"></i> 生成结果预览
-            </h2>
-            <div class="overflow-x-auto max-h-96 overflow-y-auto">
-                <table class="result-table min-w-[500px]">
-                    <thead class="sticky top-0 bg-[rgba(15,25,45,0.8)] backdrop-blur-sm">
-                        <tr>
-                            <th>序号</th>
-                            <th>单位全称</th>
-                            <th>账号</th>
-                            <th>手机号</th>
+        <!-- 结果区 -->
+        <div class="glass-effect rounded-2xl p-6 md:p-8">
+            <h2 class="text-xl font-bold mb-4">二、生成结果预览</h2>
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-white/20">
+                            <th class="text-left py-3 px-4">序号</th>
+                            <th class="text-left py-3 px-4">单位全称</th>
+                            <th class="text-left py-3 px-4">账号</th>
+                            <th class="text-left py-3 px-4">手机号</th>
                         </tr>
                     </thead>
                     <tbody id="tbody"></tbody>
                 </table>
             </div>
-            <div class="text-center text-gray-400 text-sm mt-4" id="emptyTip">暂无数据，点击「一键生成」</div>
         </div>
     </div>
 
-    <!-- Three.js 粒子背景 -->
-    <script type="module">
-        import * as THREE from 'three';
-        const canvas = document.getElementById('bg-canvas');
-        const renderer = new THREE.WebGLRenderer({ canvas, alpha: false });
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x03050b);
-        const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 1000);
-        camera.position.set(0, 1.5, 14);
-        camera.lookAt(0, 0, 0);
+<script>
+let resultData = [];
+const KEY = "global_serial_no";
 
-        // 主粒子群 (紫罗兰)
-        const particleCount = 2100;
-        const geom = new THREE.BufferGeometry();
-        const positions = new Float32Array(particleCount * 3);
-        for (let i = 0; i < particleCount; i++) {
-            positions[i*3] = (Math.random() - 0.5) * 38;
-            positions[i*3+1] = (Math.random() - 0.5) * 24;
-            positions[i*3+2] = (Math.random() - 0.5) * 30 - 8;
-        }
-        geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        const particleMat = new THREE.PointsMaterial({ color: 0x8b5cf6, size: 0.09, transparent: true, opacity: 0.65, blending: THREE.AdditiveBlending });
-        const particleSys = new THREE.Points(geom, particleMat);
-        scene.add(particleSys);
+// ---------- 流水号：只读写一次 ----------
+function getStart(count) {
+    let cur = parseInt(localStorage.getItem(KEY) || "1");
+    localStorage.setItem(KEY, cur + count);
+    return cur;
+}
 
-        // 第二层粒子 (青色)
-        const geom2 = new THREE.BufferGeometry();
-        const pos2 = new Float32Array(1400 * 3);
-        for (let i = 0; i < 1400; i++) {
-            pos2[i*3] = (Math.random() - 0.5) * 44;
-            pos2[i*3+1] = (Math.random() - 0.5) * 28;
-            pos2[i*3+2] = (Math.random() - 0.5) * 34 - 10;
-        }
-        geom2.setAttribute('position', new THREE.BufferAttribute(pos2, 3));
-        const mat2 = new THREE.PointsMaterial({ color: 0x06b6d4, size: 0.08, transparent: true, opacity: 0.55, blending: THREE.AdditiveBlending });
-        const particleSys2 = new THREE.Points(geom2, mat2);
-        scene.add(particleSys2);
+// ---------- 重置流水号：从1开始 ----------
+function resetSerial() {
+    if (confirm("确定要重置流水号吗？重置后下次生成将从00001开始，之前的号不会再生成！")) {
+        localStorage.setItem(KEY, "1");
+        alert("✅ 流水号已重置，下次生成将从00001开始");
+    }
+}
 
-        // 第三层粒子 (粉晶)
-        const geom3 = new THREE.BufferGeometry();
-        const pos3 = new Float32Array(900 * 3);
-        for (let i = 0; i < 900; i++) {
-            pos3[i*3] = (Math.random() - 0.5) * 48;
-            pos3[i*3+1] = (Math.random() - 0.5) * 30;
-            pos3[i*3+2] = (Math.random() - 0.5) * 38 - 12;
-        }
-        geom3.setAttribute('position', new THREE.BufferAttribute(pos3, 3));
-        const mat3 = new THREE.PointsMaterial({ color: 0xf472b6, size: 0.1, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending });
-        const particleSys3 = new THREE.Points(geom3, mat3);
-        scene.add(particleSys3);
+// ---------- 下拉初始化 ----------
+function loadSel(key) {
+    let list = JSON.parse(localStorage.getItem(key+"_list") || "[]");
+    let sel = document.getElementById(key+"Sel");
+    sel.innerHTML = "";
+    list.forEach(v=>{
+        let o = document.createElement("option");
+        o.value = v; o.textContent = v;
+        sel.appendChild(o);
+    });
+    sel.onchange = ()=>document.getElementById(key).value = sel.value;
+}
+function add(key) {
+    let val = document.getElementById(key).value.trim();
+    if(!val) return alert("请输入内容");
+    let list = JSON.parse(localStorage.getItem(key+"_list") || "[]");
+    if(!list.includes(val)) list.push(val);
+    localStorage.setItem(key+"_list", JSON.stringify(list));
+    loadSel(key);
+}
 
-        // 装饰环
-        const ringCount = 380;
-        const ringGeo = new THREE.BufferGeometry();
-        const ringPositions = new Float32Array(ringCount * 3);
-        for (let i = 0; i < ringCount; i++) {
-            const angle = (i / ringCount) * Math.PI * 2;
-            const r = 5.2;
-            ringPositions[i*3] = Math.cos(angle) * r;
-            ringPositions[i*3+1] = Math.sin(angle) * r * 0.4;
-            ringPositions[i*3+2] = -1.8;
-        }
-        ringGeo.setAttribute('position', new THREE.BufferAttribute(ringPositions, 3));
-        const ringPoints = new THREE.Points(ringGeo, new THREE.PointsMaterial({ color: 0xa78bfa, size: 0.09, blending: THREE.AdditiveBlending }));
-        scene.add(ringPoints);
+// ---------- 生成（核心：支持每个单位生成多个账号，后缀自动替换序号） ----------
+function generate() {
+    const prefix = document.getElementById("prefix").value || "xfgl_";
+    const typeCode = document.getElementById("typeCode").value || "";
+    const suffixTemplate = document.getElementById("suffix").value || "";
+    const countPerUnit = parseInt(document.getElementById("countPerUnit").value) || 1;
 
-        scene.fog = new THREE.FogExp2(0x03050b, 0.008);
+    const units = document.getElementById("unitList").value.split("\n").map(x=>x.trim()).filter(Boolean);
+    const phones = document.getElementById("phoneList").value.split("\n").map(x=>x.trim()).filter(Boolean);
 
-        let targetCamX = 0, targetCamY = 0;
-        window.addEventListener('mousemove', (e) => {
-            let mx = (e.clientX / window.innerWidth) * 2 - 1;
-            let my = (e.clientY / window.innerHeight) * 2 - 1;
-            targetCamX = mx * 0.9;
-            targetCamY = my * 0.6;
-        });
+    if(units.length === 0) return alert("请输入单位列表");
 
-        let time = 0;
-        function animate() {
-            requestAnimationFrame(animate);
-            time += 0.007;
-            particleSys.rotation.y = time * 0.06;
-            particleSys.rotation.x = Math.sin(time * 0.18) * 0.08;
-            particleSys2.rotation.y = time * 0.04;
-            particleSys3.rotation.x = time * 0.03;
-            ringPoints.rotation.z = time * 0.12;
-            camera.position.x += (targetCamX * 0.5 - camera.position.x) * 0.04;
-            camera.position.y += (targetCamY * 0.4 - camera.position.y) * 0.04;
-            camera.lookAt(0, 0, 0);
-            renderer.render(scene, camera);
-        }
-        function onResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
-        window.addEventListener('resize', onResize);
-        animate();
-    </script>
+    resultData = [];
+    const totalCount = units.length * countPerUnit;
+    const start = getStart(totalCount);
+    let html = "";
+    let rowIndex = 1;
 
-    <!-- 鼠标光晕跟随 + 核心业务逻辑（完全保留原功能） -->
-    <script>
-        // 鼠标光晕
-        const glow = document.getElementById('mouseGlow');
-        document.addEventListener('mousemove', (e) => {
-            glow.style.left = e.clientX + 'px';
-            glow.style.top = e.clientY + 'px';
-        });
-
-        // ========== 原有业务逻辑（保留所有功能） ==========
-        let resultData = [];
-        const SERIAL_KEY = "global_serial_no";
-
-        function getStart(count) {
-            let cur = parseInt(localStorage.getItem(SERIAL_KEY) || "1");
-            localStorage.setItem(SERIAL_KEY, cur + count);
-            return cur;
-        }
-
-        function resetSerial() {
-            if (confirm("确定重置流水号？重置后下次生成将从00001开始，之前生成的号不会重复。")) {
-                localStorage.setItem(SERIAL_KEY, "1");
-                alert("✅ 流水号已重置，下次生成从00001开始");
-            }
-        }
-
-        // 下拉列表管理
-        function loadSel(key) {
-            let list = JSON.parse(localStorage.getItem(key + "_list") || "[]");
-            let sel = document.getElementById(key + "Sel");
-            sel.innerHTML = "";
-            list.forEach(v => {
-                let o = document.createElement("option");
-                o.value = v;
-                o.textContent = v;
-                sel.appendChild(o);
+    units.forEach((unit, unitIdx) => {
+        const phone = phones[unitIdx] || "";
+        for(let n=1; n<=countPerUnit; n++){
+            const globalNo = start + (unitIdx * countPerUnit) + (n - 1);
+            const no = String(globalNo).padStart(5, '0');
+            const suffix = suffixTemplate.replace(/N/g, n);
+            const account = prefix + typeCode + no + suffix;
+            resultData.push({
+                index: rowIndex,
+                unit: unit,
+                account: account,
+                phone: phone
             });
-            sel.onchange = () => document.getElementById(key).value = sel.value;
+            html += `<tr class="border-b border-white/10">
+                <td class="py-3 px-4">${rowIndex}</td>
+                <td class="py-3 px-4">${unit}</td>
+                <td class="py-3 px-4 text-green-300">${account}</td>
+                <td class="py-3 px-4">${phone}</td>
+            </tr>`;
+            rowIndex++;
         }
-        function add(key) {
-            let val = document.getElementById(key).value.trim();
-            if (!val) return alert("请输入内容");
-            let list = JSON.parse(localStorage.getItem(key + "_list") || "[]");
-            if (!list.includes(val)) list.push(val);
-            localStorage.setItem(key + "_list", JSON.stringify(list));
-            loadSel(key);
-        }
+    });
 
-        // 核心生成函数
-        function generate() {
-            const prefix = document.getElementById("prefix").value.trim() || "xfgl_";
-            const typeCode = document.getElementById("typeCode").value.trim() || "";
-            const suffixTemplate = document.getElementById("suffix").value.trim() || "";
-            const countPerUnit = parseInt(document.getElementById("countPerUnit").value) || 1;
+    document.getElementById("tbody").innerHTML = html;
+    alert(`✅ 生成成功！\n起始号：${start}\n总数量：${totalCount}`);
+}
 
-            const units = document.getElementById("unitList").value.split("\n").map(x => x.trim()).filter(Boolean);
-            const phones = document.getElementById("phoneList").value.split("\n").map(x => x.trim());
+// ---------- 导出 ----------
+function exportCSV() {
+    if(!resultData.length) return alert("请先生成账号");
+    let csv = "\ufeff序号,单位全称,账号,手机号\n";
+    resultData.forEach(r=>{
+        csv += `${r.index},"${r.unit}","${r.account}","${r.phone}"\n`;
+    });
+    const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "账号生成结果.csv";
+    a.click();
+}
 
-            if (units.length === 0) {
-                alert("请输入单位列表");
-                return;
-            }
+// ---------- 清空 ----------
+function clearAll() {
+    document.getElementById("unitList").value = "";
+    document.getElementById("phoneList").value = "";
+    document.getElementById("tbody").innerHTML = "";
+    resultData = [];
+}
 
-            resultData = [];
-            const totalCount = units.length * countPerUnit;
-            const start = getStart(totalCount);
-            let html = "";
-            let rowIndex = 1;
+// ---------- 页面加载初始化下拉 ----------
+window.onload = function(){
+    loadSel("prefix");
+    loadSel("typeCode");
+    loadSel("suffix");
+};
+</script>
 
-            for (let uIdx = 0; uIdx < units.length; uIdx++) {
-                const unit = units[uIdx];
-                const phone = phones[uIdx] || (phones[0] || "");
-                for (let n = 1; n <= countPerUnit; n++) {
-                    const globalNo = start + (uIdx * countPerUnit) + (n - 1);
-                    const no = String(globalNo).padStart(5, '0');
-                    let suffix = suffixTemplate.replace(/N/g, n);
-                    const account = prefix + typeCode + no + suffix;
-                    resultData.push({ index: rowIndex, unit, account, phone });
-                    html += `<tr><td class="py-2 px-3">${rowIndex}</td><td class="py-2 px-3">${unit}</td><td class="py-2 px-3 text-green-300 font-mono">${account}</td><td class="py-2 px-3">${phone}</td></tr>`;
-                    rowIndex++;
-                }
-            }
-
-            document.getElementById("tbody").innerHTML = html;
-            document.getElementById("emptyTip").style.display = "none";
-            alert(`✅ 生成成功！起始流水号：${String(start).padStart(5,'0')}，共生成 ${totalCount} 个账号`);
-        }
-
-        function exportCSV() {
-            if (!resultData.length) {
-                alert("请先生成账号");
-                return;
-            }
-            let csv = "\ufeff序号,单位全称,账号,手机号\n";
-            resultData.forEach(r => {
-                csv += `${r.index},"${r.unit}","${r.account}","${r.phone}"\n`;
-            });
-            const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-            const a = document.createElement("a");
-            a.href = URL.createObjectURL(blob);
-            a.download = "账号生成结果.csv";
-            a.click();
-            URL.revokeObjectURL(blob);
-        }
-
-        function clearAll() {
-            document.getElementById("unitList").value = "";
-            document.getElementById("phoneList").value = "";
-            document.getElementById("tbody").innerHTML = "";
-            resultData = [];
-            document.getElementById("emptyTip").style.display = "block";
-        }
-
-        // 初始化下拉
-        window.onload = () => {
-            loadSel("prefix");
-            loadSel("typeCode");
-            loadSel("suffix");
-            // 设置默认示例数据（便于演示）
-            if (!document.getElementById("unitList").value) {
-                document.getElementById("unitList").value = "";
-                document.getElementById("phoneList").value = "";
-            }
-        };
-
-        // 将函数挂载到全局供onclick调用
-        window.generate = generate;
-        window.exportCSV = exportCSV;
-        window.clearAll = clearAll;
-        window.resetSerial = resetSerial;
-        window.add = add;
-    </script>
 </body>
 </html>
