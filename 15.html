@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>批量账号生成工具（教育系统版）</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
@@ -10,10 +11,24 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: '#7C3AED',
-                        secondary: '#4F46E5',
-                        glass: 'rgba(255, 255, 255, 0.15)',
-                        'glass-border': 'rgba(255, 255, 255, 0.2)',
+                        fluidBlue: '#0099FF',
+                        fluidOrange: '#FF9944',
+                        fluidPurple: '#9977DD',
+                        fluidDarkBlue: '#0055AA',
+                        fluidGlassBg: 'rgba(22,22,32,0.24)',
+                        fluidGlassHeavy: 'rgba(18,18,28,0.30)',
+                        fluidBorder: 'rgba(255,255,255,0.12)',
+                        fluidTextMuted: 'rgba(255,255,255,0.65)',
+                        fluidBg: '#000000',
+                    },
+                    borderRadius: {
+                        'fluid-sm': '16px',
+                        'fluid-lg': '26px',
+                    },
+                    boxShadow: {
+                        fluidInner: 'inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,153,255,0.05), inset 0 0 20px rgba(255,153,68,0.03)',
+                        fluidFloat: '0 10px 42px rgba(0,0,0,0.55), 0 0 50px rgba(153,119,221,0.07)',
+                        btnGlow: '0 0 24px rgba(0,153,255,0.35), 0 0 32px rgba(255,153,68,0.18)',
                     }
                 }
             }
@@ -21,176 +36,264 @@
     </script>
     <style type="text/tailwindcss">
         @layer utilities {
-            .glass-effect {
-                background: rgba(255, 255, 255, 0.15);
-                backdrop-filter: blur(10px);
-                border: 1px solid rgba(255, 255, 255, 0.2);
+            /* 流体磨砂玻璃，匹配渐变卡片厚重柔化磨砂 */
+            .fluid-frosted {
+                background: var(--glass-bg, rgba(22,22,32,0.24));
+                backdrop-filter: blur(40px);
+                -webkit-backdrop-filter: blur(40px);
+                border: 1px solid rgba(255,255,255,0.12);
+                box-shadow: theme('boxShadow.fluidInner'), theme('boxShadow.fluidFloat');
             }
-            .btn-hover {
-                transition: all 0.2s ease;
+            .fluid-frosted-heavy {
+                background: rgba(18,18,28,0.30);
+                backdrop-filter: blur(44px);
+                -webkit-backdrop-filter: blur(44px);
+                border: 1px solid rgba(255,255,255,0.14);
+                box-shadow: theme('boxShadow.fluidInner'), theme('boxShadow.fluidFloat');
             }
-            .btn-hover:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 8px 20px rgba(124, 58, 237, 0.3);
+            /* 按钮按压流体动效 */
+            .fluid-btn {
+                transition: all 0.22s ease-out;
+            }
+            .fluid-btn:active {
+                transform: scale(0.96);
+                opacity: 0.92;
+            }
+            /* 输入框三色柔光聚焦 */
+            .fluid-input {
+                transition: border-color 0.28s ease, box-shadow 0.28s ease;
+            }
+            .fluid-input:focus {
+                outline: none;
+                border-color: rgba(0,153,255,0.75);
+                box-shadow: 0 0 0 3px rgba(0,153,255,0.18), 0 0 0 5px rgba(255,153,68,0.08);
+            }
+            /* 渐变文字标题 */
+            .gradient-text {
+                background: linear-gradient(90deg, #0099FF, #FF9944, #9977DD);
+                -webkit-background-clip: text;
+                color: transparent;
             }
         }
     </style>
     <style>
         body {
-            background: linear-gradient(135deg, #7C3AED 0%, #4F46E5 100%);
+            /* 纯黑底层基底，匹配流体卡片底色 */
+            background: #000000;
             min-height: 100vh;
-            color: #fff;
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+            overflow-x: hidden;
+            position: relative;
         }
-        .custom-select {
+        /* 动态三色粒子画布 */
+        #particleCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            pointer-events: none;
+        }
+        /* 流体渐变几何背景装饰（复刻参考图圆角流体色块） */
+        .fluid-shape-1 {
+            position: fixed;
+            top: 5%;
+            left: -80px;
+            width: 520px;
+            height: 320px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #FF9944 0%, #FFDD77 100%);
+            filter: blur(60px);
+            opacity: 0.22;
+            z-index: -2;
+        }
+        .fluid-shape-2 {
+            position: fixed;
+            top: 12%;
+            right: -100px;
+            width: 480px;
+            height: 400px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #9977DD 0%, #7755BB 100%);
+            filter: blur(70px);
+            opacity: 0.18;
+            z-index: -2;
+        }
+        .fluid-shape-3 {
+            position: fixed;
+            bottom: 10%;
+            left: 10%;
+            width: 400px;
+            height: 360px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #0099FF 0%, #0066CC 100%);
+            filter: blur(65px);
+            opacity: 0.20;
+            z-index: -2;
+        }
+        .fluid-circle {
+            position: fixed;
+            top: 40%;
+            left: 42%;
+            width: 260px;
+            height: 260px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,153,68,0.32) 0%, transparent 72%);
+            filter: blur(30px);
+            opacity: 0.25;
+            z-index: -2;
+        }
+        /* 流体渐变下拉选择器 */
+        .fluid-select {
             appearance: none;
-            background-color: rgba(255, 255, 255, 0.2);
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-color: rgba(22, 22, 32, 0.24);
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.72)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
             background-repeat: no-repeat;
-            background-position: right 0.5rem center;
-            background-size: 1em;
+            background-position: right 0.75rem center;
+            background-size: 0.9rem;
             color: #fff !important;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255,255,255,0.12);
             padding-right: 2rem;
         }
-        .custom-select option {
-            background-color: #7C3AED;
+        .fluid-select option {
+            background-color: #0a0a12;
             color: #fff;
         }
-        input, textarea {
+        input.fluid-input, textarea.fluid-input {
             color: #fff !important;
-            background-color: rgba(255, 255, 255, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background-color: rgba(22, 22, 32, 0.24);
+            border: 1px solid rgba(255,255,255,0.12);
         }
-        /* 自定义宽度控制类（仅用于示例） */
+        /* 表格柔和分割线 */
+        .fluid-table-row {
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        /* 原有自定义输入宽度完全保留，无修改 */
         .input-width-control {
-            /* 修改下面宽度值可调整所有带此类的输入框宽度 */
-            max-width: 200px; /* 默认200px，可改为 150px, 300px, 100% 等 */
+            max-width: 200px;
             width: 100%;
         }
-        /* 单独控制分类码输入框宽度（方法二） */
         #typeCodeInput {
-            /* 修改下面的值可以单独调整分类码输入框宽度 */
-            max-width: 180px;  /* 改为 250px 变宽，改为 120px 变窄 */
+            max-width: 180px;
         }
-        /* 单独控制数量输入框宽度（方法二） */
         #countInput {
-            /* 修改下面的值可以单独调整数量输入框宽度 */
-            max-width: 120px;  /* 改为 180px 变宽，改为 80px 变窄 */
+            max-width: 120px;
         }
     </style>
 </head>
-<body class="p-4 md:p-8">
-    <div class="max-w-5xl mx-auto">
-        <header class="text-center mb-8">
-            <h1 class="text-3xl md:text-4xl font-bold mb-2">
-                <i class="fa fa-user-circle"></i> 批量账号生成工具
+<body class="px-4 py-6 md:px-10 md:py-10">
+    <!-- 三色动态粒子背景画布 -->
+    <canvas id="particleCanvas"></canvas>
+    <!-- 流体渐变几何柔光装饰层 -->
+    <div class="fluid-shape-1"></div>
+    <div class="fluid-shape-2"></div>
+    <div class="fluid-shape-3"></div>
+    <div class="fluid-circle"></div>
+
+    <div class="max-w-5xl mx-auto relative z-10">
+        <header class="text-center mb-10">
+            <h1 class="text-[clamp(1.8rem,4vw,2.4rem)] font-semibold mb-2 tracking-tight gradient-text">
+                <i class="fa fa-user-circle mr-2"></i>批量账号生成工具
             </h1>
-            <p class="opacity-80">前缀+分类码+5位流水号 · 本地永久连续不重复</p>
+            <p class="text-fluidTextMuted text-sm">前缀+分类码+5位流水号 · 本地永久连续不重复</p>
         </header>
 
-        <!-- 配置区 -->
-        <div class="glass-effect rounded-2xl p-6 md:p-8 mb-8">
-            <h2 class="text-xl font-bold mb-4">一、生成规则配置</h2>
+        <!-- 配置区 厚重流体磨砂卡片 -->
+        <div class="fluid-frosted-heavy rounded-fluid-lg p-6 md:p-8 mb-8">
+            <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full bg-gradient-to-r from-fluidBlue to-fluidOrange inline-flex items-center justify-center text-xs">1</span>
+                生成规则配置
+            </h2>
 
             <!-- 第一行：前缀、分类码 -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                    <label class="block mb-2 opacity-90">前缀</label>
-                    <div class="flex gap-2">
-                        <input id="prefix" value="xfgl_" class="w-full max-w-48 rounded px-3 py-2">
-                        <select id="prefixSel" class="custom-select rounded px-2 w-48"></select>
-                        <button onclick="add('prefix')" class="bg-green-500 px-3 rounded"><i class="fa fa-plus"></i></button>
+                    <label class="block mb-2 text-sm text-fluidTextMuted">前缀</label>
+                    <div class="flex gap-2 items-center">
+                        <input id="prefix" value="xfgl_" class="fluid-input w-full max-w-48 rounded-fluid-sm px-3 py-2.5">
+                        <select id="prefixSel" class="fluid-select rounded-fluid-sm px-2 py-2.5 w-48"></select>
+                        <button onclick="add('prefix')" class="fluid-btn bg-gradient-to-r from-fluidBlue to-fluidOrange px-3 py-2.5 rounded-fluid-sm shadow-btnGlow">
+                            <i class="fa fa-plus"></i>
+                        </button>
                     </div>
                 </div>
                 <div>
-                    <label class="block mb-2 opacity-90">分类码</label>
-                    <div class="flex gap-2">
-                        <!-- ★★★★★ 分类码输入框宽度控制 ★★★★★ -->
-                        <!-- 方法一：使用 Tailwind 类（推荐） -->
-                        <!-- 修改 max-w-xs 为 max-w-sm（变宽）或 max-w-24（变窄） -->
-                        <!-- 可用值：max-w-24, max-w-32, max-w-40, max-w-48, max-w-xs, max-w-sm, max-w-md, max-w-lg -->
-                        <!-- 或者直接写 w-24, w-32, w-40, w-48 等 -->
+                    <label class="block mb-2 text-sm text-fluidTextMuted">分类码</label>
+                    <div class="flex gap-2 items-center">
                         <input id="typeCode" placeholder="jyj"
-                               class="flex-1 max-w-48 rounded px-3 py-2">
-                               <!-- 上面 max-w-xs 控制最大宽度，若想固定宽度可改为 w-32 -->
-                        <!-- 方法二：通过自定义 CSS 单独控制（已在 style 中定义 #typeCodeInput） -->
-                        <!-- 可取消下面一行的注释，并将上面的 input 注释掉 -->
-                        <!-- <input id="typeCodeInput" placeholder="jyj" class="flex-1 rounded px-3 py-2"> -->
-                        <!-- 然后修改 style 中 #typeCodeInput 的 max-width 值即可 -->
-                        <!-- 方法三：直接添加 style 属性，如 style="max-width: 180px;" -->
-                        <!-- <input id="typeCode" placeholder="jyj" style="max-width: 180px;" class="flex-1 rounded px-3 py-2"> -->
-                        <select id="typeCodeSel" class="custom-select rounded px-2 w-48"></select>
-                        <button onclick="add('typeCode')" class="bg-green-500 px-3 rounded"><i class="fa fa-plus"></i></button>
+                               class="fluid-input flex-1 max-w-48 rounded-fluid-sm px-3 py-2.5">
+                        <select id="typeCodeSel" class="fluid-select rounded-fluid-sm px-2 py-2.5 w-48"></select>
+                        <button onclick="add('typeCode')" class="fluid-btn bg-gradient-to-r from-fluidBlue to-fluidOrange px-3 py-2.5 rounded-fluid-sm shadow-btnGlow">
+                            <i class="fa fa-plus"></i>
+                        </button>
                     </div>
                 </div>
             </div>
 
-            <!-- 第二行：后缀、数量（和上面布局完全统一，宽度一样） -->
+            <!-- 第二行：后缀、数量 -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
-                    <label class="block mb-2 opacity-90">后缀模板（用N代表序号）</label>
-                    <div class="flex gap-2">
-                        <input id="suffix" placeholder="例：_N" class="w-full max-w-48 rounded px-3 py-2">
-                        <select id="suffixSel" class="custom-select rounded px-2 w-48"></select>
-                        <button onclick="add('suffix')" class="bg-green-500 px-3 rounded"><i class="fa fa-plus"></i></button>
+                    <label class="block mb-2 text-sm text-fluidTextMuted">后缀模板（用N代表序号）</label>
+                    <div class="flex gap-2 items-center">
+                        <input id="suffix" placeholder="例：_N" class="fluid-input w-full max-w-48 rounded-fluid-sm px-3 py-2.5">
+                        <select id="suffixSel" class="fluid-select rounded-fluid-sm px-2 py-2.5 w-48"></select>
+                        <button onclick="add('suffix')" class="fluid-btn bg-gradient-to-r from-fluidBlue to-fluidOrange px-3 py-2.5 rounded-fluid-sm shadow-btnGlow">
+                            <i class="fa fa-plus"></i>
+                        </button>
                     </div>
                 </div>
                 <div>
-                    <label class="block mb-2 opacity-90">每个单位生成数量</label>
-                    <!-- ★★★★★ 数量输入框宽度控制 ★★★★★ -->
-                    <!-- 方法一：使用 Tailwind 类 -->
+                    <label class="block mb-2 text-sm text-fluidTextMuted">每个单位生成数量</label>
                     <input id="countPerUnit" type="number" min="1" value="1"
-                           class="w-full max-w-xs rounded px-3 py-2">
-                           <!-- 上面 max-w-xs 控制最大宽度，若想固定宽度可改为 w-32 -->
-                    <!-- 方法二：通过自定义 CSS 单独控制（已在 style 中定义 #countInput） -->
-                    <!-- 可取消下面一行的注释，并将上面的 input 注释掉 -->
-                    <!-- <input id="countInput" type="number" min="1" value="1" class="w-full rounded px-3 py-2"> -->
-                    <!-- 然后修改 style 中 #countInput 的 max-width 值即可 -->
-                    <!-- 方法三：直接添加 style 属性，如 style="max-width: 100px;" -->
-                    <!-- <input id="countPerUnit" type="number" min="1" value="1" style="max-width: 100px;" class="w-full rounded px-3 py-2"> -->
+                           class="fluid-input w-full max-w-xs rounded-fluid-sm px-3 py-2.5">
                 </div>
             </div>
 
             <!-- 文本域：单位、手机号 -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                 <div>
-                    <label class="block mb-2 opacity-90">单位列表（每行一个）</label>
-                    <textarea id="unitList" class="w-full h-32 rounded p-3"></textarea>
+                    <label class="block mb-2 text-sm text-fluidTextMuted">单位列表（每行一个）</label>
+                    <textarea id="unitList" class="fluid-input w-full h-32 rounded-fluid-sm p-3 resize-none"></textarea>
                 </div>
                 <div>
-                    <label class="block mb-2 opacity-90">手机号列表（和单位一一对应，留空则复用）</label>
-                    <textarea id="phoneList" class="w-full h-32 rounded p-3"></textarea>
+                    <label class="block mb-2 text-sm text-fluidTextMuted">手机号列表（和单位一一对应，留空则复用）</label>
+                    <textarea id="phoneList" class="fluid-input w-full h-32 rounded-fluid-sm p-3 resize-none"></textarea>
                 </div>
             </div>
 
-            <!-- 按钮区 -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <button onclick="generate()" class="bg-green-600 py-3 rounded font-bold btn-hover">
-                    <i class="fa fa-magic"></i> 一键生成账号
+            <!-- 按钮区分级：主渐变按钮 / 次要磨砂按钮 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <button onclick="generate()" class="fluid-btn bg-gradient-to-r from-fluidBlue via-fluidPurple to-fluidOrange py-3 rounded-fluid-sm font-medium shadow-btnGlow">
+                    <i class="fa fa-magic mr-1"></i>一键生成账号
                 </button>
-                <button onclick="exportCSV()" class="bg-indigo-600 py-3 rounded font-bold btn-hover">
-                    <i class="fa fa-download"></i> 导出CSV
+                <button onclick="exportCSV()" class="fluid-btn bg-gradient-to-r from-fluidOrange via-fluidPurple to-fluidBlue py-3 rounded-fluid-sm font-medium shadow-btnGlow">
+                    <i class="fa fa-download mr-1"></i>导出CSV
                 </button>
-                <button onclick="clearAll()" class="bg-red-500 py-3 rounded font-bold btn-hover">
-                    <i class="fa fa-trash"></i> 清空内容
+                <button onclick="clearAll()" class="fluid-btn bg-white/5 border border-fluidBorder py-3 rounded-fluid-sm font-medium">
+                    <i class="fa fa-trash mr-1 text-fluidOrange"></i>清空内容
                 </button>
-                <button onclick="resetSerial()" class="bg-red-700 py-3 rounded font-bold btn-hover">
-                    <i class="fa fa-refresh"></i> 重置流水号（从1开始）
+                <button onclick="resetSerial()" class="fluid-btn bg-white/5 border border-fluidBorder py-3 rounded-fluid-sm font-medium">
+                    <i class="fa fa-refresh mr-1 text-fluidBlue"></i>重置流水号（从1开始）
                 </button>
             </div>
         </div>
 
-        <!-- 结果区 -->
-        <div class="glass-effect rounded-2xl p-6 md:p-8">
-            <h2 class="text-xl font-bold mb-4">二、生成结果预览</h2>
+        <!-- 结果预览流体磨砂卡片 -->
+        <div class="fluid-frosted rounded-fluid-lg p-6 md:p-8">
+            <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full bg-gradient-to-r from-fluidPurple to-fluidOrange inline-flex items-center justify-center text-xs">2</span>
+                生成结果预览
+            </h2>
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead>
-                        <tr class="border-b border-white/20">
-                            <th class="text-left py-3 px-4">序号</th>
-                            <th class="text-left py-3 px-4">单位全称</th>
-                            <th class="text-left py-3 px-4">账号</th>
-                            <th class="text-left py-3 px-4">手机号</th>
+                        <tr class="border-b border-fluidBorder">
+                            <th class="text-left py-3 px-4 text-fluidTextMuted font-normal">序号</th>
+                            <th class="text-left py-3 px-4 text-fluidTextMuted font-normal">单位全称</th>
+                            <th class="text-left py-3 px-4 font-mono bg-gradient-to-r from-fluidBlue to-fluidOrange bg-clip-text text-transparent font-normal">账号</th>
+                            <th class="text-left py-3 px-4 text-fluidTextMuted font-normal">手机号</th>
                         </tr>
                     </thead>
                     <tbody id="tbody"></tbody>
@@ -200,17 +303,86 @@
     </div>
 
 <script>
+// 三色渐变动态粒子系统
+const canvas = document.getElementById('particleCanvas');
+const ctx = canvas.getContext('2d');
+let width, height;
+let particles = [];
+const particleColors = [
+    'rgba(0,153,255,',
+    'rgba(255,153,68,',
+    'rgba(153,119,221,'
+];
+
+function resizeCanvas() {
+    width = window.innerWidth;
+    height = window.innerHeight;
+    canvas.width = width;
+    canvas.height = height;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// 物理缓动粒子类
+class Particle {
+    constructor() {
+        this.x = Math.random() * width;
+        this.y = Math.random() * height;
+        this.radius = Math.random() * 2.6 + 0.3;
+        this.speedX = (Math.random() - 0.5) * 0.45;
+        this.speedY = (Math.random() - 0.5) * 0.45;
+        this.opacity = Math.random() * 0.38 + 0.08;
+        this.color = particleColors[Math.floor(Math.random() * particleColors.length)];
+    }
+    update() {
+        this.x += this.speedX;
+        this.y += this.speedY;
+        // 边界循环回弹
+        if (this.x < 0) this.x = width;
+        if (this.x > width) this.x = 0;
+        if (this.y < 0) this.y = height;
+        if (this.y > height) this.y = 0;
+    }
+    draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `${this.color}${this.opacity})`;
+        ctx.fill();
+    }
+}
+
+// 初始化80个三色粒子
+function initParticles(count = 80) {
+    particles = [];
+    for (let i = 0; i < count; i++) {
+        particles.push(new Particle());
+    }
+}
+initParticles();
+
+// 流畅动画循环
+function animateParticles() {
+    ctx.clearRect(0, 0, width, height);
+    particles.forEach(p => {
+        p.update();
+        p.draw();
+    });
+    requestAnimationFrame(animateParticles);
+}
+animateParticles();
+
+// ===================== 原有业务JS完全无修改 =====================
 let resultData = [];
 const KEY = "global_serial_no";
 
-// ---------- 流水号：只读写一次 ----------
+// ---------- 流水号本地存储计数 ----------
 function getStart(count) {
     let cur = parseInt(localStorage.getItem(KEY) || "1");
     localStorage.setItem(KEY, cur + count);
     return cur;
 }
 
-// ---------- 重置流水号：从1开始 ----------
+// ---------- 重置流水号弹窗 ----------
 function resetSerial() {
     if (confirm("确定要重置流水号吗？重置后下次生成将从00001开始，之前的号不会再生成！")) {
         localStorage.setItem(KEY, "1");
@@ -218,7 +390,7 @@ function resetSerial() {
     }
 }
 
-// ---------- 下拉初始化 ----------
+// ---------- 下拉选项本地记忆加载 ----------
 function loadSel(key) {
     let list = JSON.parse(localStorage.getItem(key+"_list") || "[]");
     let sel = document.getElementById(key+"Sel");
@@ -239,7 +411,7 @@ function add(key) {
     loadSel(key);
 }
 
-// ---------- 生成（核心：支持每个单位生成多个账号，后缀自动替换序号） ----------
+// ---------- 批量生成账号核心逻辑 ----------
 function generate() {
     const prefix = document.getElementById("prefix").value || "xfgl_";
     const typeCode = document.getElementById("typeCode").value || "";
@@ -270,10 +442,10 @@ function generate() {
                 account: account,
                 phone: phone
             });
-            html += `<tr class="border-b border-white/10">
+            html += `<tr class="fluid-table-row">
                 <td class="py-3 px-4">${rowIndex}</td>
                 <td class="py-3 px-4">${unit}</td>
-                <td class="py-3 px-4 text-green-300">${account}</td>
+                <td class="py-3 px-4 font-mono bg-gradient-to-r from-fluidBlue to-fluidOrange bg-clip-text text-transparent">${account}</td>
                 <td class="py-3 px-4">${phone}</td>
             </tr>`;
             rowIndex++;
@@ -284,7 +456,7 @@ function generate() {
     alert(`✅ 生成成功！\n起始号：${start}\n总数量：${totalCount}`);
 }
 
-// ---------- 导出 ----------
+// ---------- 导出CSV文件 ----------
 function exportCSV() {
     if(!resultData.length) return alert("请先生成账号");
     let csv = "\ufeff序号,单位全称,账号,手机号\n";
@@ -298,7 +470,7 @@ function exportCSV() {
     a.click();
 }
 
-// ---------- 清空 ----------
+// ---------- 清空全部输入与表格 ----------
 function clearAll() {
     document.getElementById("unitList").value = "";
     document.getElementById("phoneList").value = "";
@@ -306,7 +478,7 @@ function clearAll() {
     resultData = [];
 }
 
-// ---------- 页面加载初始化下拉 ----------
+// ---------- 页面初始化加载下拉历史记录 ----------
 window.onload = function(){
     loadSel("prefix");
     loadSel("typeCode");
