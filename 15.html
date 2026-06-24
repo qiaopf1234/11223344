@@ -61,6 +61,22 @@
             background-color: rgba(255, 255, 255, 0.15);
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
+        /* 自定义宽度控制类（仅用于示例） */
+        .input-width-control {
+            /* 修改下面宽度值可调整所有带此类的输入框宽度 */
+            max-width: 200px; /* 默认200px，可改为 150px, 300px, 100% 等 */
+            width: 100%;
+        }
+        /* 单独控制分类码输入框宽度（方法二） */
+        #typeCodeInput {
+            /* 修改下面的值可以单独调整分类码输入框宽度 */
+            max-width: 180px;  /* 改为 250px 变宽，改为 120px 变窄 */
+        }
+        /* 单独控制数量输入框宽度（方法二） */
+        #countInput {
+            /* 修改下面的值可以单独调整数量输入框宽度 */
+            max-width: 120px;  /* 改为 180px 变宽，改为 80px 变窄 */
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -81,16 +97,29 @@
                 <div>
                     <label class="block mb-2 opacity-90">前缀</label>
                     <div class="flex gap-2">
-                        <input id="prefix" value="xfgl_" class="flex-1 rounded px-3 py-2">
-                        <select id="prefixSel" class="custom-select rounded px-2"></select>
+                        <input id="prefix" value="xfgl_" class="w-full max-w-48 rounded px-3 py-2">
+                        <select id="prefixSel" class="custom-select rounded px-2 w-48"></select>
                         <button onclick="add('prefix')" class="bg-green-500 px-3 rounded"><i class="fa fa-plus"></i></button>
                     </div>
                 </div>
                 <div>
                     <label class="block mb-2 opacity-90">分类码</label>
                     <div class="flex gap-2">
-                        <input id="typeCode" placeholder="jyj" class="flex-1 rounded px-3 py-2">
-                        <select id="typeCodeSel" class="custom-select rounded px-2"></select>
+                        <!-- ★★★★★ 分类码输入框宽度控制 ★★★★★ -->
+                        <!-- 方法一：使用 Tailwind 类（推荐） -->
+                        <!-- 修改 max-w-xs 为 max-w-sm（变宽）或 max-w-24（变窄） -->
+                        <!-- 可用值：max-w-24, max-w-32, max-w-40, max-w-48, max-w-xs, max-w-sm, max-w-md, max-w-lg -->
+                        <!-- 或者直接写 w-24, w-32, w-40, w-48 等 -->
+                        <input id="typeCode" placeholder="jyj"
+                               class="flex-1 max-w-48 rounded px-3 py-2">
+                               <!-- 上面 max-w-xs 控制最大宽度，若想固定宽度可改为 w-32 -->
+                        <!-- 方法二：通过自定义 CSS 单独控制（已在 style 中定义 #typeCodeInput） -->
+                        <!-- 可取消下面一行的注释，并将上面的 input 注释掉 -->
+                        <!-- <input id="typeCodeInput" placeholder="jyj" class="flex-1 rounded px-3 py-2"> -->
+                        <!-- 然后修改 style 中 #typeCodeInput 的 max-width 值即可 -->
+                        <!-- 方法三：直接添加 style 属性，如 style="max-width: 180px;" -->
+                        <!-- <input id="typeCode" placeholder="jyj" style="max-width: 180px;" class="flex-1 rounded px-3 py-2"> -->
+                        <select id="typeCodeSel" class="custom-select rounded px-2 w-48"></select>
                         <button onclick="add('typeCode')" class="bg-green-500 px-3 rounded"><i class="fa fa-plus"></i></button>
                     </div>
                 </div>
@@ -101,14 +130,24 @@
                 <div>
                     <label class="block mb-2 opacity-90">后缀模板（用N代表序号）</label>
                     <div class="flex gap-2">
-                        <input id="suffix" placeholder="例：_N" class="flex-1 rounded px-3 py-2">
-                        <select id="suffixSel" class="custom-select rounded px-2"></select>
+                        <input id="suffix" placeholder="例：_N" class="w-full max-w-48 rounded px-3 py-2">
+                        <select id="suffixSel" class="custom-select rounded px-2 w-48"></select>
                         <button onclick="add('suffix')" class="bg-green-500 px-3 rounded"><i class="fa fa-plus"></i></button>
                     </div>
                 </div>
                 <div>
                     <label class="block mb-2 opacity-90">每个单位生成数量</label>
-                    <input id="countPerUnit" type="number" min="1" value="1" class="w-full rounded px-3 py-2">
+                    <!-- ★★★★★ 数量输入框宽度控制 ★★★★★ -->
+                    <!-- 方法一：使用 Tailwind 类 -->
+                    <input id="countPerUnit" type="number" min="1" value="1"
+                           class="w-full max-w-xs rounded px-3 py-2">
+                           <!-- 上面 max-w-xs 控制最大宽度，若想固定宽度可改为 w-32 -->
+                    <!-- 方法二：通过自定义 CSS 单独控制（已在 style 中定义 #countInput） -->
+                    <!-- 可取消下面一行的注释，并将上面的 input 注释掉 -->
+                    <!-- <input id="countInput" type="number" min="1" value="1" class="w-full rounded px-3 py-2"> -->
+                    <!-- 然后修改 style 中 #countInput 的 max-width 值即可 -->
+                    <!-- 方法三：直接添加 style 属性，如 style="max-width: 100px;" -->
+                    <!-- <input id="countPerUnit" type="number" min="1" value="1" style="max-width: 100px;" class="w-full rounded px-3 py-2"> -->
                 </div>
             </div>
 
