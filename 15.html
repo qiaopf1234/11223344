@@ -266,8 +266,8 @@
                 <button onclick="generate()" class="fluid-btn bg-gradient-to-r from-fluidBlue via-fluidPurple to-fluidOrange py-3 rounded-fluid-sm font-medium shadow-btnGlow">
                     <i class="fa fa-magic mr-1"></i>一键生成账号
                 </button>
-                <button onclick="exportCSV()" class="fluid-btn bg-gradient-to-r from-fluidOrange via-fluidPurple to-fluidBlue py-3 rounded-fluid-sm font-medium shadow-btnGlow">
-                    <i class="fa fa-download mr-1"></i>导出CSV
+                <button onclick="exportXLSX()" class="fluid-btn bg-gradient-to-r from-fluidOrange via-fluidPurple to-fluidBlue py-3 rounded-fluid-sm font-medium shadow-btnGlow">
+                    <i class="fa fa-download mr-1"></i>导出XLSX
                 </button>
                 <button onclick="clearAll()" class="fluid-btn bg-white/5 border border-fluidBorder py-3 rounded-fluid-sm font-medium">
                     <i class="fa fa-trash mr-1 text-fluidOrange"></i>清空内容
@@ -581,18 +581,51 @@ function generate() {
     alert(`✅ 生成完成\n起始流水号：${startNo}\n总条数：${total}\n未匹配上级单位：${missingOrgList.length}个`);
 }
 
-// 导出CSV
-function exportCSV() {
+// 导出XLSX文件，自动设置最适合的列宽和行高
+function exportXLSX() {
     if (!resultData.length) return alert("请先生成账号");
-    let csv = "\ufeff上级机构名称,所属机构名称,角色,登陆账号,用户名称,手机号\n";
+    // 准备表头和数据
+    const headers = ["上级机构名称", "所属机构名称", "角色", "登陆账号", "用户名称", "手机号"];
+    const data = [headers];
     resultData.forEach(item => {
-        csv += `"${item.superOrg}","${item.belongOrg}","${item.role}","${item.loginAccount}","${item.userName}","${item.phone}"\n`;
+        data.push([
+            item.superOrg || "",
+            item.belongOrg || "",
+            item.role || "",
+            item.loginAccount || "",
+            item.userName || "",
+            item.phone || ""
+        ]);
     });
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "账号导入模板.csv";
-    a.click();
+    // 生成工作表
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    // 设置最适合的列宽
+    const colWidths = [];
+    for (let col = 0; col < headers.length; col++) {
+        let maxLen = 0;
+        for (let row = 0; row < data.length; row++) {
+            const cellVal = String(data[row][col] || "");
+            // 计算内容长度，中文按2字符算，英文按1
+            const len = cellVal.split("").reduce((acc, char) => {
+                return acc + (char.charCodeAt(0) > 255 ? 2 : 1);
+            }, 0);
+            if (len > maxLen) maxLen = len;
+        }
+        // 设置列宽，最小8，最大50，乘以1.2倍留白保证美观
+        colWidths.push({ wch: Math.min(Math.max(maxLen * 1.2, 8), 50) });
+    }
+    ws['!cols'] = colWidths;
+    // 设置最适合的行高，表头24px，数据行20px
+    const rowHeights = [];
+    for (let row = 0; row < data.length; row++) {
+        rowHeights.push({ hpx: row === 0 ? 24 : 20 });
+    }
+    ws['!rows'] = rowHeights;
+    // 生成工作簿
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "账号数据");
+    // 导出文件
+    XLSX.writeFile(wb, "账号导入模板.xlsx");
 }
 
 function clearAll() {
