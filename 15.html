@@ -195,7 +195,7 @@
                 <div>
                     <label class="block mb-2 text-sm text-fluidTextMuted">兜底上级机构（仅无匹配且无|分割时使用）</label>
                     <div class="flex gap-2 items-center">
-                        <input id="superOrg" placeholder="如：自治区教育厅" class="fluid-input w-full max-w-48 rounded-fluid-sm px-3 py-2.5">
+                        <input id="superOrg" placeholder="" class="fluid-input w-full max-w-48 rounded-fluid-sm px-3 py-2.5">
                         <select id="superOrgSel" class="fluid-select rounded-fluid-sm px-2 py-2.5 w-48"></select>
                         <button onclick="add('superOrg')" class="fluid-btn bg-gradient-to-r from-fluidBlue to-fluidOrange px-3 py-2.5 rounded-fluid-sm shadow-btnGlow">
                             <i class="fa fa-plus"></i>
@@ -251,8 +251,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-2">
                 <div>
                     <label class="block mb-2 text-sm text-fluidTextMuted">所属机构列表（每行1个，输入实时匹配上级）</label>
-                    <textarea id="unitList" class="fluid-input w-full h-32 rounded-fluid-sm p-3 resize-none" placeholder="凉城县第五小学
-乌兰察布市中等职业技术学校"></textarea>
+                    <textarea id="unitList" class="fluid-input w-full h-32 rounded-fluid-sm p-3 resize-none" placeholder=""></textarea>
                     <!-- 实时匹配预览区域 -->
                     <div id="realTimeMatchBox" class="mt-3 p-3 rounded-fluid-sm bg-white/5 max-h-40 overflow-y-auto text-xs"></div>
                 </div>
