@@ -6,6 +6,8 @@
     <title>批量账号生成工具（教育系统版）</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <!-- 引入Excel解析库SheetJS -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
         tailwind.config = {
             theme: {
@@ -20,6 +22,9 @@
                         fluidBorder: 'rgba(255,255,255,0.12)',
                         fluidTextMuted: 'rgba(255,255,255,0.65)',
                         fluidBg: '#000000',
+                        successGreen: '#34d399',
+                        dangerRed: '#f87171',
+                        warnYellow: '#facc15'
                     },
                     borderRadius: {
                         'fluid-sm': '16px',
@@ -36,7 +41,6 @@
     </script>
     <style type="text/tailwindcss">
         @layer utilities {
-            /* 流体磨砂玻璃，匹配渐变卡片厚重柔化磨砂 */
             .fluid-frosted {
                 background: var(--glass-bg, rgba(22,22,32,0.24));
                 backdrop-filter: blur(40px);
@@ -51,7 +55,6 @@
                 border: 1px solid rgba(255,255,255,0.14);
                 box-shadow: theme('boxShadow.fluidInner'), theme('boxShadow.fluidFloat');
             }
-            /* 按钮按压流体动效 */
             .fluid-btn {
                 transition: all 0.22s ease-out;
             }
@@ -59,7 +62,6 @@
                 transform: scale(0.96);
                 opacity: 0.92;
             }
-            /* 输入框三色柔光聚焦 */
             .fluid-input {
                 transition: border-color 0.28s ease, box-shadow 0.28s ease;
             }
@@ -68,7 +70,6 @@
                 border-color: rgba(0,153,255,0.75);
                 box-shadow: 0 0 0 3px rgba(0,153,255,0.18), 0 0 0 5px rgba(255,153,68,0.08);
             }
-            /* 渐变文字标题 */
             .gradient-text {
                 background: linear-gradient(90deg, #0099FF, #FF9944, #9977DD);
                 -webkit-background-clip: text;
@@ -78,7 +79,6 @@
     </style>
     <style>
         body {
-            /* 纯黑底层基底，匹配流体卡片底色 */
             background: #000000;
             min-height: 100vh;
             color: #ffffff;
@@ -86,7 +86,6 @@
             overflow-x: hidden;
             position: relative;
         }
-        /* 动态三色粒子画布 */
         #particleCanvas {
             position: fixed;
             top: 0;
@@ -96,7 +95,6 @@
             z-index: -1;
             pointer-events: none;
         }
-        /* 流体渐变几何背景装饰（复刻参考图圆角流体色块） */
         .fluid-shape-1 {
             position: fixed;
             top: 5%;
@@ -145,7 +143,6 @@
             opacity: 0.25;
             z-index: -2;
         }
-        /* 流体渐变下拉选择器 */
         .fluid-select {
             appearance: none;
             background-color: rgba(22, 22, 32, 0.24);
@@ -166,48 +163,51 @@
             background-color: rgba(22, 22, 32, 0.24);
             border: 1px solid rgba(255,255,255,0.12);
         }
-        /* 表格柔和分割线 */
         .fluid-table-row {
             border-bottom: 1px solid rgba(255,255,255,0.06);
-        }
-        /* 原有自定义输入宽度完全保留，无修改 */
-        .input-width-control {
-            max-width: 200px;
-            width: 100%;
-        }
-        #typeCodeInput {
-            max-width: 180px;
-        }
-        #countInput {
-            max-width: 120px;
         }
     </style>
 </head>
 <body class="px-4 py-6 md:px-10 md:py-10">
-    <!-- 三色动态粒子背景画布 -->
     <canvas id="particleCanvas"></canvas>
-    <!-- 流体渐变几何柔光装饰层 -->
     <div class="fluid-shape-1"></div>
     <div class="fluid-shape-2"></div>
     <div class="fluid-shape-3"></div>
     <div class="fluid-circle"></div>
 
     <div class="max-w-5xl mx-auto relative z-10">
-        <header class="text-center mb-10">
+        <header class="text-center mb-4">
             <h1 class="text-[clamp(1.8rem,4vw,2.4rem)] font-semibold mb-2 tracking-tight gradient-text">
                 <i class="fa fa-user-circle mr-2"></i>批量账号生成工具
             </h1>
-            <p class="text-fluidTextMuted text-sm">前缀+分类码+5位流水号 · 本地永久连续不重复</p>
+            <p class="text-fluidTextMuted text-sm mb-3">前缀+分类码+5位流水号 · 实时自动匹配上下级机构</p>
+            <!-- 组织机构文件加载状态提示区 -->
+            <div id="orgFileStatus" class="fluid-frosted rounded-fluid-sm py-2 px-4 inline-block text-sm"></div>
         </header>
 
-        <!-- 配置区 厚重流体磨砂卡片 -->
         <div class="fluid-frosted-heavy rounded-fluid-lg p-6 md:p-8 mb-8">
             <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
                 <span class="w-6 h-6 rounded-full bg-gradient-to-r from-fluidBlue to-fluidOrange inline-flex items-center justify-center text-xs">1</span>
                 生成规则配置
             </h2>
 
-            <!-- 第一行：前缀、分类码 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <label class="block mb-2 text-sm text-fluidTextMuted">兜底上级机构（仅无匹配且无|分割时使用）</label>
+                    <div class="flex gap-2 items-center">
+                        <input id="superOrg" placeholder="如：自治区教育厅" class="fluid-input w-full max-w-48 rounded-fluid-sm px-3 py-2.5">
+                        <select id="superOrgSel" class="fluid-select rounded-fluid-sm px-2 py-2.5 w-48"></select>
+                        <button onclick="add('superOrg')" class="fluid-btn bg-gradient-to-r from-fluidBlue to-fluidOrange px-3 py-2.5 rounded-fluid-sm shadow-btnGlow">
+                            <i class="fa fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <label class="block mb-2 text-sm text-fluidTextMuted">角色（内置下拉选择）</label>
+                    <select id="roleSel" class="fluid-select w-full rounded-fluid-sm px-3 py-2.5"></select>
+                </div>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
                     <label class="block mb-2 text-sm text-fluidTextMuted">前缀</label>
@@ -222,8 +222,7 @@
                 <div>
                     <label class="block mb-2 text-sm text-fluidTextMuted">分类码</label>
                     <div class="flex gap-2 items-center">
-                        <input id="typeCode" placeholder="jyj"
-                               class="fluid-input flex-1 max-w-48 rounded-fluid-sm px-3 py-2.5">
+                        <input id="typeCode" placeholder="jyj" class="fluid-input flex-1 max-w-48 rounded-fluid-sm px-3 py-2.5">
                         <select id="typeCodeSel" class="fluid-select rounded-fluid-sm px-2 py-2.5 w-48"></select>
                         <button onclick="add('typeCode')" class="fluid-btn bg-gradient-to-r from-fluidBlue to-fluidOrange px-3 py-2.5 rounded-fluid-sm shadow-btnGlow">
                             <i class="fa fa-plus"></i>
@@ -232,7 +231,6 @@
                 </div>
             </div>
 
-            <!-- 第二行：后缀、数量 -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
                     <label class="block mb-2 text-sm text-fluidTextMuted">后缀模板（用N代表序号）</label>
@@ -246,24 +244,25 @@
                 </div>
                 <div>
                     <label class="block mb-2 text-sm text-fluidTextMuted">每个单位生成数量</label>
-                    <input id="countPerUnit" type="number" min="1" value="1"
-                           class="fluid-input w-full max-w-xs rounded-fluid-sm px-3 py-2.5">
+                    <input id="countPerUnit" type="number" min="1" value="1" class="fluid-input w-full max-w-xs rounded-fluid-sm px-3 py-2.5">
                 </div>
             </div>
 
-            <!-- 文本域：单位、手机号 -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-2">
                 <div>
-                    <label class="block mb-2 text-sm text-fluidTextMuted">单位列表（每行一个）</label>
-                    <textarea id="unitList" class="fluid-input w-full h-32 rounded-fluid-sm p-3 resize-none"></textarea>
+                    <label class="block mb-2 text-sm text-fluidTextMuted">所属机构列表（每行1个，输入实时匹配上级）</label>
+                    <textarea id="unitList" class="fluid-input w-full h-32 rounded-fluid-sm p-3 resize-none" placeholder="凉城县第五小学
+乌兰察布市中等职业技术学校"></textarea>
+                    <!-- 实时匹配预览区域 -->
+                    <div id="realTimeMatchBox" class="mt-3 p-3 rounded-fluid-sm bg-white/5 max-h-40 overflow-y-auto text-xs"></div>
                 </div>
                 <div>
-                    <label class="block mb-2 text-sm text-fluidTextMuted">手机号列表（和单位一一对应，留空则复用）</label>
+                    <label class="block mb-2 text-sm text-fluidTextMuted">手机号列表（与所属机构一一对应）</label>
                     <textarea id="phoneList" class="fluid-input w-full h-32 rounded-fluid-sm p-3 resize-none"></textarea>
                 </div>
             </div>
+            <p class="text-fluidOrange text-xs mb-8">匹配规则：1.行内「上级|所属机构」强制指定；2.自动读取org-map.xlsx（表头parent_name/org_name）匹配；3.无匹配统一使用兜底上级；红色标注未匹配单位</p>
 
-            <!-- 按钮区分级：主渐变按钮 / 次要磨砂按钮 -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <button onclick="generate()" class="fluid-btn bg-gradient-to-r from-fluidBlue via-fluidPurple to-fluidOrange py-3 rounded-fluid-sm font-medium shadow-btnGlow">
                     <i class="fa fa-magic mr-1"></i>一键生成账号
@@ -280,19 +279,20 @@
             </div>
         </div>
 
-        <!-- 结果预览流体磨砂卡片 -->
         <div class="fluid-frosted rounded-fluid-lg p-6 md:p-8">
             <h2 class="text-xl font-semibold mb-6 flex items-center gap-2">
                 <span class="w-6 h-6 rounded-full bg-gradient-to-r from-fluidPurple to-fluidOrange inline-flex items-center justify-center text-xs">2</span>
                 生成结果预览
             </h2>
             <div class="overflow-x-auto">
-                <table class="w-full">
+                <table class="w-full text-sm">
                     <thead>
                         <tr class="border-b border-fluidBorder">
                             <th class="text-left py-3 px-4 text-fluidTextMuted font-normal">序号</th>
-                            <th class="text-left py-3 px-4 text-fluidTextMuted font-normal">单位全称</th>
-                            <th class="text-left py-3 px-4 font-mono bg-gradient-to-r from-fluidBlue to-fluidOrange bg-clip-text text-transparent font-normal">账号</th>
+                            <th class="text-left py-3 px-4 text-fluidTextMuted font-normal">上级机构</th>
+                            <th class="text-left py-3 px-4 text-fluidTextMuted font-normal">所属机构</th>
+                            <th class="text-left py-3 px-4 text-fluidTextMuted font-normal">角色</th>
+                            <th class="text-left py-3 px-4 font-mono bg-gradient-to-r from-fluidBlue to-fluidOrange bg-clip-text text-transparent font-normal">登录账号/用户名</th>
                             <th class="text-left py-3 px-4 text-fluidTextMuted font-normal">手机号</th>
                         </tr>
                     </thead>
@@ -303,7 +303,7 @@
     </div>
 
 <script>
-// 三色渐变动态粒子系统
+// 粒子动画
 const canvas = document.getElementById('particleCanvas');
 const ctx = canvas.getContext('2d');
 let width, height;
@@ -323,7 +323,6 @@ function resizeCanvas() {
 resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
-// 物理缓动粒子类
 class Particle {
     constructor() {
         this.x = Math.random() * width;
@@ -337,7 +336,6 @@ class Particle {
     update() {
         this.x += this.speedX;
         this.y += this.speedY;
-        // 边界循环回弹
         if (this.x < 0) this.x = width;
         if (this.x > width) this.x = 0;
         if (this.y < 0) this.y = height;
@@ -350,101 +348,226 @@ class Particle {
         ctx.fill();
     }
 }
-
-// 初始化80个三色粒子
 function initParticles(count = 80) {
     particles = [];
-    for (let i = 0; i < count; i++) {
-        particles.push(new Particle());
-    }
+    for (let i = 0; i < count; i++) particles.push(new Particle());
 }
 initParticles();
-
-// 流畅动画循环
 function animateParticles() {
     ctx.clearRect(0, 0, width, height);
-    particles.forEach(p => {
-        p.update();
-        p.draw();
-    });
+    particles.forEach(p => { p.update(); p.draw(); });
     requestAnimationFrame(animateParticles);
 }
 animateParticles();
 
-// ===================== 原有业务JS完全无修改 =====================
+// ===================== 业务全局变量 =====================
 let resultData = [];
 const KEY = "global_serial_no";
+let orgMapping = [];
+let excelLoadSuccess = false;
+let matchDebounceTimer = null;
 
-// ---------- 流水号本地存储计数 ----------
+// 内置完整角色列表
+const roleList = [
+    "超级管理员", "特级管理员", "二级管理员", "重置密码", "教育厅制证二级管理员", "教育厅管理员", "校服系统管理员",
+    "教育装备自治区管理人员", "盟市管理员", "普通角色", "测试角色", "基教处证照设置人员", "u-key登录",
+    "购买校服举报", "违规招生举报", "违规征订教材", "我和我的老师", "老师，我想对您说", "我心中的好老师",
+    "教育世家", "随手拍", "师德师风", "举报反馈", "校园餐", "校外培训", "校园餐投诉举报", "教师减负",
+    "补课举报", "报平安人员", "报平安发布统计", "调查问卷", "教师资格证审批", "教师资格证申请", "竞赛单位", "教育局竞赛单位填报审核人员",
+    "职业技术学校批量编辑", "批量编辑", "义务教育和高中教育学校证照制作负责人", "个人签名负责人", "学校盖章负责人",
+    "手动导入学号并制高中毕业证", "职业技术学校证照制作负责人", "教育局数据审核人员", "基教处数据审核", "教育局盖章人员",
+    "教育局证照签发确定人员", "校服管理", "报告学校角色", "报告旗县角色", "报告盟市角色", "学校校服上报", "教育局校服备案"
+];
+
+// 更新组织机构文件加载状态显示
+function updateOrgFileStatus(text, colorClass, icon) {
+    const statusDom = document.getElementById("orgFileStatus");
+    statusDom.className = `fluid-frosted rounded-fluid-sm py-2 px-4 inline-block text-sm ${colorClass}`;
+    statusDom.innerHTML = `<i class="fa ${icon} mr-1"></i>${text}`;
+}
+
+// 读取Excel组织机构映射文件【已适配你的表头 parent_name / org_name】
+async function loadOrgMapping() {
+    updateOrgFileStatus("正在加载 org-map.xlsx ...", "text-warnYellow", "fa-spinner fa-spin");
+    try {
+        const res = await fetch("./org-map.xlsx");
+        if (!res.ok) throw new Error("文件不存在或路径错误，请确认文件名为org-map.xlsx且和index.html同目录");
+        const arrayBuffer = await res.arrayBuffer();
+        // 解析Excel文件
+        const workbook = XLSX.read(arrayBuffer, { type: "array" });
+        // 取第一个工作表
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        // 转换为JSON数组
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+        // 校验你的表头：必须存在 parent_name（上级）、org_name（所属）
+        if (jsonData.length === 0 || !jsonData[0].hasOwnProperty("parent_name") || !jsonData[0].hasOwnProperty("org_name")) {
+            throw new Error("Excel表头必须包含两列：parent_name（上级机构）、org_name（所属机构），C列full_path无需处理");
+        }
+        // 转换为映射数组，自动去除空格、空行
+        orgMapping = jsonData.map(item => ({
+            belongOrg: String(item["org_name"]).trim(),
+            superOrg: String(item["parent_name"]).trim()
+        })).filter(item => item.belongOrg && item.superOrg);
+        excelLoadSuccess = true;
+        updateOrgFileStatus(`组织机构Excel加载成功，共${orgMapping.length}条上下级对应关系`, "text-successGreen", "fa-check-circle");
+    } catch (e) {
+        excelLoadSuccess = false;
+        orgMapping = [];
+        updateOrgFileStatus(`组织机构Excel加载失败：${e.message}，本地打开会跨域拦截，部署GitHub Pages可正常读取`, "text-dangerRed", "fa-times-circle");
+    }
+}
+
+// 根据所属机构匹配上级
+function getSuperByBelong(name) {
+    const item = orgMapping.find(o => o.belongOrg === name);
+    return item ? item.superOrg : null;
+}
+
+// 实时解析所属机构，底部预览匹配结果（输入防抖）
+function realTimeMatchPreview() {
+    clearTimeout(matchDebounceTimer);
+    matchDebounceTimer = setTimeout(() => {
+        const unitRawList = document.getElementById("unitList").value.split("\n").map(i => i.trim()).filter(Boolean);
+        const defaultSuper = document.getElementById("superOrg").value.trim();
+        const boxDom = document.getElementById("realTimeMatchBox");
+        if (unitRawList.length === 0) {
+            boxDom.innerHTML = "<span class='text-fluidTextMuted'>输入所属机构后实时展示匹配结果</span>";
+            return;
+        }
+        let html = "";
+        let missingCount = 0;
+        unitRawList.forEach((rawUnit, idx) => {
+            let superOrg, belongOrg;
+            if (rawUnit.includes("|")) {
+                const arr = rawUnit.split("|").map(i => i.trim());
+                superOrg = arr[0];
+                belongOrg = arr[1];
+                html += `<div class="mb-1"><span class="text-fluidBlue">${idx+1}.强制指定</span>：${belongOrg} → ${superOrg}</div>`;
+            } else {
+                belongOrg = rawUnit;
+                const mapSuper = getSuperByBelong(belongOrg);
+                if (mapSuper) {
+                    superOrg = mapSuper;
+                    html += `<div class="mb-1"><span class="text-successGreen">${idx+1}.匹配成功</span>：${belongOrg} → ${superOrg}</div>`;
+                } else {
+                    superOrg = defaultSuper || "无兜底上级";
+                    missingCount++;
+                    html += `<div class="mb-1"><span class="text-dangerRed">${idx+1}.未匹配</span>：${belongOrg} → ${superOrg}</div>`;
+                }
+            }
+        });
+        if(missingCount > 0){
+            html = `<div class="text-dangerRed mb-2">共${missingCount}个单位未在org-map.xlsx找到对应上级</div>` + html;
+        }
+        boxDom.innerHTML = html;
+    }, 300);
+}
+
+// 初始化角色下拉
+function initRoleSelect() {
+    const sel = document.getElementById("roleSel");
+    sel.innerHTML = "";
+    roleList.forEach(r => {
+        const opt = document.createElement("option");
+        opt.value = r;
+        opt.textContent = r;
+        sel.appendChild(opt);
+    });
+    sel.value = "普通角色";
+}
+
+// 流水号
 function getStart(count) {
     let cur = parseInt(localStorage.getItem(KEY) || "1");
     localStorage.setItem(KEY, cur + count);
     return cur;
 }
-
-// ---------- 重置流水号弹窗 ----------
 function resetSerial() {
-    if (confirm("确定要重置流水号吗？重置后下次生成将从00001开始，之前的号不会再生成！")) {
+    if (confirm("确定重置流水号？下次生成从00001开始！")) {
         localStorage.setItem(KEY, "1");
-        alert("✅ 流水号已重置，下次生成将从00001开始");
+        alert("流水号重置完成");
     }
 }
 
-// ---------- 下拉选项本地记忆加载 ----------
+// 历史下拉缓存
 function loadSel(key) {
-    let list = JSON.parse(localStorage.getItem(key+"_list") || "[]");
-    let sel = document.getElementById(key+"Sel");
+    const list = JSON.parse(localStorage.getItem(key + "_list") || "[]");
+    const sel = document.getElementById(key + "Sel");
     sel.innerHTML = "";
-    list.forEach(v=>{
-        let o = document.createElement("option");
-        o.value = v; o.textContent = v;
+    list.forEach(v => {
+        const o = document.createElement("option");
+        o.value = v;
+        o.textContent = v;
         sel.appendChild(o);
     });
-    sel.onchange = ()=>document.getElementById(key).value = sel.value;
+    sel.onchange = () => document.getElementById(key).value = sel.value;
 }
 function add(key) {
-    let val = document.getElementById(key).value.trim();
-    if(!val) return alert("请输入内容");
-    let list = JSON.parse(localStorage.getItem(key+"_list") || "[]");
-    if(!list.includes(val)) list.push(val);
-    localStorage.setItem(key+"_list", JSON.stringify(list));
+    const val = document.getElementById(key).value.trim();
+    if (!val) return alert("请输入内容");
+    let list = JSON.parse(localStorage.getItem(key + "_list") || "[]");
+    if (!list.includes(val)) list.push(val);
+    localStorage.setItem(key + "_list", JSON.stringify(list));
     loadSel(key);
 }
 
-// ---------- 批量生成账号核心逻辑 ----------
+// 核心生成逻辑：批量匹配 + 缺失机构弹窗提醒
 function generate() {
     const prefix = document.getElementById("prefix").value || "xfgl_";
     const typeCode = document.getElementById("typeCode").value || "";
     const suffixTemplate = document.getElementById("suffix").value || "";
-    const countPerUnit = parseInt(document.getElementById("countPerUnit").value) || 1;
+    const countPerUnit = Number(document.getElementById("countPerUnit").value) || 1;
+    const defaultSuper = document.getElementById("superOrg").value.trim();
+    const role = document.getElementById("roleSel").value;
 
-    const units = document.getElementById("unitList").value.split("\n").map(x=>x.trim()).filter(Boolean);
-    const phones = document.getElementById("phoneList").value.split("\n").map(x=>x.trim()).filter(Boolean);
+    const unitRawList = document.getElementById("unitList").value.split("\n").map(i => i.trim()).filter(Boolean);
+    const phoneList = document.getElementById("phoneList").value.split("\n").map(i => i.trim()).filter(Boolean);
+    if (unitRawList.length === 0) return alert("请填写所属机构列表");
 
-    if(units.length === 0) return alert("请输入单位列表");
-
-    resultData = [];
-    const totalCount = units.length * countPerUnit;
-    const start = getStart(totalCount);
+    let missingOrgList = [];
     let html = "";
+    resultData = [];
+    const total = unitRawList.length * countPerUnit;
+    const startNo = getStart(total);
     let rowIndex = 1;
 
-    units.forEach((unit, unitIdx) => {
-        const phone = phones[unitIdx] || "";
-        for(let n=1; n<=countPerUnit; n++){
-            const globalNo = start + (unitIdx * countPerUnit) + (n - 1);
-            const no = String(globalNo).padStart(5, '0');
+    unitRawList.forEach((rawUnit, idx) => {
+        let superOrg, belongOrg;
+        if (rawUnit.includes("|")) {
+            const arr = rawUnit.split("|").map(i => i.trim());
+            superOrg = arr[0];
+            belongOrg = arr[1];
+        } else {
+            belongOrg = rawUnit;
+            const mapSuper = getSuperByBelong(belongOrg);
+            if (mapSuper) {
+                superOrg = mapSuper;
+            } else {
+                missingOrgList.push(belongOrg);
+                superOrg = defaultSuper;
+            }
+        }
+        const phone = phoneList[idx] || "";
+        for (let n = 1; n <= countPerUnit; n++) {
+            const globalSerial = startNo + idx * countPerUnit + (n - 1);
+            const serial5 = String(globalSerial).padStart(5, "0");
             const suffix = suffixTemplate.replace(/N/g, n);
-            const account = prefix + typeCode + no + suffix;
+            const account = prefix + typeCode + serial5 + suffix;
             resultData.push({
                 index: rowIndex,
-                unit: unit,
-                account: account,
+                superOrg: superOrg,
+                belongOrg: belongOrg,
+                role: role,
+                loginAccount: account,
+                userName: account,
                 phone: phone
             });
             html += `<tr class="fluid-table-row">
                 <td class="py-3 px-4">${rowIndex}</td>
-                <td class="py-3 px-4">${unit}</td>
+                <td class="py-3 px-4">${superOrg || "无上级"}</td>
+                <td class="py-3 px-4">${belongOrg}</td>
+                <td class="py-3 px-4">${role}</td>
                 <td class="py-3 px-4 font-mono bg-gradient-to-r from-fluidBlue to-fluidOrange bg-clip-text text-transparent">${account}</td>
                 <td class="py-3 px-4">${phone}</td>
             </tr>`;
@@ -452,39 +575,52 @@ function generate() {
         }
     });
 
+    if (missingOrgList.length > 0) {
+        alert(`以下${missingOrgList.length}个所属机构未在org-map.xlsx中匹配到上级机构：\n${missingOrgList.join("、")}\n可修改Excel补充对应行，或使用「上级|所属机构」格式强制指定`);
+    }
     document.getElementById("tbody").innerHTML = html;
-    alert(`✅ 生成成功！\n起始号：${start}\n总数量：${totalCount}`);
+    alert(`✅ 生成完成\n起始流水号：${startNo}\n总条数：${total}\n未匹配上级单位：${missingOrgList.length}个`);
 }
 
-// ---------- 导出CSV文件 ----------
+// 导出CSV
 function exportCSV() {
-    if(!resultData.length) return alert("请先生成账号");
-    let csv = "\ufeff序号,单位全称,账号,手机号\n";
-    resultData.forEach(r=>{
-        csv += `${r.index},"${r.unit}","${r.account}","${r.phone}"\n`;
+    if (!resultData.length) return alert("请先生成账号");
+    let csv = "\ufeff上级机构名称,所属机构名称,角色,登陆账号,用户名称,手机号\n";
+    resultData.forEach(item => {
+        csv += `"${item.superOrg}","${item.belongOrg}","${item.role}","${item.loginAccount}","${item.userName}","${item.phone}"\n`;
     });
-    const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "账号生成结果.csv";
+    a.download = "账号导入模板.csv";
     a.click();
 }
 
-// ---------- 清空全部输入与表格 ----------
 function clearAll() {
     document.getElementById("unitList").value = "";
     document.getElementById("phoneList").value = "";
     document.getElementById("tbody").innerHTML = "";
+    document.getElementById("realTimeMatchBox").innerHTML = "<span class='text-fluidTextMuted'>输入所属机构后实时展示匹配结果</span>";
     resultData = [];
 }
 
-// ---------- 页面初始化加载下拉历史记录 ----------
-window.onload = function(){
+// 页面初始化绑定实时输入事件
+window.onload = async function () {
+    await loadOrgMapping();
+    initRoleSelect();
     loadSel("prefix");
     loadSel("typeCode");
     loadSel("suffix");
+    loadSel("superOrg");
+    // 绑定文本框输入、失焦实时匹配
+    const unitInput = document.getElementById("unitList");
+    unitInput.addEventListener("input", realTimeMatchPreview);
+    unitInput.addEventListener("blur", realTimeMatchPreview);
+    // 初始化提示文字
+    document.getElementById("realTimeMatchBox").innerHTML = "<span class='text-fluidTextMuted'>输入所属机构后实时展示匹配结果</span>";
+    // 兜底上级修改后刷新实时匹配
+    document.getElementById("superOrg").addEventListener("input", realTimeMatchPreview);
 };
 </script>
-
 </body>
 </html>
