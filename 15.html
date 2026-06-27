@@ -365,11 +365,11 @@ function animateParticles() {
 }
 animateParticles();
 
-// ===================== 业务全局变量【新增schoolList】 =====================
+// ===================== 业务全局变量 =====================
 let resultData = [];
 const KEY = "global_serial_no";
 let orgMapping = [];
-let schoolList = []; // 存储school_list.xlsx全部标准单位名称
+let schoolList = [];
 let excelLoadSuccess = false;
 let schoolExcelSuccess = false;
 let matchDebounceTimer = null;
@@ -402,7 +402,6 @@ async function loadSchoolList() {
         const wb = XLSX.read(buf, { type: "array" });
         const sheet = wb.Sheets[wb.SheetNames[0]];
         const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-        // 提取所有单元格文本作为标准单位名称，去空、去重
         const names = new Set();
         json.forEach(row => {
             row.forEach(cell => {
@@ -419,10 +418,9 @@ async function loadSchoolList() {
     }
 }
 
-// 读取Excel组织机构映射文件【已适配你的表头 parent_name / org_name】
+// 读取Excel组织机构映射文件
 async function loadOrgMapping() {
     updateOrgFileStatus("正在并行加载 org-map.xlsx、school_list.xlsx ...", "text-warnYellow", "fa-spinner fa-spin");
-    // 并行加载两个Excel
     const [orgRes, schoolOk] = await Promise.all([
         (async ()=>{
             try {
@@ -451,7 +449,6 @@ async function loadOrgMapping() {
         loadSchoolList()
     ]);
 
-    // 拼接加载状态文本
     let tipText = "";
     if (typeof orgRes === "string") {
         tipText += `org-map.xlsx 失败:${orgRes}; `;
@@ -467,35 +464,40 @@ async function loadOrgMapping() {
     }
 }
 
-// ========== 新增简写模糊检索函数 ==========
+// 简写模糊检索
 function fuzzySearchSchool(keyword) {
     if (!schoolExcelSuccess || schoolList.length === 0) return null;
     const kw = keyword.trim();
-    // 包含匹配，优先返回第一个匹配到的标准全称
     const match = schoolList.find(name => name.includes(kw));
     return match || null;
 }
 
-// 根据所属机构匹配上级（兼容简写模糊检索）
+// 【修复核心匹配函数】还原原版精准匹配逻辑，仅trim不清除中间空格
 function getSuperByBelong(rawName) {
-    let belongOrg = rawName.trim();
-    // 1.精准匹配
-    let item = orgMapping.find(o => o.belongOrg === belongOrg);
-    if (item) return { super: item.super, standardName: belongOrg, fuzzy: false };
+    const rawTrim = rawName.trim();
+    // 1. 原版精准全等匹配（和之前正常使用逻辑一致）
+    const exactMatch = orgMapping.find(o => o.belongOrg === rawTrim);
+    if (exactMatch) {
+        return { super: exactMatch.superOrg, standardName: rawTrim, fuzzy: false };
+    }
 
-    // 2.精准匹配失败，尝试简写模糊检索标准全称
-    const standardName = fuzzySearchSchool(belongOrg);
-    if (!standardName) return { super: null, standardName: belongOrg, fuzzy: false, noMatch: true };
+    // 2. 精准匹配失败，走简写模糊
+    const standardName = fuzzySearchSchool(rawTrim);
+    if (!standardName) {
+        return { super: null, standardName: rawTrim, fuzzy: false, noMatch: true };
+    }
 
-    // 3.用检索到的标准全称重新匹配上下级
-    item = orgMapping.find(o => o.belongOrg === standardName);
-    if (item) return { super: item.super, standardName: standardName, fuzzy: true };
+    // 3. 拿到标准全称，做空格容错再匹配上级
+    const cleanStd = standardName.trim().replace(/\s/g, "");
+    const stdMatch = orgMapping.find(o => o.belongOrg.trim().replace(/\s/g, "") === cleanStd);
+    if (stdMatch) {
+        return { super: stdMatch.superOrg, standardName: standardName, fuzzy: true };
+    }
 
-    // 4.检索到全称但全称依然无上级
     return { super: null, standardName: standardName, fuzzy: true, noMatch: true };
 }
 
-// 实时解析所属机构，底部预览匹配结果（输入防抖）
+// 实时解析所属机构预览
 function realTimeMatchPreview() {
     clearTimeout(matchDebounceTimer);
     matchDebounceTimer = setTimeout(() => {
@@ -509,7 +511,7 @@ function realTimeMatchPreview() {
         let html = "";
         let missingCount = 0;
         unitRawList.forEach((rawUnit, idx) => {
-            let superOrg, belongOrg, standardName, isFuzzy = false;
+            let superOrg, standardName, isFuzzy = false;
             if (rawUnit.includes("|")) {
                 const arr = rawUnit.split("|").map(i => i.trim());
                 superOrg = arr[0];
@@ -592,7 +594,7 @@ function add(key) {
     loadSel(key);
 }
 
-// 核心生成逻辑：兼容简写模糊匹配
+// 生成账号主逻辑
 function generate() {
     const prefix = document.getElementById("prefix").value || "xfgl_";
     const typeCode = document.getElementById("typeCode").value || "";
@@ -637,7 +639,7 @@ function generate() {
             resultData.push({
                 index: rowIndex,
                 superOrg: superOrg,
-                belongOrg: standardName, // 表格导出全部使用标准全称
+                belongOrg: standardName,
                 role: role,
                 loginAccount: account,
                 userName: account,
@@ -662,10 +664,9 @@ function generate() {
     alert(`✅ 生成完成\n起始流水号：${startNo}\n总条数：${total}\n无法自动匹配上下级单位：${missingOrgList.length}个`);
 }
 
-// 导出XLSX文件，自动设置最适合的列宽和行高
+// 导出XLSX
 function exportXLSX() {
     if (!resultData.length) return alert("请先生成账号");
-    // 准备表头和数据
     const headers = ["上级机构名称", "所属机构标准全称", "角色", "登陆账号", "用户名称", "手机号"];
     const data = [headers];
     resultData.forEach(item => {
@@ -678,34 +679,27 @@ function exportXLSX() {
             item.phone || ""
         ]);
     });
-    // 生成工作表
     const ws = XLSX.utils.aoa_to_sheet(data);
-    // 设置最适合的列宽
     const colWidths = [];
     for (let col = 0; col < headers.length; col++) {
         let maxLen = 0;
         for (let row = 0; row < data.length; row++) {
             const cellVal = String(data[row][col] || "");
-            // 计算内容长度，中文按2字符算，英文按1
             const len = cellVal.split("").reduce((acc, char) => {
                 return acc + (char.charCodeAt(0) > 255 ? 2 : 1);
             }, 0);
             if (len > maxLen) maxLen = len;
         }
-        // 设置列宽，最小8，最大50，乘以1.2倍留白保证美观
         colWidths.push({ wch: Math.min(Math.max(maxLen * 1.2, 8), 50) });
     }
     ws['!cols'] = colWidths;
-    // 设置最适合的行高，表头24px，数据行20px
     const rowHeights = [];
     for (let row = 0; row < data.length; row++) {
         rowHeights.push({ hpx: row === 0 ? 24 : 20 });
     }
     ws['!rows'] = rowHeights;
-    // 生成工作簿
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "账号数据");
-    // 导出文件
     XLSX.writeFile(wb, "账号导入模板.xlsx");
 }
 
@@ -717,7 +711,7 @@ function clearAll() {
     resultData = [];
 }
 
-// 页面初始化绑定实时输入事件
+// 页面初始化
 window.onload = async function () {
     await loadOrgMapping();
     initRoleSelect();
@@ -725,13 +719,10 @@ window.onload = async function () {
     loadSel("typeCode");
     loadSel("suffix");
     loadSel("superOrg");
-    // 绑定文本框输入、失焦实时匹配
     const unitInput = document.getElementById("unitList");
     unitInput.addEventListener("input", realTimeMatchPreview);
     unitInput.addEventListener("blur", realTimeMatchPreview);
-    // 初始化提示文字
     document.getElementById("realTimeMatchBox").innerHTML = "<span class='text-fluidTextMuted'>输入所属机构后实时展示匹配结果，简写自动识别标准全称</span>";
-    // 兜底上级修改后刷新实时匹配
     document.getElementById("superOrg").addEventListener("input", realTimeMatchPreview);
 };
 </script>
