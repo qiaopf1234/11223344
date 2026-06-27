@@ -24,7 +24,8 @@
                         fluidBg: '#000000',
                         successGreen: '#34d399',
                         dangerRed: '#f87171',
-                        warnYellow: '#facc15'
+                        warnYellow: '#facc15',
+                        matchCyan: '#22d3ee'
                     },
                     borderRadius: {
                         'fluid-sm': '16px',
@@ -180,7 +181,7 @@
             <h1 class="text-[clamp(1.8rem,4vw,2.4rem)] font-semibold mb-2 tracking-tight gradient-text">
                 <i class="fa fa-user-circle mr-2"></i>批量账号生成工具
             </h1>
-            <p class="text-fluidTextMuted text-sm mb-3">前缀+分类码+5位流水号 · 实时自动匹配上下级机构</p>
+            <p class="text-fluidTextMuted text-sm mb-3">前缀+分类码+5位流水号 · 实时自动匹配上下级机构 | 支持单位简写模糊匹配</p>
             <!-- 组织机构文件加载状态提示区 -->
             <div id="orgFileStatus" class="fluid-frosted rounded-fluid-sm py-2 px-4 inline-block text-sm"></div>
         </header>
@@ -250,7 +251,7 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-2">
                 <div>
-                    <label class="block mb-2 text-sm text-fluidTextMuted">所属机构列表（每行1个，输入实时匹配上级）</label>
+                    <label class="block mb-2 text-sm text-fluidTextMuted">所属机构列表（每行1个，简写自动模糊匹配标准全称）</label>
                     <textarea id="unitList" class="fluid-input w-full h-32 rounded-fluid-sm p-3 resize-none" placeholder=""></textarea>
                     <!-- 实时匹配预览区域 -->
                     <div id="realTimeMatchBox" class="mt-3 p-3 rounded-fluid-sm bg-white/5 max-h-40 overflow-y-auto text-xs"></div>
@@ -260,7 +261,12 @@
                     <textarea id="phoneList" class="fluid-input w-full h-32 rounded-fluid-sm p-3 resize-none"></textarea>
                 </div>
             </div>
-            <p class="text-fluidOrange text-xs mb-8">匹配规则：1.行内「上级|所属机构」强制指定；2.自动读取org-map.xlsx（表头parent_name/org_name）匹配；3.无匹配统一使用兜底上级；红色标注未匹配单位</p>
+            <p class="text-fluidOrange text-xs mb-8">匹配规则：
+            1.行内「上级|所属机构」强制指定；
+            2.精准匹配org-map.xlsx；
+            3.无精准匹配自动去school_list.xlsx模糊检索标准全称再匹配上级；
+            4.全部匹配失败统一使用兜底上级；红色标注完全检索不到的单位，青色简写转全称匹配成功
+            </p>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <button onclick="generate()" class="fluid-btn bg-gradient-to-r from-fluidBlue via-fluidPurple to-fluidOrange py-3 rounded-fluid-sm font-medium shadow-btnGlow">
@@ -289,7 +295,7 @@
                         <tr class="border-b border-fluidBorder">
                             <th class="text-left py-3 px-4 text-fluidTextMuted font-normal">序号</th>
                             <th class="text-left py-3 px-4 text-fluidTextMuted font-normal">上级机构</th>
-                            <th class="text-left py-3 px-4 text-fluidTextMuted font-normal">所属机构</th>
+                            <th class="text-left py-3 px-4 text-fluidTextMuted font-normal">所属机构（标准全称）</th>
                             <th class="text-left py-3 px-4 text-fluidTextMuted font-normal">角色</th>
                             <th class="text-left py-3 px-4 font-mono bg-gradient-to-r from-fluidBlue to-fluidOrange bg-clip-text text-transparent font-normal">登录账号/用户名</th>
                             <th class="text-left py-3 px-4 text-fluidTextMuted font-normal">手机号</th>
@@ -359,11 +365,13 @@ function animateParticles() {
 }
 animateParticles();
 
-// ===================== 业务全局变量 =====================
+// ===================== 业务全局变量【新增schoolList】 =====================
 let resultData = [];
 const KEY = "global_serial_no";
 let orgMapping = [];
+let schoolList = []; // 存储school_list.xlsx全部标准单位名称
 let excelLoadSuccess = false;
+let schoolExcelSuccess = false;
 let matchDebounceTimer = null;
 
 // 内置完整角色列表
@@ -385,42 +393,106 @@ function updateOrgFileStatus(text, colorClass, icon) {
     statusDom.innerHTML = `<i class="fa ${icon} mr-1"></i>${text}`;
 }
 
-// 读取Excel组织机构映射文件【已适配你的表头 parent_name / org_name】
-async function loadOrgMapping() {
-    updateOrgFileStatus("正在加载 org-map.xlsx ...", "text-warnYellow", "fa-spinner fa-spin");
+// 加载 school_list.xlsx 标准单位库（用于简写模糊匹配）
+async function loadSchoolList() {
     try {
-        const res = await fetch("./org-map.xlsx");
-        if (!res.ok) throw new Error("文件不存在或路径错误，请确认文件名为org-map.xlsx且和index.html同目录");
-        const arrayBuffer = await res.arrayBuffer();
-        // 解析Excel文件
-        const workbook = XLSX.read(arrayBuffer, { type: "array" });
-        // 取第一个工作表
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        // 转换为JSON数组
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
-        // 校验你的表头：必须存在 parent_name（上级）、org_name（所属）
-        if (jsonData.length === 0 || !jsonData[0].hasOwnProperty("parent_name") || !jsonData[0].hasOwnProperty("org_name")) {
-            throw new Error("Excel表头必须包含两列：parent_name（上级机构）、org_name（所属机构），C列full_path无需处理");
-        }
-        // 转换为映射数组，自动去除空格、空行
-        orgMapping = jsonData.map(item => ({
-            belongOrg: String(item["org_name"]).trim(),
-            superOrg: String(item["parent_name"]).trim()
-        })).filter(item => item.belongOrg && item.superOrg);
-        excelLoadSuccess = true;
-        updateOrgFileStatus(`组织机构Excel加载成功，共${orgMapping.length}条上下级对应关系`, "text-successGreen", "fa-check-circle");
+        const res = await fetch("./school_list.xlsx");
+        if (!res.ok) throw new Error("文件不存在");
+        const buf = await res.arrayBuffer();
+        const wb = XLSX.read(buf, { type: "array" });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const json = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+        // 提取所有单元格文本作为标准单位名称，去空、去重
+        const names = new Set();
+        json.forEach(row => {
+            row.forEach(cell => {
+                if (cell && String(cell).trim()) names.add(String(cell).trim());
+            })
+        })
+        schoolList = Array.from(names);
+        schoolExcelSuccess = true;
+        return true;
     } catch (e) {
-        excelLoadSuccess = false;
-        orgMapping = [];
-        updateOrgFileStatus(`组织机构Excel加载失败：${e.message}，本地打开会跨域拦截，部署GitHub Pages可正常读取`, "text-dangerRed", "fa-times-circle");
+        schoolExcelSuccess = false;
+        schoolList = [];
+        return false;
     }
 }
 
-// 根据所属机构匹配上级
-function getSuperByBelong(name) {
-    const item = orgMapping.find(o => o.belongOrg === name);
-    return item ? item.superOrg : null;
+// 读取Excel组织机构映射文件【已适配你的表头 parent_name / org_name】
+async function loadOrgMapping() {
+    updateOrgFileStatus("正在并行加载 org-map.xlsx、school_list.xlsx ...", "text-warnYellow", "fa-spinner fa-spin");
+    // 并行加载两个Excel
+    const [orgRes, schoolOk] = await Promise.all([
+        (async ()=>{
+            try {
+                const res = await fetch("./org-map.xlsx");
+                if (!res.ok) throw new Error("文件不存在或路径错误");
+                const arrayBuffer = await res.arrayBuffer();
+                const workbook = XLSX.read(arrayBuffer, { type: "array" });
+                const sheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[sheetName];
+                const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                if (jsonData.length === 0 || !jsonData[0].hasOwnProperty("parent_name") || !jsonData[0].hasOwnProperty("org_name")) {
+                    throw new Error("表头缺少parent_name/org_name");
+                }
+                orgMapping = jsonData.map(item => ({
+                    belongOrg: String(item["org_name"]).trim(),
+                    superOrg: String(item["parent_name"]).trim()
+                })).filter(item => item.belongOrg && item.superOrg);
+                excelLoadSuccess = true;
+                return true;
+            } catch (e) {
+                excelLoadSuccess = false;
+                orgMapping = [];
+                return e.message;
+            }
+        })(),
+        loadSchoolList()
+    ]);
+
+    // 拼接加载状态文本
+    let tipText = "";
+    if (typeof orgRes === "string") {
+        tipText += `org-map.xlsx 失败:${orgRes}; `;
+    } else {
+        tipText += `org-map加载成功(${orgMapping.length}条上下级); `;
+    }
+    if (schoolOk) {
+        tipText += `school_list加载成功(${schoolList.length}个标准单位)`;
+        updateOrgFileStatus(tipText, "text-successGreen", "fa-check-circle");
+    } else {
+        tipText += `school_list.xlsx加载失败，简写模糊匹配功能失效`;
+        updateOrgFileStatus(tipText, "text-dangerRed", "fa-times-circle");
+    }
+}
+
+// ========== 新增简写模糊检索函数 ==========
+function fuzzySearchSchool(keyword) {
+    if (!schoolExcelSuccess || schoolList.length === 0) return null;
+    const kw = keyword.trim();
+    // 包含匹配，优先返回第一个匹配到的标准全称
+    const match = schoolList.find(name => name.includes(kw));
+    return match || null;
+}
+
+// 根据所属机构匹配上级（兼容简写模糊检索）
+function getSuperByBelong(rawName) {
+    let belongOrg = rawName.trim();
+    // 1.精准匹配
+    let item = orgMapping.find(o => o.belongOrg === belongOrg);
+    if (item) return { super: item.super, standardName: belongOrg, fuzzy: false };
+
+    // 2.精准匹配失败，尝试简写模糊检索标准全称
+    const standardName = fuzzySearchSchool(belongOrg);
+    if (!standardName) return { super: null, standardName: belongOrg, fuzzy: false, noMatch: true };
+
+    // 3.用检索到的标准全称重新匹配上下级
+    item = orgMapping.find(o => o.belongOrg === standardName);
+    if (item) return { super: item.super, standardName: standardName, fuzzy: true };
+
+    // 4.检索到全称但全称依然无上级
+    return { super: null, standardName: standardName, fuzzy: true, noMatch: true };
 }
 
 // 实时解析所属机构，底部预览匹配结果（输入防抖）
@@ -431,33 +503,42 @@ function realTimeMatchPreview() {
         const defaultSuper = document.getElementById("superOrg").value.trim();
         const boxDom = document.getElementById("realTimeMatchBox");
         if (unitRawList.length === 0) {
-            boxDom.innerHTML = "<span class='text-fluidTextMuted'>输入所属机构后实时展示匹配结果</span>";
+            boxDom.innerHTML = "<span class='text-fluidTextMuted'>输入所属机构后实时展示匹配结果，简写自动识别标准全称</span>";
             return;
         }
         let html = "";
         let missingCount = 0;
         unitRawList.forEach((rawUnit, idx) => {
-            let superOrg, belongOrg;
+            let superOrg, belongOrg, standardName, isFuzzy = false;
             if (rawUnit.includes("|")) {
                 const arr = rawUnit.split("|").map(i => i.trim());
                 superOrg = arr[0];
-                belongOrg = arr[1];
-                html += `<div class="mb-1"><span class="text-fluidBlue">${idx+1}.强制指定</span>：${belongOrg} → ${superOrg}</div>`;
+                standardName = arr[1];
+                html += `<div class="mb-1"><span class="text-fluidBlue">${idx+1}.强制指定</span>：输入${rawUnit} → 所属${standardName} → 上级${superOrg}</div>`;
             } else {
-                belongOrg = rawUnit;
-                const mapSuper = getSuperByBelong(belongOrg);
-                if (mapSuper) {
-                    superOrg = mapSuper;
-                    html += `<div class="mb-1"><span class="text-successGreen">${idx+1}.匹配成功</span>：${belongOrg} → ${superOrg}</div>`;
+                const matchRes = getSuperByBelong(rawUnit);
+                standardName = matchRes.standardName;
+                isFuzzy = matchRes.fuzzy;
+                if (matchRes.super) {
+                    superOrg = matchRes.super;
+                    if(isFuzzy){
+                        html += `<div class="mb-1"><span class="text-matchCyan">${idx+1}.简写模糊匹配成功</span>：输入「${rawUnit}」转标准全称「${standardName}」→ ${superOrg}</div>`;
+                    }else{
+                        html += `<div class="mb-1"><span class="text-successGreen">${idx+1}.精准匹配成功</span>：${standardName} → ${superOrg}</div>`;
+                    }
                 } else {
                     superOrg = defaultSuper || "无兜底上级";
                     missingCount++;
-                    html += `<div class="mb-1"><span class="text-dangerRed">${idx+1}.未匹配</span>：${belongOrg} → ${superOrg}</div>`;
+                    if(matchRes.noMatch){
+                        html += `<div class="mb-1"><span class="text-dangerRed">${idx+1}.完全未匹配</span>：输入「${rawUnit}」检索不到标准单位，使用兜底${superOrg}</div>`;
+                    }else{
+                        html += `<div class="mb-1"><span class="text-dangerRed">${idx+1}.全称存在但无上级</span>：标准名「${standardName}」无对应上级，使用兜底${superOrg}</div>`;
+                    }
                 }
             }
         });
         if(missingCount > 0){
-            html = `<div class="text-dangerRed mb-2">共${missingCount}个单位未在org-map.xlsx找到对应上级</div>` + html;
+            html = `<div class="text-dangerRed mb-2">共${missingCount}条单位无法自动匹配上下级，将使用兜底上级</div>` + html;
         }
         boxDom.innerHTML = html;
     }, 300);
@@ -511,7 +592,7 @@ function add(key) {
     loadSel(key);
 }
 
-// 核心生成逻辑：批量匹配 + 缺失机构弹窗提醒
+// 核心生成逻辑：兼容简写模糊匹配
 function generate() {
     const prefix = document.getElementById("prefix").value || "xfgl_";
     const typeCode = document.getElementById("typeCode").value || "";
@@ -532,18 +613,18 @@ function generate() {
     let rowIndex = 1;
 
     unitRawList.forEach((rawUnit, idx) => {
-        let superOrg, belongOrg;
+        let superOrg, standardName;
         if (rawUnit.includes("|")) {
             const arr = rawUnit.split("|").map(i => i.trim());
             superOrg = arr[0];
-            belongOrg = arr[1];
+            standardName = arr[1];
         } else {
-            belongOrg = rawUnit;
-            const mapSuper = getSuperByBelong(belongOrg);
-            if (mapSuper) {
-                superOrg = mapSuper;
+            const matchRes = getSuperByBelong(rawUnit);
+            standardName = matchRes.standardName;
+            if (matchRes.super) {
+                superOrg = matchRes.super;
             } else {
-                missingOrgList.push(belongOrg);
+                missingOrgList.push(`输入:${rawUnit} 标准全称:${standardName}`);
                 superOrg = defaultSuper;
             }
         }
@@ -556,7 +637,7 @@ function generate() {
             resultData.push({
                 index: rowIndex,
                 superOrg: superOrg,
-                belongOrg: belongOrg,
+                belongOrg: standardName, // 表格导出全部使用标准全称
                 role: role,
                 loginAccount: account,
                 userName: account,
@@ -565,7 +646,7 @@ function generate() {
             html += `<tr class="fluid-table-row">
                 <td class="py-3 px-4">${rowIndex}</td>
                 <td class="py-3 px-4">${superOrg || "无上级"}</td>
-                <td class="py-3 px-4">${belongOrg}</td>
+                <td class="py-3 px-4">${standardName}</td>
                 <td class="py-3 px-4">${role}</td>
                 <td class="py-3 px-4 font-mono bg-gradient-to-r from-fluidBlue to-fluidOrange bg-clip-text text-transparent">${account}</td>
                 <td class="py-3 px-4">${phone}</td>
@@ -575,17 +656,17 @@ function generate() {
     });
 
     if (missingOrgList.length > 0) {
-        alert(`以下${missingOrgList.length}个所属机构未在org-map.xlsx中匹配到上级机构：\n${missingOrgList.join("、")}\n可修改Excel补充对应行，或使用「上级|所属机构」格式强制指定`);
+        alert(`以下${missingOrgList.length}条单位无法自动匹配到上级机构：\n${missingOrgList.join("\n")}\n处理方案：1.补充org-map.xlsx上下级；2.使用「上级|标准全称」强制指定；3.完善school_list.xlsx单位名称`);
     }
     document.getElementById("tbody").innerHTML = html;
-    alert(`✅ 生成完成\n起始流水号：${startNo}\n总条数：${total}\n未匹配上级单位：${missingOrgList.length}个`);
+    alert(`✅ 生成完成\n起始流水号：${startNo}\n总条数：${total}\n无法自动匹配上下级单位：${missingOrgList.length}个`);
 }
 
 // 导出XLSX文件，自动设置最适合的列宽和行高
 function exportXLSX() {
     if (!resultData.length) return alert("请先生成账号");
     // 准备表头和数据
-    const headers = ["上级机构名称", "所属机构名称", "角色", "登陆账号", "用户名称", "手机号"];
+    const headers = ["上级机构名称", "所属机构标准全称", "角色", "登陆账号", "用户名称", "手机号"];
     const data = [headers];
     resultData.forEach(item => {
         data.push([
@@ -632,7 +713,7 @@ function clearAll() {
     document.getElementById("unitList").value = "";
     document.getElementById("phoneList").value = "";
     document.getElementById("tbody").innerHTML = "";
-    document.getElementById("realTimeMatchBox").innerHTML = "<span class='text-fluidTextMuted'>输入所属机构后实时展示匹配结果</span>";
+    document.getElementById("realTimeMatchBox").innerHTML = "<span class='text-fluidTextMuted'>输入所属机构后实时展示匹配结果，简写自动识别标准全称</span>";
     resultData = [];
 }
 
@@ -649,7 +730,7 @@ window.onload = async function () {
     unitInput.addEventListener("input", realTimeMatchPreview);
     unitInput.addEventListener("blur", realTimeMatchPreview);
     // 初始化提示文字
-    document.getElementById("realTimeMatchBox").innerHTML = "<span class='text-fluidTextMuted'>输入所属机构后实时展示匹配结果</span>";
+    document.getElementById("realTimeMatchBox").innerHTML = "<span class='text-fluidTextMuted'>输入所属机构后实时展示匹配结果，简写自动识别标准全称</span>";
     // 兜底上级修改后刷新实时匹配
     document.getElementById("superOrg").addEventListener("input", realTimeMatchPreview);
 };
