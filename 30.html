@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>全能通用Excel匹配填充工具（修复搜索框版）</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box}
+/* 原图提取色系定义 */
+:root {
+  --color-deep-purple: #5a2080;
+  --color-mid-purple: #9138a8;
+  --color-pink-purple: #d068b8;
+  --color-light-pink: #f2b4c8;
+  --color-cloud-white: #ffffff;
+  --color-mountain-dark: #682488;
+  --color-mountain-mid: #a040b8;
+  --color-text-dark: #3a1050;
+  --color-text-light: #fef4f8;
+}
+body{
+  max-width:1200px;
+  margin:30px auto;
+  padding:0 20px;
+  font-family:"Microsoft Yahei",system-ui;
+  background: linear-gradient(180deg, var(--color-mid-purple) 0%, var(--color-pink-purple) 50%, var(--color-light-pink) 100%);
+  min-height: 100vh;
+  position: relative;
+  overflow-x: hidden;
+}
+/* 粒子画布底层 */
+#particleCanvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  pointer-events: none;
+}
+h2{
+  color:var(--color-cloud-white);
+  margin-top:0;
+  text-shadow: 0 2px 8px rgba(60,10,80,0.4);
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+h3{
+  margin:0 0 12px 0;
+  color:var(--color-text-dark);
+  font-size:16px;
+  font-weight: 600;
+}
+h4 {
+  color: var(--color-deep-purple);
+  margin: 8px 0;
+}
+p.tip{
+  color:var(--color-text-light);
+  font-size:13px;
+  margin:4px 0 12px;
+  opacity: 0.9;
+}
+.box{
+  border:none;
+  border-radius:16px;
+  padding:24px;
+  margin-bottom:22px;
+  background:rgba(255,255,255,0.92);
+  box-shadow: 0 8px 24px rgba(80,20,110,0.25);
+  backdrop-filter: blur(6px);
+}
+.flex-row{display:flex;gap:24px;flex-wrap:wrap}
+.col{flex:1;min-width:340px}
+.item{margin-bottom:16px}
+label{
+  display:block;
+  margin-bottom:6px;
+  font-weight:500;
+  font-size:14px;
+  color: var(--color-deep-purple);
+}
+input[type="file"],input[type="text"], select, textarea{
+  width:100%;
+  padding:10px 12px;
+  border:1px solid var(--color-mountain-mid);
+  border-radius:8px;
+  font-size:14px;
+  background: #fff;
+  color: var(--color-text-dark);
+  transition: 0.2s all ease;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--color-mid-purple);
+  box-shadow: 0 0 0 3px rgba(145, 56, 168, 0.2);
+}
+textarea{
+  width:100%;
+  min-height:120px;
+  padding:12px;
+  border:1px solid var(--color-mountain-mid);
+  resize:vertical;
+  font-size:13px;
+}
+.btn-group{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0}
+button{
+  padding:11px 22px;
+  border:none;
+  border-radius:10px;
+  font-size:14px;
+  cursor:pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(90, 32, 128, 0.3);
+}
+.btn-main{
+  background:linear-gradient(135deg, var(--color-deep-purple), var(--color-mid-purple));
+  color:#fff;
+}
+.btn-second{
+  background:linear-gradient(135deg, var(--color-mountain-mid), var(--color-pink-purple));
+  color:#fff;
+}
+.btn-danger{
+  background:#c03080;
+  color:#fff;
+}
+button:disabled{opacity:0.5;cursor:not-allowed;transform:none;box-shadow:none}
+.check-row{display:flex;align-items:center;gap:10px;margin:8px 0}
+input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-mid-purple);
+}
+.progress-bar{
+  width:100%;
+  height:12px;
+  background:#f0e0f8;
+  border-radius:6px;
+  margin:12px 0;
+  overflow:hidden
+}
+.progress-inner{
+  height:100%;
+  width:0%;
+  background:linear-gradient(90deg, var(--color-deep-purple), var(--color-pink-purple));
+  transition:0.2s width ease
+}
+.table-preview{
+  max-height:200px;
+  overflow:auto;
+  border:1px solid var(--color-light-pink);
+  margin:10px 0;
+  border-radius:8px;
+}
+.table-preview table{width:100%;border-collapse:collapse;font-size:12px}
+.table-preview td,.table-preview th{
+  border:1px solid #e8d0ef;
+  padding:6px 8px;
+  color: var(--color-text-dark);
+}
+.table-preview th {
+  background: var(--color-light-pink);
+}
+.tab-switch{display:flex;gap:8px;margin-bottom:14px}
+.tab-btn{
+  padding:8px 14px;
+  border:1px solid var(--color-mountain-mid);
+  background:#f8edf9;
+  cursor:pointer;
+  border-radius:8px;
+  color: var(--color-deep-purple);
+}
+.tab-btn.active{
+  background:linear-gradient(135deg, var(--color-mid-purple), var(--color-pink-purple));
+  color:#fff;
+  border-color:var(--color-mid-purple);
+}
+.template-list{margin:12px 0}
+.template-item{
+  padding:8px 10px;
+  border:1px solid var(--color-light-pink);
+  margin:6px 0;
+  cursor:pointer;
+  border-radius:8px;
+  transition:0.2s;
+}
+.template-item:hover{
+  background: var(--color-light-pink);
+}
+#log{
+  min-height:150px;
+  white-space:pre-line;
+  font-size:13px;
+  color:var(--color-text-dark);
+  background: #fcf4fc;
+}
+.field-search{margin-bottom:10px}
+.field-search-tip{font-size:12px;color:#884899;margin-top:3px}
+/* 页面底部装饰简化远山元素 */
+.footer-hill {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 120px;
+  z-index: -2;
+  pointer-events: none;
+}
+</style>
+</head>
+<body>
+<!-- 动态粒子画布 -->
+<canvas id="particleCanvas"></canvas>
+<!-- 底层远山装饰 -->
+<svg class="footer-hill" viewBox="0 0 1600 120" preserveAspectRatio="none">
+  <path d="M0,120 L0,90 Q200,40 400,70 Q600,20 800,60 Q1000,10 1200,50 Q1400,30 1600,80 L1600,120 Z" fill="#702890" opacity="0.6"></path>
+  <path d="M0,120 L0,100 Q300,60 500,85 Q700,45 900,75 Q1100,35 1300,65 Q1500,45 1600,95 L1600,120 Z" fill="#9842b8" opacity="0.4"></path>
+</svg>
+
+<h2>全能通用Excel匹配填充工具（修复搜索框）</h2>
+<p class="tip">支持XLSX/XLS/CSV，本地离线运算，无固定字段、不限表格结构</p>
+
+<div class="btn-group">
+  <button class="btn-second" id="resetAll">一键重置全部</button>
+  <button class="btn-second" id="swapConfig">互换源表/目标表配置</button>
+  <button class="btn-second" id="exportLogBtn">导出操作日志</button>
+</div>
+
+<div class="flex-row">
+  <!-- 左侧 数据源区域 -->
+  <div class="col box">
+    <h3>① 数据源（提供填充值，支持多Sheet、多文件合并）</h3>
+    <input type="file" id="srcFile" accept=".xlsx,.xls,.csv" multiple>
+    <p class="tip" id="srcFileTip">未选择文件，支持多选合并数据源</p>
+    <div class="item">
+      <label>选择工作表</label>
+      <select id="srcSheetSel"><option value="">请先上传文件</option></select>
+    </div>
+    <div class="field-search">
+      <label>字段快速搜索</label>
+      <input type="text" id="srcFieldSearch" placeholder="输入表头关键词，打开下拉框查看筛选结果">
+      <div class="field-search-tip">作用：过滤下方匹配/取值字段下拉列表，不会修改预览表格</div>
+    </div>
+    <div class="item">
+      <label>匹配模式</label>
+      <select id="matchMode">
+        <option value="single">单字段匹配（仅1个关键字）</option>
+        <option value="double">双字段联合匹配（两个条件同时匹配）</option>
+      </select>
+    </div>
+    <div class="item" id="srcMatch1Wrap">
+      <label>匹配字段1</label>
+      <select id="srcMatchField1"><option value="">请先上传文件</option></select>
+    </div>
+    <div class="item" id="srcMatch2Wrap" style="display:none">
+      <label>匹配字段2（联合条件）</label>
+      <select id="srcMatchField2"><option value="">请先上传文件</option></select>
+    </div>
+    <div class="item">
+      <label>取值字段（需要填充到目标表的内容）</label>
+      <select id="srcValField"><option value="">请先上传文件</option></select>
+    </div>
+    <div class="table-preview" id="srcPreview"></div>
+  </div>
+
+  <!-- 右侧 待填充目标区域 -->
+  <div class="col box">
+    <h3>② 待填充目标表（需更新数据）</h3>
+    <input type="file" id="targetFile" accept=".xlsx,.xls,.csv">
+    <p class="tip" id="targetFileTip">未选择文件</p>
+    <div class="item">
+      <label>选择工作表</label>
+      <select id="targetSheetSel"><option value="">请先上传文件</option></select>
+    </div>
+    <div class="field-search">
+      <label>字段快速搜索</label>
+      <input type="text" id="targetFieldSearch" placeholder="输入表头关键词，打开下拉框查看筛选结果">
+      <div class="field-search-tip">作用：过滤下方匹配/填充字段下拉列表，不会修改预览表格</div>
+    </div>
+    <div class="item" id="tarMatch1Wrap">
+      <label>匹配字段1（与源表对应）</label>
+      <select id="targetMatchField1"><option value="">请先上传文件</option></select>
+    </div>
+    <div class="item" id="tarMatch2Wrap" style="display:none">
+      <label>匹配字段2（联合条件）</label>
+      <select id="targetMatchField2"><option value="">请先上传文件</option></select>
+    </div>
+    <div class="item">
+      <label>填充写入字段</label>
+      <select id="targetWriteField"><option value="">请先上传文件</option></select>
+    </div>
+    <div class="table-preview" id="targetPreview"></div>
+  </div>
+</div>
+
+<!-- 高级配置面板 -->
+<div class="box">
+  <h3>③ 高级参数配置（全部增强功能开关）</h3>
+  <div class="flex-row">
+    <div class="col">
+      <h4>关键字清洗预处理</h4>
+      <div class="check-row">
+        <input type="checkbox" id="trimSpace" checked>
+        <label for="trimSpace">去除首尾空格、换行、制表符</label>
+      </div>
+      <div class="check-row">
+        <input type="checkbox" id="unifyNumStr" checked>
+        <label for="unifyNumStr">统一数字/文本格式，避免123与"123"不匹配</label>
+      </div>
+      <div class="check-row">
+        <input type="checkbox" id="clearSep">
+        <label for="clearSep">清除证件/编号分隔符（- / 空格）</label>
+      </div>
+      <h4 style="margin-top:12px">重复关键字冲突处理</h4>
+      <select id="dupRule">
+        <option value="first">取第一条匹配数据</option>
+        <option value="last">取最后一条匹配数据</option>
+        <option value="skip">冲突跳过，写入失败清单</option>
+      </select>
+    </div>
+    <div class="col">
+      <h4>填充覆盖规则</h4>
+      <select id="fillRule">
+        <option value="empty">仅填充空白单元格（默认）</option>
+        <option value="force">强制覆盖原有全部内容</option>
+        <option value="srcNotEmpty">仅源表有值才覆盖，源表空则保留目标原值</option>
+      </select>
+      <h4 style="margin-top:12px">导出设置</h4>
+      <div class="item">
+        <label>自定义导出文件名</label>
+        <input type="text" id="exportFileName" placeholder="填充结果.xlsx">
+      </div>
+      <div class="check-row">
+        <input type="checkbox" id="exportFailList" checked>
+        <label for="exportFailList">自动导出匹配失败明细Excel</label>
+      </div>
+      <div class="check-row">
+        <input type="checkbox" id="dataCheck">
+        <label for="dataCheck">开启填充后数据校验（空值/重复/证件格式）</label>
+      </div>
+    </div>
+  </div>
+  <div class="check-row">
+    <input type="checkbox" id="saveConfig" checked>
+    <label for="saveConfig">自动保存本次字段配置，刷新页面不丢失</label>
+  </div>
+  <div class="check-row">
+    <input type="checkbox" id="transposeTable">
+    <label for="transposeTable">表格转置（适配横向表头特殊表格）</label>
+  </div>
+</div>
+
+<!-- 模板管理 -->
+<div class="box">
+  <h3>④ 业务模板快捷配置</h3>
+  <div class="tab-switch">
+    <button class="tab-btn active" data-tab="saveTab">保存当前模板</button>
+    <button class="tab-btn" data-tab="loadTab">加载已有模板</button>
+  </div>
+  <div id="saveTab">
+    <div class="item">
+      <label>模板名称</label>
+      <input type="text" id="templateName" placeholder="学籍身份证匹配毕业证">
+    </div>
+    <button class="btn-second" id="saveTemplateBtn">保存当前配置为模板</button>
+  </div>
+  <div id="loadTab" style="display:none">
+    <div class="template-list" id="templateList"></div>
+  </div>
+</div>
+
+<!-- 执行区域 -->
+<div class="box">
+  <button id="startBtn" class="btn-main" disabled>开始批量匹配填充并导出文件</button>
+  <div class="progress-bar"><div class="progress-inner" id="progressInner"></div></div>
+  <textarea id="log" readonly placeholder="操作日志输出区域..."></textarea>
+</div>
+
+<script>
+// ====================== 动态粒子物理系统（仅使用原图紫/粉/白色） ======================
+const canvas = document.getElementById('particleCanvas');
+const ctx = canvas.getContext('2d');
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+// 粒子类
+class Particle {
+  constructor() {
+    this.reset();
+  }
+  reset() {
+    // 仅原图色系粒子
+    const colorPool = [
+      'rgba(255,255,255,0.6)',
+      'rgba(208,104,184,0.4)',
+      'rgba(145,56,168,0.35)',
+      'rgba(242,180,200,0.5)'
+    ];
+    this.x = Math.random() * canvas.width;
+    this.y = Math.random() * canvas.height;
+    this.radius = Math.random() * 3 + 0.5;
+    this.color = colorPool[Math.floor(Math.random() * colorPool.length)];
+    // 物理运动速度
+    this.vx = (Math.random() - 0.5) * 0.6;
+    this.vy = (Math.random() - 0.5) * 0.6;
+    this.alpha = Math.random() * 0.6 + 0.1;
+  }
+  update() {
+    this.x += this.vx;
+    this.y += this.vy;
+    // 边界回弹重置
+    if(this.x < 0 || this.x > canvas.width || this.y <0 || this.y>canvas.height) {
+      this.reset();
+    }
+  }
+  draw() {
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fillStyle = this.color;
+    ctx.fill();
+  }
+}
+// 生成粒子数组
+const particleCount = 80;
+const particles = Array.from({length: particleCount}, ()=>new Particle());
+// 动画循环
+function animateParticles() {
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  particles.forEach(p=>{
+    p.update();
+    p.draw();
+  })
+  requestAnimationFrame(animateParticles);
+}
+animateParticles();
+
+// ====================== 全局变量 ======================
+let srcWorkBooks = [];
+let targetWorkbook = null;
+let srcAllData = [];
+let targetAllData = [];
+let srcHeaders = [];
+let targetHeaders = [];
+let srcSheetList = [];
+let targetSheetList = [];
+let srcReady = false;
+let targetReady = false;
+let globalMap = new Map();
+let failDataList = [];
+const logBox = document.getElementById('log');
+const progressInner = document.getElementById('progressInner');
+const LOCAL_STORAGE_KEY = "excelFillConfigSave";
+const TEMPLATE_STORAGE_KEY = "excelFillTemplateList";
+
+// ====================== 基础工具函数 ======================
+function log(msg) {
+  const now = new Date().toLocaleTimeString();
+  logBox.value += `[${now}] ${msg}\n`;
+  logBox.scrollTop = logBox.scrollHeight;
+}
+function clearSelect(selId) {
+  const sel = document.getElementById(selId);
+  sel.innerHTML = '<option value="">请选择字段</option>';
+}
+function cleanKey(str) {
+  if (str === undefined || str === null) return "";
+  let s = String(str);
+  if (document.getElementById('trimSpace').checked) s = s.trim().replace(/[\t\n\r]/g, "");
+  if (document.getElementById('clearSep').checked) s = s.replace(/[-\/ ]/g, "");
+  if (document.getElementById('unifyNumStr').checked) s = s.replace(/^0+/, "")
+  return s;
+}
+function setProgress(percent) {
+  progressInner.style.width = `${percent}%`;
+}
+function getStorageConfig() {
+  const str = localStorage.getItem(LOCAL_STORAGE_KEY);
+  return str ? JSON.parse(str) : null;
+}
+function saveStorageConfig() {
+  const cfg = {
+    matchMode: document.getElementById('matchMode').value,
+    srcMatch1: document.getElementById('srcMatchField1').value,
+    srcMatch2: document.getElementById('srcMatchField2').value,
+    srcVal: document.getElementById('srcValField').value,
+    tarMatch1: document.getElementById('targetMatchField1').value,
+    tarMatch2: document.getElementById('targetMatchField2').value,
+    tarWrite: document.getElementById('targetWriteField').value,
+    fillRule: document.getElementById('fillRule').value,
+    dupRule: document.getElementById('dupRule').value,
+    trimSpace: document.getElementById('trimSpace').checked,
+    unifyNumStr: document.getElementById('unifyNumStr').checked,
+    clearSep: document.getElementById('clearSep').checked,
+    transposeTable: document.getElementById('transposeTable').checked,
+    exportFailList: document.getElementById('exportFailList').checked,
+    dataCheck: document.getElementById('dataCheck').checked,
+    exportFileName: document.getElementById('exportFileName').value
+  }
+  localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cfg));
+}
+function loadStorageConfig() {
+  const cfg = getStorageConfig();
+  if (!cfg) return;
+  document.getElementById('matchMode').value = cfg.matchMode || "single";
+  document.getElementById('fillRule').value = cfg.fillRule || "empty";
+  document.getElementById('dupRule').value = cfg.dupRule || "first";
+  document.getElementById('trimSpace').checked = !!cfg.trimSpace;
+  document.getElementById('unifyNumStr').checked = !!cfg.unifyNumStr;
+  document.getElementById('clearSep').checked = !!cfg.clearSep;
+  document.getElementById('transposeTable').checked = !!cfg.transposeTable;
+  document.getElementById('exportFailList').checked = !!cfg.exportFailList;
+  document.getElementById('dataCheck').checked = !!cfg.dataCheck;
+  document.getElementById('exportFileName').value = cfg.exportFileName || "";
+  toggleDoubleMatch();
+}
+function getAllTemplates() {
+  const str = localStorage.getItem(TEMPLATE_STORAGE_KEY);
+  return str ? JSON.parse(str) : [];
+}
+function saveTemplateList(list) {
+  localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(list));
+}
+
+// ====================== 下拉字段渲染+修复版搜索筛选 ======================
+function fillSelect(selId, headers, filterText = "") {
+  const sel = document.getElementById(selId);
+  sel.innerHTML = '<option value="">请选择字段</option>';
+  // 统一清理搜索关键词，去除空格、小写匹配
+  const filter = filterText.trim().toLowerCase();
+  headers.forEach((h, idx) => {
+    const headerText = String(h ?? "无表头").toLowerCase();
+    const optionText = `${idx+1}列 - ${h ?? "无表头"}`;
+    // 关键词为空直接全部展示，否则模糊匹配
+    if(filter && !headerText.includes(filter)) return;
+    const opt = document.createElement('option');
+    opt.value = idx;
+    opt.textContent = optionText;
+    sel.appendChild(opt);
+  })
+}
+// 绑定搜索框实时刷新下拉，修复切换工作表丢失监听问题
+function bindFieldSearch(inputId, selArr, getHeadersFunc) {
+  const input = document.getElementById(inputId);
+  input.oninput = () => {
+    const keyword = input.value;
+    const headers = getHeadersFunc();
+    selArr.forEach(selId=>fillSelect(selId, headers, keyword));
+  }
+}
+
+// ====================== 双匹配字段显示切换 ======================
+function toggleDoubleMatch() {
+  const mode = document.getElementById('matchMode').value;
+  const doubleShow = mode === "double";
+  document.getElementById('srcMatch2Wrap').style.display = doubleShow ? "block" : "none";
+  document.getElementById('tarMatch2Wrap').style.display = doubleShow ? "block" : "none";
+}
+document.getElementById('matchMode').onchange = toggleDoubleMatch;
+
+// ====================== 表格预览渲染 ======================
+function renderPreview(containerId, rows, limit = 10) {
+  const wrap = document.getElementById(containerId);
+  if (!rows || rows.length === 0) { wrap.innerHTML = "<p>暂无数据预览</p>"; return; }
+  const showRows = rows.slice(0, limit + 1);
+  let html = "<table><thead><tr>";
+  showRows[0].forEach(h => html += `<th>${h}</th>`);
+  html += "</tr></thead><tbody>";
+  for (let i = 1; i < showRows.length; i++) {
+    html += "<tr>";
+    showRows[i].forEach(cell => html += `<td>${cell ?? ""}</td>`);
+    html += "</tr>";
+  }
+  html += "</tbody></table>";
+  wrap.innerHTML = html;
+}
+
+// ====================== 文件读取核心 ======================
+async function readFile(file) {
+  const buf = await file.arrayBuffer();
+  let wb;
+  if (file.name.endsWith(".csv")) {
+    const text = new TextDecoder().decode(buf);
+    const arr = XLSX.utils.csv_to_array(text);
+    const ws = XLSX.utils.aoa_to_sheet(arr);
+    wb = { SheetNames: ["CSV"], Sheets: { CSV: ws } };
+  } else {
+    wb = XLSX.read(buf);
+  }
+  return { name: file.name, workbook: wb };
+}
+// 读取多数据源文件
+document.getElementById('srcFile').addEventListener('change', async e => {
+  const files = Array.from(e.target.files);
+  if (files.length === 0) return;
+  srcWorkBooks = [];
+  srcSheetList = [];
+  log(`开始读取 ${files.length} 个数据源文件`);
+  setProgress(0);
+  for (let i = 0; i < files.length; i++) {
+    const res = await readFile(files[i]);
+    srcWorkBooks.push(res);
+    res.workbook.SheetNames.forEach(sn => srcSheetList.push(`${res.name} | ${sn}`));
+    setProgress(Math.round((i+1)/files.length * 40));
+  }
+  // 填充工作表下拉
+  const sheetSel = document.getElementById('srcSheetSel');
+  sheetSel.innerHTML = '<option value="">选择工作表</option>';
+  srcSheetList.forEach((name, idx) => {
+    const opt = document.createElement('option');
+    opt.value = idx;
+    opt.textContent = name;
+    sheetSel.appendChild(opt);
+  })
+  // 切换工作表时重新加载表头+重新绑定搜索
+  sheetSel.onchange = () => {
+    const idx = Number(sheetSel.value);
+    if (isNaN(idx)) return;
+    const [fileName, sheetName] = srcSheetList[idx].split(" | ");
+    const wbItem = srcWorkBooks.find(x => x.name === fileName);
+    const sheet = wbItem.workbook.Sheets[sheetName];
+    srcAllData = XLSX.utils.sheet_to_json(sheet, { header:1 });
+    if (document.getElementById('transposeTable').checked) srcAllData = XLSX.utils.transpose(srcAllData);
+    srcHeaders = srcAllData[0] || [];
+    // 刷新所有下拉
+    fillSelect('srcMatchField1', srcHeaders, document.getElementById('srcFieldSearch').value);
+    fillSelect('srcMatchField2', srcHeaders, document.getElementById('srcFieldSearch').value);
+    fillSelect('srcValField', srcHeaders, document.getElementById('srcFieldSearch').value);
+    renderPreview("srcPreview", srcAllData, 10);
+    buildSourceMap();
+    // 修复：切换工作表后重新绑定搜索监听
+    bindFieldSearch("srcFieldSearch", ["srcMatchField1","srcMatchField2","srcValField"], ()=>srcHeaders);
+  }
+  // 绑定数据源搜索框，一次性关联3个下拉
+  bindFieldSearch("srcFieldSearch", ["srcMatchField1","srcMatchField2","srcValField"], ()=>srcHeaders);
+  document.getElementById('srcFileTip').innerText = `✅ 已加载 ${files.length} 个数据源文件`;
+  srcReady = true;
+  checkBtnStatus();
+  setProgress(100);
+  log("数据源文件读取完成，请选择工作表");
+})
+// 读取目标单文件
+document.getElementById('targetFile').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  log(`读取目标文件：${file.name}`);
+  setProgress(0);
+  const res = await readFile(file);
+  targetWorkbook = res.workbook;
+  targetSheetList = targetWorkbook.SheetNames;
+  const sheetSel = document.getElementById('targetSheetSel');
+  sheetSel.innerHTML = '<option value="">选择工作表</option>';
+  targetSheetList.forEach((sn, idx) => {
+    const opt = document.createElement('option');
+    opt.value = idx;
+    opt.textContent = sn;
+    sheetSel.appendChild(opt);
+  })
+  sheetSel.onchange = () => {
+    const idx = Number(sheetSel.value);
+    if (isNaN(idx)) return;
+    const sheet = targetWorkbook.Sheets[targetSheetList[idx]];
+    targetAllData = XLSX.utils.sheet_to_json(sheet, { header:1 });
+    if (document.getElementById('transposeTable').checked) targetAllData = XLSX.utils.transpose(targetAllData);
+    targetHeaders = targetAllData[0] || [];
+    fillSelect('targetMatchField1', targetHeaders, document.getElementById('targetFieldSearch').value);
+    fillSelect('targetMatchField2', targetHeaders, document.getElementById('targetFieldSearch').value);
+    fillSelect('targetWriteField', targetHeaders, document.getElementById('targetFieldSearch').value);
+    renderPreview("targetPreview", targetAllData, 10);
+    // 修复切换工作表丢失搜索绑定
+    bindFieldSearch("targetFieldSearch", ["targetMatchField1","targetMatchField2","targetWriteField"], ()=>targetHeaders);
+  }
+  // 绑定目标表搜索框
+  bindFieldSearch("targetFieldSearch", ["targetMatchField1","targetMatchField2","targetWriteField"], ()=>targetHeaders);
+  document.getElementById('targetFileTip').innerText = `✅ 已加载目标文件：${file.name}`;
+  targetReady = true;
+  checkBtnStatus();
+  setProgress(100);
+  log("目标文件读取完成，请选择工作表");
+})
+
+// ====================== 构建数据源映射 ======================
+function buildSourceMap() {
+  globalMap.clear();
+  const mode = document.getElementById('matchMode').value;
+  const m1Idx = Number(document.getElementById('srcMatchField1').value);
+  const m2Idx = Number(document.getElementById('srcMatchField2').value);
+  const valIdx = Number(document.getElementById('srcValField').value);
+  const dupRule = document.getElementById('dupRule').value;
+  if (isNaN(m1Idx) || isNaN(valIdx)) return;
+  let count = 0;
+  for (let i = 1; i < srcAllData.length; i++) {
+    const row = srcAllData[i];
+    let key;
+    const k1 = cleanKey(row[m1Idx]);
+    if (mode === "single") key = k1;
+    else {
+      const k2 = cleanKey(row[m2Idx]);
+      key = `${k1}|||${k2}`;
+    }
+    const val = row[valIdx];
+    if (!key) continue;
+    if (globalMap.has(key)) {
+      if (dupRule === "last") globalMap.set(key, val);
+      else if (dupRule === "skip") continue;
+    } else {
+      globalMap.set(key, val);
+    }
+    count++;
+  }
+  log(`数据源映射重建完成，有效关键字共 ${count} 条`);
+}
+// 字段切换自动重建映射
+["srcMatchField1","srcMatchField2","srcValField","dupRule"].forEach(id=>{
+  document.getElementById(id).onchange = buildSourceMap;
+})
+
+// ====================== 按钮状态控制 ======================
+function checkBtnStatus() {
+  document.getElementById('startBtn').disabled = !(srcReady && targetReady);
+}
+
+// ====================== 互换配置功能 ======================
+document.getElementById('swapConfig').onclick = () => {
+  const m1s = document.getElementById('srcMatchField1').value;
+  const m2s = document.getElementById('srcMatchField2').value;
+  const valS = document.getElementById('srcValField').value;
+  const m1t = document.getElementById('targetMatchField1').value;
+  const m2t = document.getElementById('targetMatchField2').value;
+  const wT = document.getElementById('targetWriteField').value;
+  document.getElementById('srcMatchField1').value = m1t;
+  document.getElementById('srcMatchField2').value = m2t;
+  document.getElementById('srcValField').value = wT;
+  document.getElementById('targetMatchField1').value = m1s;
+  document.getElementById('targetMatchField2').value = m2s;
+  document.getElementById('targetWriteField').value = valS;
+  buildSourceMap();
+  log("已一键互换源表与目标表字段配置");
+}
+
+// ====================== 一键重置 ======================
+document.getElementById('resetAll').onclick = () => {
+  srcWorkBooks = []; targetWorkbook = null; srcAllData = []; targetAllData = [];
+  srcHeaders = []; targetHeaders = []; srcSheetList = []; targetSheetList = [];
+  globalMap.clear(); failDataList = [];
+  srcReady = false; targetReady = false;
+  document.getElementById('srcFile').value = "";
+  document.getElementById('targetFile').value = "";
+  document.getElementById('srcFieldSearch').value = "";
+  document.getElementById('targetFieldSearch').value = "";
+  document.getElementById('srcFileTip').innerText = "未选择文件";
+  document.getElementById('targetFileTip').innerText = "未选择文件";
+  clearSelect('srcMatchField1'); clearSelect('srcMatchField2'); clearSelect('srcValField');
+  clearSelect('targetMatchField1'); clearSelect('targetMatchField2'); clearSelect('targetWriteField');
+  clearSelect('srcSheetSel'); clearSelect('targetSheetSel');
+  document.getElementById('srcPreview').innerHTML = "<p>暂无数据预览</p>";
+  document.getElementById('targetPreview').innerHTML = "<p>暂无数据预览</p>";
+  logBox.value = "";
+  setProgress(0);
+  checkBtnStatus();
+  log("全部配置、文件、日志已重置清空");
+}
+
+// ====================== 日志导出 ======================
+document.getElementById('exportLogBtn').onclick = () => {
+  const blob = new Blob([logBox.value], {type:"text/plain"});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = "操作日志.txt";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  log("操作日志文件已导出");
+}
+
+// ====================== 模板管理 ======================
+// 标签切换
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.onclick = () => {
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    document.getElementById('saveTab').style.display = tab==="saveTab" ? "block" : "none";
+    document.getElementById('loadTab').style.display = tab==="loadTab" ? "block" : "none";
+    if(tab==="loadTab") renderTemplateList();
+  }
+})
+// 保存模板
+document.getElementById('saveTemplateBtn').onclick = () => {
+  const name = document.getElementById('templateName').value.trim();
+  if(!name) { log("请输入模板名称"); return; }
+  const tmplList = getAllTemplates();
+  const cfg = {
+    name,
+    matchMode: document.getElementById('matchMode').value,
+    srcM1: document.getElementById('srcMatchField1').value,
+    srcM2: document.getElementById('srcMatchField2').value,
+    srcVal: document.getElementById('srcValField').value,
+    tarM1: document.getElementById('targetMatchField1').value,
+    tarM2: document.getElementById('targetMatchField2').value,
+    tarWrite: document.getElementById('targetWriteField').value,
+    fillRule: document.getElementById('fillRule').value,
+    dupRule: document.getElementById('dupRule').value
+  }
+  tmplList.push(cfg);
+  saveTemplateList(tmplList);
+  log(`模板【${name}】保存成功`);
+  document.getElementById('templateName').value = "";
+}
+// 渲染模板列表
+function renderTemplateList() {
+  const wrap = document.getElementById('templateList');
+  const list = getAllTemplates();
+  if(list.length === 0) { wrap.innerHTML = "<p>暂无保存模板</p>"; return; }
+  wrap.innerHTML = "";
+  list.forEach((t,idx)=>{
+    const div = document.createElement('div');
+    div.className = "template-item";
+    div.innerHTML = `<b>${t.name}</b> <button data-del="${idx}" style="margin-left:10px;color:#c03080;border:none;background:transparent;cursor:pointer">删除</button>`;
+    div.onclick = e => {
+      if(e.target.dataset.del) {
+        const all = getAllTemplates();
+        all.splice(idx,1);
+        saveTemplateList(all);
+        renderTemplateList();
+        log(`模板【${t.name}】已删除`);
+        return;
+      }
+      document.getElementById('matchMode').value = t.matchMode;
+      document.getElementById('fillRule').value = t.fillRule;
+      document.getElementById('dupRule').value = t.dupRule;
+      toggleDoubleMatch();
+      log(`已加载模板【${t.name}】，请重新选择字段下拉确认`);
+    }
+    wrap.appendChild(div);
+  })
+}
+
+// ====================== 主填充执行逻辑 ======================
+document.getElementById('startBtn').onclick = async () => {
+  log("==================== 开始批量填充 ====================");
+  failDataList = [];
+  const mode = document.getElementById('matchMode').value;
+  const m1T = Number(document.getElementById('targetMatchField1').value);
+  const m2T = Number(document.getElementById('targetMatchField2').value);
+  const writeT = Number(document.getElementById('targetWriteField').value);
+  const fillRule = document.getElementById('fillRule').value;
+  const exportFail = document.getElementById('exportFailList').checked;
+  const checkData = document.getElementById('dataCheck').checked;
+  const fileName = document.getElementById('exportFileName').value.trim() || "填充结果.xlsx";
+  const sheetIdx = Number(document.getElementById('targetSheetSel').value);
+  const sheet = targetWorkbook.Sheets[targetSheetList[sheetIdx]];
+  let success = 0, noMatch = 0, skipCover = 0;
+  const totalRows = targetAllData.length - 1;
+  for (let r = 1; r < targetAllData.length; r++) {
+    setProgress(Math.round((r / totalRows) * 100));
+    const row = targetAllData[r];
+    const cellAddr = XLSX.utils.encode_cell({ r, c: writeT });
+    const originVal = sheet[cellAddr]?.v;
+    // 判断覆盖规则
+    if (fillRule === "empty" && originVal !== undefined && String(originVal).trim() !== "") { skipCover++; continue; }
+    // 获取匹配关键字
+    let key;
+    const k1 = cleanKey(row[m1T]);
+    if (mode === "single") key = k1;
+    else {
+      const k2 = cleanKey(row[m2T]);
+      key = `${k1}|||${k2}`;
+    }
+    if (!key || !globalMap.has(key)) {
+      noMatch++;
+      failDataList.push({ row: r+1, key, reason: "无匹配数据源" });
+      continue;
+    }
+    const fillVal = globalMap.get(key);
+    if (fillRule === "srcNotEmpty" && (fillVal === undefined || String(fillVal).trim() === "")) { skipCover++; continue; }
+    sheet[cellAddr] = { v: fillVal };
+    success++;
+  }
+  setProgress(100);
+  // 数据校验
+  if(checkData) {
+    log("=== 填充后数据校验 ===");
+    const emptyCount = targetAllData.filter((row,i)=>i>0 && !sheet[XLSX.utils.encode_cell({r:i,c:writeT})]?.v).length;
+    log(`目标填充列剩余空值：${emptyCount} 行`);
+    const idCardReg = /^[1-9]\d{5}(18|19|20)\d{2}(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])\d{3}[\dXx]$/;
+    let badId = 0;
+    targetAllData.forEach((row,i)=>{
+      if(i===0) return;
+      const k = cleanKey(row[m1T]);
+      if(k.length === 18 && !idCardReg.test(k)) badId++;
+    })
+    log(`身份证格式异常行数：${badId}`);
+  }
+  // 输出统计
+  log(`填充完成统计：
+成功写入行数：${success}
+跳过不覆盖原有内容：${skipCover}
+无匹配关键字失败行数：${noMatch}`);
+  // 导出主文件
+  const outBuf = XLSX.write(targetWorkbook, { bookType: "xlsx", type: "array" });
+  const blob = new Blob([outBuf], { type: "application/octet-stream" });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  log(`主文件【${fileName}】已下载`);
+  // 导出失败清单
+  if(exportFail && failDataList.length > 0) {
+    const failWs = XLSX.utils.json_to_sheet(failDataList);
+    const failWb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(failWb, failWs, "匹配失败明细");
+    const failBuf = XLSX.write(failWb, { bookType: "xlsx", type: "array" });
+    const failBlob = new Blob([failBuf], { type: "application/octet-stream" });
+    const a2 = document.createElement('a');
+    a2.href = URL.createObjectURL(failBlob);
+    a2.download = "匹配失败明细.xlsx";
+    a2.click();
+    URL.revokeObjectURL(a2.href);
+    log("匹配失败明细Excel已下载");
+  }
+  // 保存配置
+  if(document.getElementById('saveConfig').checked) saveStorageConfig();
+  log("==================== 填充流程结束 ====================\n");
+}
+
+// 页面加载读取本地保存配置
+window.onload = () => {
+  loadStorageConfig();
+  renderTemplateList();
+}
+</script>
+</body>
+</html>
