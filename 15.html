@@ -185,7 +185,7 @@
             <h1 class="text-[clamp(1.8rem,4vw,2.4rem)] font-semibold mb-2 tracking-tight gradient-text">
                 <i class="fa fa-user-circle mr-2"></i>批量账号生成工具
             </h1>
-            <p class="text-fluidTextMuted text-sm mb-3">前缀+分类码+5位流水号 · 实时自动匹配上下级 | 简写模糊匹配 | 单行独立角色/分类码 | 批量模板生成</p>
+            <p class="text-fluidTextMuted text-sm mb-3">前缀+分类码+5位流水号 · 教育局/学校分区分开匹配 | 简写模糊匹配 | 单行独立角色/分类码</p>
             <div id="orgFileStatus" class="fluid-frosted rounded-fluid-sm py-2 px-4 inline-block text-sm"></div>
         </header>
 
@@ -249,44 +249,35 @@
                 </div>
             </div>
 
-            <!-- 批量模板生成面板，解决手动输分隔符麻烦 -->
-            <div class="fluid-frosted p-4 rounded-fluid-sm mb-6">
-                <h3 class="text-sm font-medium mb-3"><i class="fa fa-magic text-matchCyan mr-1"></i>批量生成统一格式机构行（减少手动输入||）</h3>
+            <!-- 独立教育局批量面板：专门匹配教育局，下拉复用全局角色/分类码缓存 -->
+            <div class="fluid-frosted p-4 rounded-fluid-sm mb-6 border-l-4 border-matchCyan">
+                <h3 class="text-sm font-medium mb-3"><i class="fa fa-building text-matchCyan mr-1"></i>批量教育局快速生成（独立教育局模糊匹配，不和学校冲突）</h3>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
                     <div>
-                        <label class="text-xs text-fluidTextMuted block mb-1">机构名称列表（一行一个）</label>
+                        <label class="text-xs text-fluidTextMuted block mb-1">教育局名称列表（一行一个）</label>
                         <textarea id="batchOrgList" rows="3" class="fluid-input w-full rounded-fluid-sm p-2 text-sm resize-v" placeholder="苏尼特右旗教育局
-苏尼特右旗一小"></textarea>
+锡林郭勒盟教育局"></textarea>
                     </div>
                     <div>
-                        <label class="text-xs text-fluidTextMuted block mb-1">统一角色</label>
-                        <input id="batchRole" class="fluid-input w-full rounded-fluid-sm px-2 py-2 text-sm" placeholder="盟市管理员">
+                        <label class="text-xs text-fluidTextMuted block mb-1">统一角色（下拉复用全局缓存）</label>
+                        <select id="batchRoleSel" class="fluid-select w-full rounded-fluid-sm px-2 py-2 text-sm"></select>
                     </div>
                     <div>
-                        <label class="text-xs text-fluidTextMuted block mb-1">统一分类码</label>
-                        <input id="batchCode" class="fluid-input w-full rounded-fluid-sm px-2 py-2 text-sm" placeholder="xs01">
+                        <label class="text-xs text-fluidTextMuted block mb-1">统一分类码（下拉复用全局缓存）</label>
+                        <select id="batchCodeSel" class="fluid-select w-full rounded-fluid-sm px-2 py-2 text-sm"></select>
                     </div>
                     <button onclick="genBatchTemplate()" class="fluid-btn bg-successGreen/20 border border-successGreen py-2.5 rounded-fluid-sm text-sm">
-                        <i class="fa fa-copy mr-1"></i>生成并追加到机构框
+                        <i class="fa fa-copy mr-1"></i>生成并追加到下方机构框
                     </button>
                 </div>
-                <p class="text-xs text-fluidTextMuted mt-2">生成格式：机构||统一角色||统一分类码，批量粘贴机构名一键生成多行完整语法</p>
+                <p class="text-xs text-fluidTextMuted mt-2">自动生成格式：教育局名称||选中角色||选中分类码，批量教育局独立模糊匹配，不干扰下方学校单位</p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-2">
+            <!-- 下方正式机构框：仅用于学校、其他单位 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-2 items-start">
                 <div>
-                    <label class="block mb-2 text-sm text-fluidTextMuted">所属机构列表（4种基础+新增单行分类码格式）
-                        <div class="text-xs mt-1 space-y-1">
-                            <div class="text-fluidTextMuted">1.纯机构名（使用全局角色+全局分类码）</div>
-                            <div class="text-lineRolePurple">2.机构||自定义角色</div>
-                            <div class="text-lineCodeGreen">3.机构||自定义角色||自定义分类码</div>
-                            <div class="text-fluidBlue">4.上级|机构||角色||分类码（强制上级+自定义双参数）</div>
-                        </div>
-                    </label>
-                    <textarea id="unitList" class="fluid-input w-full h-32 rounded-fluid-sm p-3 resize-v" placeholder="示例：
-苏尼特右旗教育局||盟市管理员||ms01
-锡林郭勒盟|苏尼特右旗第一小学||学校管理员||xx02
-苏尼特右旗第二小学"></textarea>
+                    <label class="block mb-2 text-sm text-fluidTextMuted">学校/其他所属机构列表</label>
+                    <textarea id="unitList" class="fluid-input w-full h-32 rounded-fluid-sm p-3 resize-v" placeholder="一行填写一个学校名称"></textarea>
                     <div id="realTimeMatchBox" class="mt-3 p-3 rounded-fluid-sm bg-white/5 max-h-40 overflow-y-auto text-xs"></div>
                 </div>
                 <div>
@@ -312,7 +303,7 @@
         </div>
 
         <div class="text-right mb-8 text-fluidOrange text-xs opacity-70">
-            匹配规则：简写双向模糊匹配、清除全角空格；青色=简写匹配、紫=单行角色、绿=单行自定义分类码；无自定义参数自动读取顶部全局配置
+            匹配规则：简写双向模糊匹配、清除全角空格；青色=简写匹配、紫=单行角色、绿=单行自定义分类码；教育局独立面板加权优先匹配
         </div>
 
         <div class="fluid-frosted rounded-fluid-lg p-6 md:p-8">
@@ -328,7 +319,6 @@
                             <th class="text-left py-3 px-4 text-fluidTextMuted font-normal">上级机构</th>
                             <th class="text-left py-3 px-4 text-fluidTextMuted font-normal">所属机构全称</th>
                             <th class="text-left py-3 px-4 text-fluidTextMuted font-normal">角色</th>
-                            <th class="text-left py-3 px-4 text-fluidTextMuted font-normal">分类码</th>
                             <th class="text-left py-3 px-4 font-mono gradient-text font-normal">登录账号</th>
                             <th class="text-left py-3 px-4 text-fluidTextMuted font-normal">手机号</th>
                         </tr>
@@ -420,7 +410,7 @@ async function loadOrgMapping(){
     updateOrgFileStatus(tip,schoolOk?"text-successGreen":"text-dangerRed","fa-check-circle");
 }
 
-// 修复版模糊匹配（兼容全角空格、教育局加权优先）
+// 修复版模糊匹配（教育局尾部大幅加权，独立面板优先匹配教育局）
 function fuzzySearchSchool(keyword){
     if(!schoolExcelSuccess||!schoolList.length)return null;
     const kw=keyword.trim().replace(/[\s　\t\n]/g,"");
@@ -461,11 +451,10 @@ function getSuperByBelong(rawName){
     return {super:null,standardName:stdName,fuzzy:true,noMatch:true};
 }
 
-// 【扩展解析】拆分：上级、机构、单行角色、单行分类码
+// 拆分单行语法：上级、机构、自定义角色、自定义分类码
 function parseUnitLine(lineText){
     const raw=lineText.trim();
     let customRole="",customCode="",mainPart=raw;
-    // 先拆分 |||| 层级：机构||角色||分类码
     const parts=raw.split("||").map(s=>s.trim());
     if(parts.length>=3){
         mainPart=parts[0];
@@ -475,7 +464,6 @@ function parseUnitLine(lineText){
         mainPart=parts[0];
         customRole=parts[1];
     }
-    // 拆分上级|机构
     let fixSuper="",unitName=mainPart;
     if(mainPart.includes("|")){
         const arr=mainPart.split("|").map(s=>s.trim());
@@ -485,26 +473,23 @@ function parseUnitLine(lineText){
     return {fixSuper,unitName,customRole,customCode};
 }
 
-// 批量生成模板行，解决手动输入分隔符麻烦
+// 批量教育局生成函数，下拉读取全局缓存
 function genBatchTemplate(){
     const orgText=document.getElementById("batchOrgList").value;
-    const batchRole=document.getElementById("batchRole").value.trim();
-    const batchCode=document.getElementById("batchCode").value.trim();
+    const batchRole=document.getElementById("batchRoleSel").value.trim();
+    const batchCode=document.getElementById("batchCodeSel").value.trim();
     const orgArr=orgText.split("\n").map(s=>s.trim()).filter(Boolean);
-    if(!orgArr.length)return alert("请填写批量机构列表");
-    const lines=orgArr.map(name=>{
-        if(batchRole&&batchCode) return `${name}||${batchRole}||${batchCode}`;
-        if(batchRole) return `${name}||${batchRole}`;
-        return name;
-    });
+    if(!orgArr.length)return alert("请填写批量教育局名称列表");
+    if(!batchRole) return alert("请从下拉选择统一角色");
+    if(!batchCode) return alert("请从下拉选择统一分类码");
+    const lines=orgArr.map(name=>`${name}||${batchRole}||${batchCode}`);
     const targetBox=document.getElementById("unitList");
-    // 追加到现有内容末尾
     targetBox.value = (targetBox.value.trim() ? targetBox.value.trim()+"\n" : "") + lines.join("\n");
     realTimeMatchPreview();
-    alert(`已生成${orgArr.length}条机构行并追加到所属机构框`);
+    alert(`已生成${orgArr.length}条教育局行并追加到下方机构框，教育局独立加权模糊匹配`);
 }
 
-// 实时预览
+// 实时预览匹配信息
 function realTimeMatchPreview(){
     clearTimeout(matchDebounceTimer);
     matchDebounceTimer=setTimeout(()=>{
@@ -514,7 +499,7 @@ function realTimeMatchPreview(){
         const defCode=document.getElementById("typeCode").value.trim();
         const box=document.getElementById("realTimeMatchBox");
         if(!unitRawList.length){
-            box.innerHTML="<span class='text-fluidTextMuted'>输入机构实时预览匹配、单行自定义角色/分类码信息</span>";
+            box.innerHTML="<span class='text-fluidTextMuted'>输入学校/机构实时预览匹配、单行自定义角色/分类码信息；教育局请使用上方独立面板批量生成</span>";
             return;
         }
         let html="",missing=0;
@@ -536,7 +521,6 @@ function realTimeMatchPreview(){
                     html+=`<div class="mb-1"><span class="text-dangerRed">${idx+1}.未匹配单位</span>：${unitName} 使用兜底${dispSuper}`;
                 }
             }
-            // 展示自定义参数
             const showRole=customRole||defRole||"未选全局角色";
             const showCode=customCode||defCode||"无全局分类码";
             html+=` <span class="text-lineRolePurple">[角色:${showRole}${customRole?"(本行自定义)":"(全局)"}]</span>`;
@@ -548,12 +532,32 @@ function realTimeMatchPreview(){
     },300);
 }
 
+// 初始化角色下拉（全局+批量教育局面板下拉共用数据源）
 function initRoleSelect(){
-    const sel=document.getElementById("roleSel");
-    sel.innerHTML="";
-    roleList.forEach(r=>{const o=document.createElement("option");o.value=r;o.textContent=r;sel.appendChild(o);});
-    sel.value="";
-    sel.onchange=realTimeMatchPreview;
+    const selMain=document.getElementById("roleSel");
+    const selBatch=document.getElementById("batchRoleSel");
+    selMain.innerHTML="";
+    selBatch.innerHTML="<option value=''>请选择统一角色</option>";
+    roleList.forEach(r=>{
+        const o1=document.createElement("option");
+        o1.value=r;o1.textContent=r;selMain.appendChild(o1);
+        const o2=document.createElement("option");
+        o2.value=r;o2.textContent=r;selBatch.appendChild(o2);
+    });
+    selMain.value="";
+    selMain.onchange=realTimeMatchPreview;
+}
+
+// 初始化分类码下拉（全局输入框下拉 + 批量教育局面板下拉共享本地缓存）
+function refreshCodeBatchSel(){
+    const codeList=JSON.parse(localStorage.getItem("typeCode_list")||"[]");
+    const batchSel=document.getElementById("batchCodeSel");
+    batchSel.innerHTML="<option value=''>请选择统一分类码</option>";
+    codeList.forEach(v=>{
+        const opt=document.createElement("option");
+        opt.value=v;opt.textContent=v;
+        batchSel.appendChild(opt);
+    });
 }
 
 function getStart(count){
@@ -571,6 +575,8 @@ function loadSel(key){
     sel.innerHTML="";
     list.forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v;sel.appendChild(o);});
     sel.onchange=()=>document.getElementById(key).value=sel.value;
+    // 同步刷新批量面板分类码下拉
+    if(key==="typeCode") refreshCodeBatchSel();
 }
 function add(key){
     const val=document.getElementById(key).value.trim();
@@ -581,7 +587,7 @@ function add(key){
     loadSel(key);
 }
 
-// 生成主逻辑（支持单行自定义分类码）
+// 生成账号主逻辑
 function generate(){
     const prefix=document.getElementById("prefix").value||"xfgl_";
     const globalCode=document.getElementById("typeCode").value||"";
@@ -593,7 +599,7 @@ function generate(){
 
     const unitRawList=document.getElementById("unitList").value.split("\n").map(i=>i.trim()).filter(Boolean);
     const phoneList=document.getElementById("phoneList").value.split("\n").map(i=>i.trim()).filter(Boolean);
-    if(!unitRawList.length)return alert("请填写所属机构列表");
+    if(!unitRawList.length)return alert("请填写所属机构列表（教育局可使用上方批量面板生成）");
 
     let missingList=[],html="";
     resultData=[];
@@ -605,7 +611,6 @@ function generate(){
         const p=parseUnitLine(rawLine);
         const {fixSuper,unitName,customRole,customCode}=p;
         let superOrg,stdName;
-        // 本行最终参数
         const lineRole=customRole||globalRole;
         const lineCode=customCode||globalCode;
 
@@ -625,15 +630,12 @@ function generate(){
             resultData.push({
                 index:rowIdx,superOrg,belongOrg:stdName,role:lineRole,typeCode:lineCode,loginAccount:account,userName:account,phone
             });
-            // 表格彩色标记自定义项
             const roleHtml=customRole?`<span class="text-lineRolePurple">${lineRole}</span>`:lineRole;
-            const codeHtml=customCode?`<span class="text-lineCodeGreen">${lineCode}</span>`:lineCode;
             html+=`<tr class="fluid-table-row">
                 <td class="py-3 px-4">${rowIdx}</td>
                 <td class="py-3 px-4">${superOrg||"无上级"}</td>
                 <td class="py-3 px-4">${stdName}</td>
                 <td class="py-3 px-4">${roleHtml}</td>
-                <td class="py-3 px-4">${codeHtml}</td>
                 <td class="py-3 px-4 font-mono gradient-text">${account}</td>
                 <td class="py-3 px-4">${phone}</td>
             </tr>`;
@@ -645,13 +647,21 @@ function generate(){
     alert(`✅生成完成\n起始流水:${startNo}\n总条数:${total}\n匹配失败单位:${missingList.length}`);
 }
 
+// 导出Excel，移除分类码字段
 function exportXLSX(){
     if(!resultData.length)return alert("请先生成账号");
-    const headers=["上级机构","所属标准全称","角色","分类码","登录账号","用户名","手机号"];
+    const headers=["上级机构名称", "所属机构标准全称", "角色", "登陆账号", "用户名称", "手机号"];
     const data=[headers];
-    resultData.forEach(item=>data.push([
-        item.superOrg||"",item.belongOrg||"",item.role||"",item.typeCode||"",item.loginAccount||"",item.userName||"",item.phone||""
-    ]));
+    resultData.forEach(item=>{
+        data.push([
+            item.superOrg||"",
+            item.belongOrg||"",
+            item.role||"",
+            item.loginAccount||"",
+            item.userName||"",
+            item.phone||""
+        ]);
+    });
     const ws=XLSX.utils.aoa_to_sheet(data);
     const colWidths=[];
     headers.forEach((_,col)=>{
@@ -667,17 +677,15 @@ function exportXLSX(){
     ws["!rows"]=data.map((_,i)=>({hpx:i===0?26:22}));
     const wb=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb,ws,"账号数据");
-    XLSX.writeFile(wb,"批量账号导出.xlsx");
+    XLSX.writeFile(wb,"账号导入模板.xlsx");
 }
 
 function clearAll(){
     document.getElementById("unitList").value="";
     document.getElementById("phoneList").value="";
     document.getElementById("batchOrgList").value="";
-    document.getElementById("batchRole").value="";
-    document.getElementById("batchCode").value="";
     document.getElementById("tbody").innerHTML="";
-    document.getElementById("realTimeMatchBox").innerHTML="<span class='text-fluidTextMuted'>输入机构实时预览匹配、单行自定义角色/分类码信息</span>";
+    document.getElementById("realTimeMatchBox").innerHTML="<span class='text-fluidTextMuted'>输入学校/机构实时预览匹配、单行自定义角色/分类码信息；教育局请使用上方独立面板批量生成</span>";
     resultData=[];
 }
 
@@ -685,6 +693,7 @@ window.onload=async function(){
     await loadOrgMapping();
     initRoleSelect();
     ["prefix","typeCode","suffix","superOrg"].forEach(k=>loadSel(k));
+    refreshCodeBatchSel();
     const unitInput=document.getElementById("unitList");
     unitInput.addEventListener("input",realTimeMatchPreview);
     unitInput.addEventListener("blur",realTimeMatchPreview);
