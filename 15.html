@@ -275,7 +275,7 @@
                 <p class="text-xs text-fluidTextMuted mt-2">匹配逻辑：仅读取org-map.xlsx本级教育局全称模糊匹配，匹配成功直接读取同行上级机构；下方学校框沿用原有双表匹配逻辑</p>
             </div>
 
-            <!-- 下方正式机构框：原有学校匹配逻辑不变，仅修改预览提示文案（方案A修复） -->
+            <!-- 下方正式机构框 -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-2 items-start">
                 <div>
                     <label class="block mb-2 text-sm text-fluidTextMuted">学校/其他所属机构列表</label>
@@ -470,7 +470,7 @@ function getSuperByBelong(rawName){
     };
 }
 
-// ==========【新增：教育局独立单表匹配函数，仅上方面板调用】==========
+// ==========【教育局独立单表匹配函数，仅上方面板+生成教育局行调用】==========
 function eduFuzzyMatch(keyword){
     if(!excelLoadSuccess||!orgMapping.length)return null;
     const kw = keyword.trim().replace(/\s+/g,"");
@@ -582,7 +582,7 @@ function genBatchTemplate(){
     alert(`已生成${orgArr.length}条教育局行并追加到下方机构框`);
 }
 
-// ==========【核心修改：realTimeMatchPreview 函数（方案A修复提示文字）】==========
+// 学校实时预览匹配信息（界面提示优化，不影响生成取值）
 function realTimeMatchPreview(){
     clearTimeout(matchDebounceTimer);
     matchDebounceTimer=setTimeout(()=>{
@@ -611,12 +611,9 @@ function realTimeMatchPreview(){
                     html+=`<div class="mb-1"><span class="${isFuzzy?'text-matchCyan':'text-successGreen'}">${idx+1}.${isFuzzy?'简写匹配':'精准匹配'}</span>：输入「${unitName}」→全称「${stdName}」上级${dispSuper}`;
                 }else{
                     dispSuper=defaultSuper||"无兜底上级";
-                    // ==========方案A改动：区分「本行带自定义参数的教育局」和「纯无匹配单位」==========
                     if(customRole || customCode){
-                        // 上方批量追加下来的教育局：黄色警告，不计入missing计数
                         html+=`<div class="mb-1"><span class="text-warnYellow">${idx+1}.【仅学校匹配列表无此单位，本行角色/编码已生效】</span>：${unitName}，标准全称：${stdName}，上级：${dispSuper}`;
                     }else{
-                        // 纯陌生无库单位：红色危险提示，计入missing
                         missing++;
                         html+=`<div class="mb-1"><span class="text-dangerRed">${idx+1}.未匹配单位</span>：${unitName} 使用兜底${dispSuper}`;
                     }
@@ -689,7 +686,7 @@ function add(key){
     loadSel(key);
 }
 
-// 生成账号主逻辑（底层匹配取值完全不变，依然读取org-map真实全称+上级）
+// ==========【核心修改：generate生成主函数】==========
 function generate(){
     const prefix=document.getElementById("prefix").value||"xfgl_";
     const globalCode=document.getElementById("typeCode").value||"";
@@ -700,7 +697,7 @@ function generate(){
     if(!globalRole)return alert("请先选择全局默认角色");
 
     const unitRawList=document.getElementById("unitList").value.split("\n").map(i=>i.trim()).filter(Boolean);
-    const phoneList=document.getElementById("phoneList").value.split("\n").map(i=>i.trim()).filter(Boolean);
+    const phoneList=document.getElementById("phoneList").split("\n").map(i=>i.trim()).filter(Boolean);
     if(!unitRawList.length)return alert("请填写所属机构列表（教育局可使用上方批量面板生成）");
 
     let missingList=[],html="";
@@ -716,18 +713,38 @@ function generate(){
         const lineRole=customRole||globalRole;
         const lineCode=customCode||globalCode;
 
+        // 分支1：手动强制上级，直接使用
         if(fixSuper){
-            superOrg=fixSuper;stdName=unitName;
+            superOrg=fixSuper;
+            stdName=unitName;
         }else{
-            const m=getSuperByBelong(unitName);
-            stdName=m.standardName;
-            if(m.super)superOrg=m.super;
-            else{
-                // 仅无自定义参数的陌生单位才计入匹配缺失
-                if(!customRole && !customCode){
-                    missingList.push(`输入:${rawLine} 标准全称:${stdName}`);
+            // ==========关键判断：当前行是上方批量生成的教育局格式（xxx||角色||编码）==========
+            const isBatchEduLine = !!customRole && !!customCode && (unitName.endsWith("教育局") || unitName.endsWith("教体局"));
+            if(isBatchEduLine){
+                // 教育局批量行：强制调用edu单表匹配（和上方面板同一套逻辑）
+                const eduMatch = eduGetSuperInfo(unitName);
+                if(eduMatch.matchSuccess){
+                    stdName = eduMatch.standardName;
+                    superOrg = eduMatch.superOrg;
+                }else{
+                    // org-map无此教育局，使用兜底
+                    stdName = unitName;
+                    superOrg = defSuper;
+                    missingList.push(`教育局行无匹配：${rawLine}`);
                 }
-                superOrg=defSuper;
+            }else{
+                // 普通学校/无自定义参数机构：维持原有双表匹配逻辑不变
+                const m=getSuperByBelong(unitName);
+                stdName=m.standardName;
+                if(m.super){
+                    superOrg=m.super;
+                }else{
+                    // 仅无自定义参数的陌生单位计入缺失
+                    if(!customRole && !customCode){
+                        missingList.push(`输入:${rawLine} 标准全称:${stdName}`);
+                    }
+                    superOrg=defSuper;
+                }
             }
         }
         const phone=phoneList[idx]||"";
@@ -750,7 +767,7 @@ function generate(){
             rowIdx++;
         }
     });
-    if(missingList.length>0)alert(`共${missingList.length}个完全无匹配单位，生成时将使用兜底上级：\n${missingList.join("\n")}`);
+    if(missingList.length>0)alert(`共${missingList.length}个单位无自动匹配上级，生成时将使用兜底上级：\n${missingList.join("\n")}`);
     document.getElementById("tbody").innerHTML=html;
     alert(`✅生成完成\n起始流水:${startNo}\n总条数:${total}\n完全无匹配单位:${missingList.length}`);
 }
