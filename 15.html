@@ -249,7 +249,7 @@
                 </div>
             </div>
 
-            <!-- 独立教育局批量面板：单独使用org-map单表匹配逻辑 -->
+            <!-- 独立教育局批量面板：仅读取org-map单表匹配逻辑 -->
             <div class="fluid-frosted p-4 rounded-fluid-sm mb-6 border-l-4 border-matchCyan">
                 <h3 class="text-sm font-medium mb-3"><i class="fa fa-building text-matchCyan mr-1"></i>批量教育局快速生成（仅读取org-map表匹配本级机构，精准带出上级）</h3>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
@@ -275,7 +275,7 @@
                 <p class="text-xs text-fluidTextMuted mt-2">匹配逻辑：仅读取org-map.xlsx本级教育局全称模糊匹配，匹配成功直接读取同行上级机构；下方学校框沿用原有双表匹配逻辑</p>
             </div>
 
-            <!-- 下方正式机构框：原有学校匹配逻辑完全不变 -->
+            <!-- 下方正式机构框：原有学校匹配逻辑不变，仅修改预览提示文案（方案A修复） -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-2 items-start">
                 <div>
                     <label class="block mb-2 text-sm text-fluidTextMuted">学校/其他所属机构列表</label>
@@ -423,35 +423,54 @@ function fuzzySearchSchool(keyword){
     const pool=[];
     schoolList.forEach(full=>{
         const clean=full.trim().replace(/[\s　\t\n]/g,"");
-        if(!clean)return;
-        if(clean.includes(kw)||kw.includes(clean)){
-            let w=0;
-            w+=clean===kw?100:0;
-            w+=clean.startsWith(kw)?20:0;
-            w+=kw.startsWith(clean)?15:0;
-            weightKeys.forEach(k=>{if(clean.includes(k))w+=8;if(kw.includes(k))w+=12;});
-            highTail.forEach(t=>{if(clean.endsWith(t))w+=30;if(kw.endsWith(t))w+=20;});
-            w+=clean.length;
-            w-=Math.abs(clean.length-kw.length);
-            pool.push({name:full,weight:w});
-        }
+        let weight=0;
+        if(clean === kw) weight += 100;
+        if(clean.includes(kw)) weight += 80;
+        if(kw.includes(clean)) weight += 40;
+        weightKeys.forEach(k=>{if(clean.includes(k)) weight += 8;if(kw.includes(k)) weight += 12;});
+        highTail.forEach(t=>{if(clean.endsWith(t)) weight += 30;if(kw.endsWith(t)) weight += 20;});
+        weight += clean.length;
+        weight -= Math.abs(clean.length - kw.length) / 2;
+        pool.push({name: full, weight: weight});
     });
     if(!pool.length)return null;
-    pool.sort((a,b)=>b.weight-a.weight);
+    pool.sort((a,b)=>b.weight - a.weight);
     return pool[0].name;
 }
 function getSuperByBelong(rawName){
     const rawTrim=rawName.trim();
     const rawClean=rawTrim.replace(/[\s　\t\n]/g,"");
-    const exact=orgMapping.find(o=>o.belongOrg.trim().replace(/[\s　\t\n]/g,"")===rawClean);
-    if(exact)return {standardName:exact.belongOrg,super:exact.superOrg,fuzzy:false,noMatch:false};
-    const stdName=fuzzySearchSchool(rawTrim);
-    if(!stdName)return {standardName:rawTrim,super:null,fuzzy:false,noMatch:true};
-    const dbItem=orgMapping.find(o=>o.belongOrg.trim()===stdName.trim());
-    return {standardName:stdName,super:dbItem?dbItem.superOrg:null,fuzzy:true,noMatch:!dbItem};
+    const exactMatch = orgMapping.find(item=>{
+        const orgClean = item.belongOrg.trim().replace(/[\s　\t\n]/g,"");
+        return orgClean === rawClean;
+    });
+    if(exactMatch){
+        return {
+            standardName: exactMatch.belongOrg,
+            super: exactMatch.superOrg,
+            fuzzy: false,
+            noMatch: false
+        };
+    }
+    const stdFullName = fuzzySearchSchool(rawTrim);
+    if(!stdFullName){
+        return {
+            standardName: rawTrim,
+            super: null,
+            fuzzy: false,
+            noMatch: true
+        };
+    }
+    const dbItem = orgMapping.find(item=>item.belongOrg.trim() === stdFullName.trim());
+    return {
+        standardName: stdFullName,
+        super: dbItem ? dbItem.superOrg : null,
+        fuzzy: true,
+        noMatch: !dbItem
+    };
 }
 
-// ==========【新增：仅教育局面板使用 独立单表匹配函数（只读取orgMapping）】==========
+// ==========【新增：教育局独立单表匹配函数，仅上方面板调用】==========
 function eduFuzzyMatch(keyword){
     if(!excelLoadSuccess||!orgMapping.length)return null;
     const kw = keyword.trim().replace(/\s+/g,"");
@@ -516,7 +535,7 @@ function parseUnitLine(lineText){
     return {fixSuper,unitName,customRole,customCode};
 }
 
-// 教育局批量输入框实时匹配预览（调用独立edu单表匹配函数）
+// 教育局批量输入框实时匹配预览（独立单表逻辑）
 function eduRealTimeMatch(){
     clearTimeout(eduDebounceTimer);
     eduDebounceTimer=setTimeout(()=>{
@@ -563,7 +582,7 @@ function genBatchTemplate(){
     alert(`已生成${orgArr.length}条教育局行并追加到下方机构框`);
 }
 
-// 学校实时预览匹配信息（原有逻辑完全不变）
+// ==========【核心修改：realTimeMatchPreview 函数（方案A修复提示文字）】==========
 function realTimeMatchPreview(){
     clearTimeout(matchDebounceTimer);
     matchDebounceTimer=setTimeout(()=>{
@@ -591,8 +610,16 @@ function realTimeMatchPreview(){
                     dispSuper=m.super;
                     html+=`<div class="mb-1"><span class="${isFuzzy?'text-matchCyan':'text-successGreen'}">${idx+1}.${isFuzzy?'简写匹配':'精准匹配'}</span>：输入「${unitName}」→全称「${stdName}」上级${dispSuper}`;
                 }else{
-                    dispSuper=defaultSuper||"无兜底上级";missing++;
-                    html+=`<div class="mb-1"><span class="text-dangerRed">${idx+1}.未匹配单位</span>：${unitName} 使用兜底${dispSuper}`;
+                    dispSuper=defaultSuper||"无兜底上级";
+                    // ==========方案A改动：区分「本行带自定义参数的教育局」和「纯无匹配单位」==========
+                    if(customRole || customCode){
+                        // 上方批量追加下来的教育局：黄色警告，不计入missing计数
+                        html+=`<div class="mb-1"><span class="text-warnYellow">${idx+1}.【仅学校匹配列表无此单位，本行角色/编码已生效】</span>：${unitName}，标准全称：${stdName}，上级：${dispSuper}`;
+                    }else{
+                        // 纯陌生无库单位：红色危险提示，计入missing
+                        missing++;
+                        html+=`<div class="mb-1"><span class="text-dangerRed">${idx+1}.未匹配单位</span>：${unitName} 使用兜底${dispSuper}`;
+                    }
                 }
             }
             const showRole=customRole||defRole||"未选全局角色";
@@ -601,7 +628,7 @@ function realTimeMatchPreview(){
             html+=` <span class="text-lineCodeGreen">[分类码:${showCode}${customCode?"(本行自定义)":"(全局)"}]</span>`;
             html+="</div>";
         });
-        if(missing>0)html=`<div class="text-dangerRed mb-2">共${missing}个单位无法自动匹配上级，使用兜底上级</div>`+html;
+        if(missing>0)html=`<div class="text-dangerRed mb-2">共${missing}个完全无匹配单位，生成时将使用兜底上级</div>`+html;
         box.innerHTML=html;
     },300);
 }
@@ -662,7 +689,7 @@ function add(key){
     loadSel(key);
 }
 
-// 生成账号主逻辑
+// 生成账号主逻辑（底层匹配取值完全不变，依然读取org-map真实全称+上级）
 function generate(){
     const prefix=document.getElementById("prefix").value||"xfgl_";
     const globalCode=document.getElementById("typeCode").value||"";
@@ -695,7 +722,13 @@ function generate(){
             const m=getSuperByBelong(unitName);
             stdName=m.standardName;
             if(m.super)superOrg=m.super;
-            else{missingList.push(`输入:${rawLine} 标准全称:${stdName}`);superOrg=defSuper;}
+            else{
+                // 仅无自定义参数的陌生单位才计入匹配缺失
+                if(!customRole && !customCode){
+                    missingList.push(`输入:${rawLine} 标准全称:${stdName}`);
+                }
+                superOrg=defSuper;
+            }
         }
         const phone=phoneList[idx]||"";
         for(let n=1;n<=perUnit;n++){
@@ -717,9 +750,9 @@ function generate(){
             rowIdx++;
         }
     });
-    if(missingList.length>0)alert(`共${missingList.length}个单位无自动匹配上级：\n${missingList.join("\n")}`);
+    if(missingList.length>0)alert(`共${missingList.length}个完全无匹配单位，生成时将使用兜底上级：\n${missingList.join("\n")}`);
     document.getElementById("tbody").innerHTML=html;
-    alert(`✅生成完成\n起始流水:${startNo}\n总条数:${total}\n匹配失败单位:${missingList.length}`);
+    alert(`✅生成完成\n起始流水:${startNo}\n总条数:${total}\n完全无匹配单位:${missingList.length}`);
 }
 
 // 导出Excel，移除分类码字段
@@ -733,8 +766,7 @@ function exportXLSX(){
             item.belongOrg||"",
             item.role||"",
             item.loginAccount||"",
-            item.userName||"",
-            item.phone||""
+            item.userName||""
         ]);
     });
     const ws=XLSX.utils.aoa_to_sheet(data);
@@ -770,19 +802,16 @@ window.onload=async function(){
     initRoleSelect();
     ["prefix","typeCode","suffix","superOrg"].forEach(k=>loadSel(k));
     refreshCodeBatchSel();
-    // 学校输入框监听（原有逻辑）
     const unitInput=document.getElementById("unitList");
     unitInput.addEventListener("input",realTimeMatchPreview);
     unitInput.addEventListener("blur",realTimeMatchPreview);
-    // 教育局输入框监听（独立单表匹配）
-    const eduInput = document.getElementById("batchOrgList");
-    eduInput.addEventListener("input", eduRealTimeMatch);
-    eduInput.addEventListener("blur", eduRealTimeMatch);
-    // 兜底上级变更同步刷新两边预览
     document.getElementById("superOrg").addEventListener("input", ()=>{
         realTimeMatchPreview();
         eduRealTimeMatch();
     });
+    const eduInput = document.getElementById("batchOrgList");
+    eduInput.addEventListener("input", eduRealTimeMatch);
+    eduInput.addEventListener("blur", eduRealTimeMatch);
     realTimeMatchPreview();
     eduRealTimeMatch();
 };
