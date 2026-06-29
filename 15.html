@@ -255,16 +255,16 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-2">
                 <div>
-                    <label class="block mb-2 text-sm text-fluidTextMuted">所属机构列表（支持三种格式）
+                    <label class="block mb-2 text-sm text-fluidTextMuted">所属机构列表（支持四种格式）
                         <div class="text-lineRolePurple mt-1 text-xs">
                             1.机构名  2.上级|机构  3.机构||自定义角色  4.上级|机构||自定义角色
                         </div>
                     </label>
                     <!-- resize-v 仅允许垂直拖动拉伸高度 -->
                     <textarea id="unitList" class="fluid-input w-full h-32 rounded-fluid-sm p-3 resize-v" placeholder="示例：
-新城区教育局||盟市管理员
-呼和浩特市|回民中学||学校管理员
-清水河县小学"></textarea>
+苏尼特右旗教育局||盟市管理员
+锡林郭勒盟|苏尼特右旗第一小学||学校管理员
+苏尼特右旗第二小学"></textarea>
                     <!-- 实时匹配预览区域 -->
                     <div id="realTimeMatchBox" class="mt-3 p-3 rounded-fluid-sm bg-white/5 max-h-40 overflow-y-auto text-xs"></div>
                 </div>
@@ -292,7 +292,7 @@
 
         <!-- 匹配规则说明移到卡片外部右下角，不占用卡片内部空间 -->
         <div class="text-right mb-8 text-fluidOrange text-xs opacity-70">
-            匹配规则：1.行内「上级|所属机构||角色」强制指定；2.精准匹配org-map.xlsx；3.简写双向模糊匹配标准全称；4.全部匹配失败统一使用兜底上级；红色=未检索到单位，青色=简写转全称匹配成功，紫色=该行自定义独立角色
+            匹配规则：1.行内「上级|所属机构||角色」强制指定；2.精准匹配org-map.xlsx；3.简写双向模糊匹配标准全称（自动清除全角空格）；4.全部匹配失败统一使用兜底上级；红色=未检索到单位，青色=简写转全称匹配成功，紫色=该行自定义独立角色
         </div>
 
         <div class="fluid-frosted rounded-fluid-lg p-6 md:p-8">
@@ -475,30 +475,42 @@ async function loadOrgMapping() {
     }
 }
 
-// ========== 优化后的双向模糊匹配（解决教育局简写匹配差）==========
+// ========== 【修复完整版】双向模糊匹配，兼容全角空格、教育局加权优先 ==========
 function fuzzySearchSchool(keyword) {
     if (!schoolExcelSuccess || schoolList.length === 0) return null;
-    const kw = keyword.trim().replace(/\s/g, "");
+    // 清除半角空格、全角空格、制表符、换行符
+    const kw = keyword.trim().replace(/[\s　\t\n]/g, "");
     if (!kw) return null;
 
-    // 教育关键词权重，优先匹配带关键字的单位
+    // 通用教育关键词权重
     const weightKeys = ["教育局", "教体局", "中学", "小学", "幼儿园", "职校", "一中", "二中", "三中", "旗", "区", "市"];
+    // 尾部高权重关键词：教育局、教体局优先匹配
+    const highTailKey = ["教育局", "教体局"];
 
     let matchPool = [];
     schoolList.forEach(fullName => {
-        const cleanName = fullName.replace(/\s/g, "");
+        // 标准全称统一清除所有空白字符
+        const cleanName = fullName.trim().replace(/[\s　\t\n]/g, "");
+        if (!cleanName) return;
         // 双向包含匹配：简写包含全称片段 / 全称包含简写
         if (cleanName.includes(kw) || kw.includes(cleanName)) {
-            // 计算匹配权重
             let weight = 0;
-            weight += cleanName === kw ? 100 : 0; // 完全匹配最高
+            weight += cleanName === kw ? 100 : 0; // 完全匹配最高分
             weight += cleanName.startsWith(kw) ? 20 : 0; // 开头匹配加分
             weight += kw.startsWith(cleanName) ? 15 : 0;
+            // 基础教育关键词加分
             weightKeys.forEach(wk => {
                 if (cleanName.includes(wk)) weight += 8;
                 if (kw.includes(wk)) weight += 12;
             })
-            // 名称长度差值越小越优
+            // 教育局/教体局尾部额外大幅加权，优先匹配教育局机构
+            highTailKey.forEach(tk => {
+                if (cleanName.endsWith(tk)) weight += 30;
+                if (kw.endsWith(tk)) weight += 20;
+            })
+            // 标准全称越长权重越高，避免短学校名称抢占教育局匹配结果
+            weight += cleanName.length;
+            // 名称长度差值越小匹配度越高
             const lenDiff = Math.abs(cleanName.length - kw.length);
             weight -= lenDiff;
             matchPool.push({ name: fullName, weight });
@@ -506,7 +518,7 @@ function fuzzySearchSchool(keyword) {
     });
 
     if (matchPool.length === 0) return null;
-    // 权重从高到低排序，取第一条最优匹配
+    // 权重从高到低排序，取最优第一条
     matchPool.sort((a, b) => b.weight - a.weight);
     return matchPool[0].name;
 }
@@ -514,9 +526,9 @@ function fuzzySearchSchool(keyword) {
 // 匹配上下级
 function getSuperByBelong(rawName) {
     const rawTrim = rawName.trim();
-    const rawClean = rawTrim.replace(/\s/g, "");
-    // 1. 精准全等匹配
-    const exactMatch = orgMapping.find(o => o.belongOrg.trim().replace(/\s/g, "") === rawClean);
+    const rawClean = rawTrim.replace(/[\s　\t\n]/g, "");
+    // 1. 精准全等匹配（清除全部空白后对比）
+    const exactMatch = orgMapping.find(o => o.belongOrg.trim().replace(/[\s　\t\n]/g, "") === rawClean);
     if (exactMatch) {
         return { super: exactMatch.superOrg, standardName: rawTrim, fuzzy: false };
     }
@@ -527,9 +539,9 @@ function getSuperByBelong(rawName) {
         return { super: null, standardName: rawTrim, fuzzy: false, noMatch: true };
     }
 
-    // 3. 标准全称去空格后匹配上级
-    const cleanStd = standardName.replace(/\s/g, "");
-    const stdMatch = orgMapping.find(o => o.belongOrg.trim().replace(/\s/g, "") === cleanStd);
+    // 3. 标准全称清除空白后匹配上级
+    const cleanStd = standardName.replace(/[\s　\t\n]/g, "");
+    const stdMatch = orgMapping.find(o => o.belongOrg.trim().replace(/[\s　\t\n]/g, "") === cleanStd);
     if (stdMatch) {
         return { super: stdMatch.superOrg, standardName: standardName, fuzzy: true };
     }
@@ -607,7 +619,7 @@ function realTimeMatchPreview() {
             if(customRole){
                 html += ` <span class="text-lineRolePurple">[本行独立角色：${customRole}]</span>`;
             }else{
-                html += ` <span class="text-fluidTextMuted">[使用全局角色：${defaultRole}]</span>`;
+                html += ` <span class="text-fluidTextMuted">[使用全局角色：${defaultRole || "未选择"}]</span>`;
             }
             html += "</div>";
         });
@@ -679,6 +691,7 @@ function generate() {
     const unitRawList = document.getElementById("unitList").value.split("\n").map(i => i.trim()).filter(Boolean);
     const phoneList = document.getElementById("phoneList").value.split("\n").map(i => i.trim()).filter(Boolean);
     if (unitRawList.length === 0) return alert("请填写所属机构列表");
+    if (!globalRole) return alert("请先选择全局默认角色");
 
     let missingOrgList = [];
     let html = "";
