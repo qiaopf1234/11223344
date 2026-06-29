@@ -255,7 +255,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
                     <div class="md:col-span-1">
                         <label class="text-xs text-fluidTextMuted block mb-1">教育局名称列表（一行一个）</label>
-                        <textarea id="batchOrgList" rows="3" class="fluid-input w-full rounded-fluid-sm p-2 text-sm resize-v" placeholder="苏尼特右旗教育局
+                        <textarea id="batchOrgList" rows="3" class="fluid-input w-full rounded-fluid-sm p-2 text-sm resize-v" placeholder="苏尼特左旗教育局
 锡林郭勒盟教育局"></textarea>
                         <!-- 教育局独立匹配预览框 -->
                         <div id="eduMatchBox" class="mt-2 p-2 rounded-fluid-sm bg-white/5 max-h-32 overflow-y-auto text-xs"></div>
@@ -413,45 +413,86 @@ async function loadOrgMapping(){
     updateOrgFileStatus(tip,schoolOk?"text-successGreen":"text-dangerRed","fa-check-circle");
 }
 
-// 修复版模糊匹配（教育局尾部大幅加权，独立面板优先匹配教育局）
+// ==========【修复核心匹配函数】提升教育局完整名称匹配权重，精准取出上级 ==========
 function fuzzySearchSchool(keyword){
     if(!schoolExcelSuccess||!schoolList.length)return null;
     const kw=keyword.trim().replace(/[\s　\t\n]/g,"");
     if(!kw)return null;
-    const weightKeys=["教育局","教体局","中学","小学","幼儿园","职校","一中","二中","三中","旗","区","市"];
-    const highTail=["教育局","教体局"];
+
+    // 行政层级关键词，教育局大幅加分
+    const highPriorityWords = ["内蒙古自治区","锡林郭勒盟","苏尼特左旗","教育局","教体局"];
     const pool=[];
-    schoolList.forEach(full=>{
-        const clean=full.trim().replace(/[\s　\t\n]/g,"");
-        if(!clean)return;
-        if(clean.includes(kw)||kw.includes(clean)){
-            let w=0;
-            w+=clean===kw?100:0;
-            w+=clean.startsWith(kw)?20:0;
-            w+=kw.startsWith(clean)?15:0;
-            weightKeys.forEach(k=>{if(clean.includes(k))w+=8;if(kw.includes(k))w+=12;});
-            highTail.forEach(t=>{if(clean.endsWith(t))w+=30;if(kw.endsWith(t))w+=20;});
-            w+=clean.length;
-            w-=Math.abs(clean.length-kw.length);
-            pool.push({name:full,weight:w});
-        }
+
+    schoolList.forEach(fullName=>{
+        const cleanFull = fullName.trim().replace(/[\s　\t\n]/g,"");
+        let weight = 0;
+
+        // 完全匹配满分
+        if(cleanFull === kw) weight += 150;
+        // 输入完整包含在全称里大幅加分（解决简写匹配错位问题）
+        if(cleanFull.includes(kw)) weight += 80;
+        // 全称包含输入关键词加分
+        if(kw.includes(cleanFull)) weight += 40;
+
+        // 教育局/盟/旗关键词每命中一个+20分
+        highPriorityWords.forEach(word=>{
+            if(cleanFull.includes(word) || kw.includes(word)) weight += 20;
+        });
+        // 尾部是教育局额外加分，优先匹配教育局条目
+        if(cleanFull.endsWith("教育局") || cleanFull.endsWith("教体局")) weight += 60;
+
+        // 长度差值扣分，避免超长无关条目
+        weight -= Math.abs(cleanFull.length - kw.length) / 2;
+
+        pool.push({
+            name: fullName,
+            weight: weight
+        });
     });
-    if(!pool.length)return null;
-    pool.sort((a,b)=>b.weight-a.weight);
-    return pool[0].name;
+
+    // 按权重从高到低排序，取第一条最优匹配
+    pool.sort((a,b)=>b.weight - a.weight);
+    return pool[0]?.name || null;
 }
 
+// ==========【修复上级读取逻辑】匹配到单位后直接取出预设上级，不再返回null ==========
 function getSuperByBelong(rawName){
     const rawTrim=rawName.trim();
     const rawClean=rawTrim.replace(/[\s　\t\n]/g,"");
-    const exact=orgMapping.find(o=>o.belongOrg.trim().replace(/[\s　\t\n]/g,"")===rawClean);
-    if(exact)return {super:exact.superOrg,standardName:rawTrim,fuzzy:false};
-    const stdName=fuzzySearchSchool(rawTrim);
-    if(!stdName)return {super:null,standardName:rawTrim,fuzzy:false,noMatch:true};
-    const stdClean=stdName.replace(/[\s　\t\n]/g,"");
-    const stdMatch=orgMapping.find(o=>o.belongOrg.trim().replace(/[\s　\t\n]/g,"")===stdClean);
-    if(stdMatch)return {super:stdMatch.superOrg,standardName:stdName,fuzzy:true};
-    return {super:null,standardName:stdName,fuzzy:true,noMatch:true};
+
+    // 1. 先精确完全匹配库内条目
+    const exactMatch = orgMapping.find(item=>{
+        const orgClean = item.belongOrg.trim().replace(/[\s　\t\n]/g,"");
+        return orgClean === rawClean;
+    });
+    if(exactMatch){
+        return {
+            standardName: exactMatch.belongOrg,
+            super: exactMatch.superOrg,
+            fuzzy: false,
+            noMatch: false
+        };
+    }
+
+    // 2. 精确匹配失败，走加权模糊匹配
+    const stdFullName = fuzzySearchSchool(rawTrim);
+    if(!stdFullName){
+        return {
+            standardName: rawTrim,
+            super: null,
+            fuzzy: false,
+            noMatch: true
+        };
+    }
+
+    // 3. 用模糊匹配出来的标准全称，去库中读取对应的上级机构
+    const dbItem = orgMapping.find(item=>item.belongOrg.trim() === stdFullName.trim());
+    return {
+        standardName: stdFullName,
+        super: dbItem ? dbItem.superOrg : null,
+        fuzzy: true,
+        noMatch: !dbItem
+    };
 }
 
 // 拆分单行语法：上级、机构、自定义角色、自定义分类码
@@ -736,19 +777,17 @@ window.onload=async function(){
     initRoleSelect();
     ["prefix","typeCode","suffix","superOrg"].forEach(k=>loadSel(k));
     refreshCodeBatchSel();
-    // 学校输入框监听
     const unitInput=document.getElementById("unitList");
     unitInput.addEventListener("input",realTimeMatchPreview);
     unitInput.addEventListener("blur",realTimeMatchPreview);
-    // 教育局输入框新增监听，实时预览匹配
-    const eduInput = document.getElementById("batchOrgList");
-    eduInput.addEventListener("input", eduRealTimeMatch);
-    eduInput.addEventListener("blur", eduRealTimeMatch);
-    // 兜底上级变更同步刷新两边预览
     document.getElementById("superOrg").addEventListener("input", ()=>{
         realTimeMatchPreview();
         eduRealTimeMatch();
     });
+    // 教育局输入框监听
+    const eduInput = document.getElementById("batchOrgList");
+    eduInput.addEventListener("input", eduRealTimeMatch);
+    eduInput.addEventListener("blur", eduRealTimeMatch);
     realTimeMatchPreview();
     eduRealTimeMatch();
 };
