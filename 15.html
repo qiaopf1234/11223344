@@ -249,14 +249,16 @@
                 </div>
             </div>
 
-            <!-- 独立教育局批量面板：专门匹配教育局，下拉复用全局角色/分类码缓存 -->
+            <!-- 独立教育局批量面板：新增教育局实时匹配预览框 -->
             <div class="fluid-frosted p-4 rounded-fluid-sm mb-6 border-l-4 border-matchCyan">
                 <h3 class="text-sm font-medium mb-3"><i class="fa fa-building text-matchCyan mr-1"></i>批量教育局快速生成（独立教育局模糊匹配，不和学校冲突）</h3>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-                    <div>
+                    <div class="md:col-span-1">
                         <label class="text-xs text-fluidTextMuted block mb-1">教育局名称列表（一行一个）</label>
                         <textarea id="batchOrgList" rows="3" class="fluid-input w-full rounded-fluid-sm p-2 text-sm resize-v" placeholder="苏尼特右旗教育局
 锡林郭勒盟教育局"></textarea>
+                        <!-- 教育局独立匹配预览框 -->
+                        <div id="eduMatchBox" class="mt-2 p-2 rounded-fluid-sm bg-white/5 max-h-32 overflow-y-auto text-xs"></div>
                     </div>
                     <div>
                         <label class="text-xs text-fluidTextMuted block mb-1">统一角色（下拉复用全局缓存）</label>
@@ -353,6 +355,7 @@ let schoolList = [];
 let excelLoadSuccess = false;
 let schoolExcelSuccess = false;
 let matchDebounceTimer = null;
+let eduDebounceTimer = null;
 
 const roleList = [
     "超级管理员", "特级管理员", "二级管理员", "重置密码", "教育厅制证二级管理员", "教育厅管理员", "校服系统管理员",
@@ -473,6 +476,40 @@ function parseUnitLine(lineText){
     return {fixSuper,unitName,customRole,customCode};
 }
 
+// 【新增】教育局批量输入框实时匹配预览
+function eduRealTimeMatch(){
+    clearTimeout(eduDebounceTimer);
+    eduDebounceTimer=setTimeout(()=>{
+        const eduRawList=document.getElementById("batchOrgList").value.split("\n").map(i=>i.trim()).filter(Boolean);
+        const defaultSuper=document.getElementById("superOrg").value.trim();
+        const batchRole=document.getElementById("batchRoleSel").value;
+        const batchCode=document.getElementById("batchCodeSel").value;
+        const box=document.getElementById("eduMatchBox");
+        if(!eduRawList.length){
+            box.innerHTML="<span class='text-fluidTextMuted'>输入教育局名称实时预览匹配结果</span>";
+            return;
+        }
+        let html="",missing=0;
+        eduRawList.forEach((name,idx)=>{
+            const m=getSuperByBelong(name);
+            const stdName=m.standardName;
+            let dispSuper;
+            if(m.super){
+                dispSuper=m.super;
+            }else{
+                dispSuper=defaultSuper||"无兜底上级";
+                missing++;
+            }
+            const matchLabel = m.fuzzy ? `<span class="text-matchCyan">教育局简写模糊匹配</span>` : `<span class="text-successGreen">教育局精准匹配</span>`;
+            html += `<div class="mb-1">${idx+1}.${matchLabel}：输入「${name}」→全称「${stdName}」 上级：${dispSuper}`;
+            html += ` <span class="text-lineRolePurple">[待选角色:${batchRole||"未选择统一角色"}]</span>`;
+            html += ` <span class="text-lineCodeGreen">[待选分类码:${batchCode||"未选择统一分类码"}]</span></div>`;
+        });
+        if(missing>0) html = `<div class="text-dangerRed mb-1">${missing}个教育局无匹配上级，将使用兜底上级</div>` + html;
+        box.innerHTML = html;
+    },300);
+}
+
 // 批量教育局生成函数，下拉读取全局缓存
 function genBatchTemplate(){
     const orgText=document.getElementById("batchOrgList").value;
@@ -489,7 +526,7 @@ function genBatchTemplate(){
     alert(`已生成${orgArr.length}条教育局行并追加到下方机构框，教育局独立加权模糊匹配`);
 }
 
-// 实时预览匹配信息
+// 学校实时预览匹配信息
 function realTimeMatchPreview(){
     clearTimeout(matchDebounceTimer);
     matchDebounceTimer=setTimeout(()=>{
@@ -546,6 +583,8 @@ function initRoleSelect(){
     });
     selMain.value="";
     selMain.onchange=realTimeMatchPreview;
+    // 角色下拉切换同步刷新教育局预览
+    selBatch.onchange = eduRealTimeMatch;
 }
 
 // 初始化分类码下拉（全局输入框下拉 + 批量教育局面板下拉共享本地缓存）
@@ -558,6 +597,8 @@ function refreshCodeBatchSel(){
         opt.value=v;opt.textContent=v;
         batchSel.appendChild(opt);
     });
+    // 编码下拉切换同步刷新教育局预览
+    batchSel.onchange = eduRealTimeMatch;
 }
 
 function getStart(count){
@@ -686,6 +727,7 @@ function clearAll(){
     document.getElementById("batchOrgList").value="";
     document.getElementById("tbody").innerHTML="";
     document.getElementById("realTimeMatchBox").innerHTML="<span class='text-fluidTextMuted'>输入学校/机构实时预览匹配、单行自定义角色/分类码信息；教育局请使用上方独立面板批量生成</span>";
+    document.getElementById("eduMatchBox").innerHTML="<span class='text-fluidTextMuted'>输入教育局名称实时预览匹配结果</span>";
     resultData=[];
 }
 
@@ -694,11 +736,21 @@ window.onload=async function(){
     initRoleSelect();
     ["prefix","typeCode","suffix","superOrg"].forEach(k=>loadSel(k));
     refreshCodeBatchSel();
+    // 学校输入框监听
     const unitInput=document.getElementById("unitList");
     unitInput.addEventListener("input",realTimeMatchPreview);
     unitInput.addEventListener("blur",realTimeMatchPreview);
-    document.getElementById("superOrg").addEventListener("input",realTimeMatchPreview);
+    // 教育局输入框新增监听，实时预览匹配
+    const eduInput = document.getElementById("batchOrgList");
+    eduInput.addEventListener("input", eduRealTimeMatch);
+    eduInput.addEventListener("blur", eduRealTimeMatch);
+    // 兜底上级变更同步刷新两边预览
+    document.getElementById("superOrg").addEventListener("input", ()=>{
+        realTimeMatchPreview();
+        eduRealTimeMatch();
+    });
     realTimeMatchPreview();
+    eduRealTimeMatch();
 };
 </script>
 </body>
