@@ -25,8 +25,7 @@
                         successGreen: '#34d399',
                         dangerRed: '#f87171',
                         warnYellow: '#facc15',
-                        matchCyan: '#22d3ee',
-                        lineRolePurple: '#c084fc'
+                        matchCyan: '#22d3ee'
                     },
                     borderRadius: {
                         'fluid-sm': '16px',
@@ -186,7 +185,7 @@
             <h1 class="text-[clamp(1.8rem,4vw,2.4rem)] font-semibold mb-2 tracking-tight gradient-text">
                 <i class="fa fa-user-circle mr-2"></i>批量账号生成工具
             </h1>
-            <p class="text-fluidTextMuted text-sm mb-3">前缀+分类码+5位流水号 · 实时自动匹配上下级机构 | 支持单位简写模糊匹配 | 每行可单独指定角色</p>
+            <p class="text-fluidTextMuted text-sm mb-3">前缀+分类码+5位流水号 · 实时自动匹配上下级机构 | 支持单位简写模糊匹配</p>
             <!-- 组织机构文件加载状态提示区 -->
             <div id="orgFileStatus" class="fluid-frosted rounded-fluid-sm py-2 px-4 inline-block text-sm"></div>
         </header>
@@ -210,7 +209,7 @@
                     </div>
                 </div>
                 <div>
-                    <label class="block mb-2 text-sm text-fluidTextMuted">全局默认角色（行未单独指定角色时生效）</label>
+                    <label class="block mb-2 text-sm text-fluidTextMuted">角色（内置下拉选择）</label>
                     <select id="roleSel" class="fluid-select w-full rounded-fluid-sm px-3 py-2.5"></select>
                 </div>
                 <div>
@@ -242,7 +241,7 @@
                     </div>
                 </div>
                 <div>
-                    <label class="block mb-2 text-sm text-fluidTextMuted">后缀（N代表单单位内序号）</label>
+                    <label class="block mb-2 text-sm text-fluidTextMuted">后缀</label>
                     <div class="flex gap-2 items-center">
                         <input id="suffix" placeholder="" class="fluid-input flex-1 max-w-20 rounded-fluid-sm px-3 py-2.5">
                         <select id="suffixSel" class="fluid-select rounded-fluid-sm px-2 py-2.5 w-32"></select>
@@ -255,21 +254,14 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-2">
                 <div>
-                    <label class="block mb-2 text-sm text-fluidTextMuted">所属机构列表（支持四种格式）
-                        <div class="text-lineRolePurple mt-1 text-xs">
-                            1.机构名  2.上级|机构  3.机构||自定义角色  4.上级|机构||自定义角色
-                        </div>
-                    </label>
+                    <label class="block mb-2 text-sm text-fluidTextMuted">所属机构列表</label>
                     <!-- resize-v 仅允许垂直拖动拉伸高度 -->
-                    <textarea id="unitList" class="fluid-input w-full h-32 rounded-fluid-sm p-3 resize-v" placeholder="示例：
-苏尼特右旗教育局||盟市管理员
-锡林郭勒盟|苏尼特右旗第一小学||学校管理员
-苏尼特右旗第二小学"></textarea>
+                    <textarea id="unitList" class="fluid-input w-full h-32 rounded-fluid-sm p-3 resize-v" placeholder=""></textarea>
                     <!-- 实时匹配预览区域 -->
                     <div id="realTimeMatchBox" class="mt-3 p-3 rounded-fluid-sm bg-white/5 max-h-40 overflow-y-auto text-xs"></div>
                 </div>
                 <div>
-                    <label class="block mb-2 text-sm text-fluidTextMuted">手机号列表（一行对应上面一行机构）</label>
+                    <label class="block mb-2 text-sm text-fluidTextMuted">手机号列表</label>
                     <textarea id="phoneList" class="fluid-input w-full h-32 rounded-fluid-sm p-3 resize-v"></textarea>
                 </div>
             </div>
@@ -292,7 +284,7 @@
 
         <!-- 匹配规则说明移到卡片外部右下角，不占用卡片内部空间 -->
         <div class="text-right mb-8 text-fluidOrange text-xs opacity-70">
-            匹配规则：1.行内「上级|所属机构||角色」强制指定；2.精准匹配org-map.xlsx；3.简写双向模糊匹配标准全称（自动清除全角空格）；4.全部匹配失败统一使用兜底上级；红色=未检索到单位，青色=简写转全称匹配成功，紫色=该行自定义独立角色
+            匹配规则：1.行内「上级|所属机构」强制指定；2.精准匹配org-map.xlsx；3.无精准匹配自动去school_list.xlsx模糊检索标准全称再匹配上级；4.全部匹配失败统一使用兜底上级；红色=未检索到单位，青色=简写转全称匹配成功
         </div>
 
         <div class="fluid-frosted rounded-fluid-lg p-6 md:p-8">
@@ -475,100 +467,37 @@ async function loadOrgMapping() {
     }
 }
 
-// ========== 【修复完整版】双向模糊匹配，兼容全角空格、教育局加权优先 ==========
+// 简写模糊检索
 function fuzzySearchSchool(keyword) {
     if (!schoolExcelSuccess || schoolList.length === 0) return null;
-    // 清除半角空格、全角空格、制表符、换行符
-    const kw = keyword.trim().replace(/[\s　\t\n]/g, "");
-    if (!kw) return null;
-
-    // 通用教育关键词权重
-    const weightKeys = ["教育局", "教体局", "中学", "小学", "幼儿园", "职校", "一中", "二中", "三中", "旗", "区", "市"];
-    // 尾部高权重关键词：教育局、教体局优先匹配
-    const highTailKey = ["教育局", "教体局"];
-
-    let matchPool = [];
-    schoolList.forEach(fullName => {
-        // 标准全称统一清除所有空白字符
-        const cleanName = fullName.trim().replace(/[\s　\t\n]/g, "");
-        if (!cleanName) return;
-        // 双向包含匹配：简写包含全称片段 / 全称包含简写
-        if (cleanName.includes(kw) || kw.includes(cleanName)) {
-            let weight = 0;
-            weight += cleanName === kw ? 100 : 0; // 完全匹配最高分
-            weight += cleanName.startsWith(kw) ? 20 : 0; // 开头匹配加分
-            weight += kw.startsWith(cleanName) ? 15 : 0;
-            // 基础教育关键词加分
-            weightKeys.forEach(wk => {
-                if (cleanName.includes(wk)) weight += 8;
-                if (kw.includes(wk)) weight += 12;
-            })
-            // 教育局/教体局尾部额外大幅加权，优先匹配教育局机构
-            highTailKey.forEach(tk => {
-                if (cleanName.endsWith(tk)) weight += 30;
-                if (kw.endsWith(tk)) weight += 20;
-            })
-            // 标准全称越长权重越高，避免短学校名称抢占教育局匹配结果
-            weight += cleanName.length;
-            // 名称长度差值越小匹配度越高
-            const lenDiff = Math.abs(cleanName.length - kw.length);
-            weight -= lenDiff;
-            matchPool.push({ name: fullName, weight });
-        }
-    });
-
-    if (matchPool.length === 0) return null;
-    // 权重从高到低排序，取最优第一条
-    matchPool.sort((a, b) => b.weight - a.weight);
-    return matchPool[0].name;
+    const kw = keyword.trim();
+    const match = schoolList.find(name => name.includes(kw));
+    return match || null;
 }
 
-// 匹配上下级
+// 【修复核心匹配函数】还原原版精准匹配逻辑，仅trim不清除中间空格
 function getSuperByBelong(rawName) {
     const rawTrim = rawName.trim();
-    const rawClean = rawTrim.replace(/[\s　\t\n]/g, "");
-    // 1. 精准全等匹配（清除全部空白后对比）
-    const exactMatch = orgMapping.find(o => o.belongOrg.trim().replace(/[\s　\t\n]/g, "") === rawClean);
+    // 1. 原版精准全等匹配（和之前正常使用逻辑一致）
+    const exactMatch = orgMapping.find(o => o.belongOrg === rawTrim);
     if (exactMatch) {
         return { super: exactMatch.superOrg, standardName: rawTrim, fuzzy: false };
     }
 
-    // 2. 简写模糊检索标准全称
+    // 2. 精准匹配失败，走简写模糊
     const standardName = fuzzySearchSchool(rawTrim);
     if (!standardName) {
         return { super: null, standardName: rawTrim, fuzzy: false, noMatch: true };
     }
 
-    // 3. 标准全称清除空白后匹配上级
-    const cleanStd = standardName.replace(/[\s　\t\n]/g, "");
-    const stdMatch = orgMapping.find(o => o.belongOrg.trim().replace(/[\s　\t\n]/g, "") === cleanStd);
+    // 3. 拿到标准全称，做空格容错再匹配上级
+    const cleanStd = standardName.trim().replace(/\s/g, "");
+    const stdMatch = orgMapping.find(o => o.belongOrg.trim().replace(/\s/g, "") === cleanStd);
     if (stdMatch) {
         return { super: stdMatch.superOrg, standardName: standardName, fuzzy: true };
     }
 
     return { super: null, standardName: standardName, fuzzy: true, noMatch: true };
-}
-
-// 解析单行机构文本，拆分 上级、机构、单行角色
-function parseUnitLine(lineText) {
-    const raw = lineText.trim();
-    let customRole = "";
-    let mainPart = raw;
-    // 先拆分角色分隔符 ||
-    if (raw.includes("||")) {
-        const splitArr = raw.split("||").map(i=>i.trim());
-        mainPart = splitArr[0];
-        customRole = splitArr[1] || "";
-    }
-    // 再拆分上级|机构
-    let superOrg = "";
-    let unitName = mainPart;
-    if (mainPart.includes("|")) {
-        const splitArr = mainPart.split("|").map(i=>i.trim());
-        superOrg = splitArr[0];
-        unitName = splitArr[1];
-    }
-    return { superOrg, unitName, customRole };
 }
 
 // 实时解析所属机构预览
@@ -577,51 +506,41 @@ function realTimeMatchPreview() {
     matchDebounceTimer = setTimeout(() => {
         const unitRawList = document.getElementById("unitList").value.split("\n").map(i => i.trim()).filter(Boolean);
         const defaultSuper = document.getElementById("superOrg").value.trim();
-        const defaultRole = document.getElementById("roleSel").value;
         const boxDom = document.getElementById("realTimeMatchBox");
         if (unitRawList.length === 0) {
-            boxDom.innerHTML = "<span class='text-fluidTextMuted'>输入所属机构后实时展示匹配结果，简写自动识别标准全称，支持每行自定义角色</span>";
+            boxDom.innerHTML = "<span class='text-fluidTextMuted'>输入所属机构后实时展示匹配结果，简写自动识别标准全称</span>";
             return;
         }
         let html = "";
         let missingCount = 0;
-        unitRawList.forEach((rawLine, idx) => {
-            const parseRes = parseUnitLine(rawLine);
-            const { superOrg: fixSuper, unitName, customRole } = parseRes;
-            let displaySuper, standardName, isFuzzy = false;
-
-            if (fixSuper) {
-                displaySuper = fixSuper;
-                standardName = unitName;
-                html += `<div class="mb-1"><span class="text-fluidBlue">${idx+1}.强制指定上级</span>：输入${rawLine} → 所属${standardName} → 上级${displaySuper}`;
+        unitRawList.forEach((rawUnit, idx) => {
+            let superOrg, standardName, isFuzzy = false;
+            if (rawUnit.includes("|")) {
+                const arr = rawUnit.split("|").map(i => i.trim());
+                superOrg = arr[0];
+                standardName = arr[1];
+                html += `<div class="mb-1"><span class="text-fluidBlue">${idx+1}.强制指定</span>：输入${rawUnit} → 所属${standardName} → 上级${superOrg}</div>`;
             } else {
-                const matchRes = getSuperByBelong(unitName);
+                const matchRes = getSuperByBelong(rawUnit);
                 standardName = matchRes.standardName;
                 isFuzzy = matchRes.fuzzy;
                 if (matchRes.super) {
-                    displaySuper = matchRes.super;
+                    superOrg = matchRes.super;
                     if(isFuzzy){
-                        html += `<div class="mb-1"><span class="text-matchCyan">${idx+1}.简写模糊匹配成功</span>：输入「${unitName}」转标准全称「${standardName}」→ ${displaySuper}`;
+                        html += `<div class="mb-1"><span class="text-matchCyan">${idx+1}.简写模糊匹配成功</span>：输入「${rawUnit}」转标准全称「${standardName}」→ ${superOrg}</div>`;
                     }else{
-                        html += `<div class="mb-1"><span class="text-successGreen">${idx+1}.精准匹配成功</span>：${standardName} → ${displaySuper}`;
+                        html += `<div class="mb-1"><span class="text-successGreen">${idx+1}.精准匹配成功</span>：${standardName} → ${superOrg}</div>`;
                     }
                 } else {
-                    displaySuper = defaultSuper || "无兜底上级";
+                    superOrg = defaultSuper || "无兜底上级";
                     missingCount++;
                     if(matchRes.noMatch){
-                        html += `<div class="mb-1"><span class="text-dangerRed">${idx+1}.完全未匹配</span>：输入「${unitName}」检索不到标准单位，使用兜底${displaySuper}`;
+                        html += `<div class="mb-1"><span class="text-dangerRed">${idx+1}.完全未匹配</span>：输入「${rawUnit}」检索不到标准单位，使用兜底${superOrg}</div>`;
                     }else{
-                        html += `<div class="mb-1"><span class="text-dangerRed">${idx+1}.全称存在但无上级</span>：标准名「${standardName}」无对应上级，使用兜底${displaySuper}`;
+                        html += `<div class="mb-1"><span class="text-dangerRed">${idx+1}.全称存在但无上级</span>：标准名「${standardName}」无对应上级，使用兜底${superOrg}</div>`;
                     }
                 }
             }
-            // 展示单行自定义角色
-            if(customRole){
-                html += ` <span class="text-lineRolePurple">[本行独立角色：${customRole}]</span>`;
-            }else{
-                html += ` <span class="text-fluidTextMuted">[使用全局角色：${defaultRole || "未选择"}]</span>`;
-            }
-            html += "</div>";
         });
         if(missingCount > 0){
             html = `<div class="text-dangerRed mb-2">共${missingCount}条单位无法自动匹配上下级，将使用兜底上级</div>` + html;
@@ -641,7 +560,6 @@ function initRoleSelect() {
         sel.appendChild(opt);
     });
     sel.value = "";
-    sel.onchange = realTimeMatchPreview;
 }
 
 // 流水号
@@ -686,12 +604,11 @@ function generate() {
     const suffixTemplate = document.getElementById("suffix").value || "";
     const countPerUnit = Number(document.getElementById("countPerUnit").value) || 1;
     const defaultSuper = document.getElementById("superOrg").value.trim();
-    const globalRole = document.getElementById("roleSel").value;
+    const role = document.getElementById("roleSel").value;
 
     const unitRawList = document.getElementById("unitList").value.split("\n").map(i => i.trim()).filter(Boolean);
     const phoneList = document.getElementById("phoneList").value.split("\n").map(i => i.trim()).filter(Boolean);
     if (unitRawList.length === 0) return alert("请填写所属机构列表");
-    if (!globalRole) return alert("请先选择全局默认角色");
 
     let missingOrgList = [];
     let html = "";
@@ -700,24 +617,19 @@ function generate() {
     const startNo = getStart(total);
     let rowIndex = 1;
 
-    unitRawList.forEach((rawLine, idx) => {
-        // 解析单行参数
-        const parseRes = parseUnitLine(rawLine);
-        const { superOrg: fixSuper, unitName, customRole } = parseRes;
+    unitRawList.forEach((rawUnit, idx) => {
         let superOrg, standardName;
-        // 确定该行最终角色
-        const lineRole = customRole || globalRole;
-
-        if (fixSuper) {
-            superOrg = fixSuper;
-            standardName = unitName;
+        if (rawUnit.includes("|")) {
+            const arr = rawUnit.split("|").map(i => i.trim());
+            superOrg = arr[0];
+            standardName = arr[1];
         } else {
-            const matchRes = getSuperByBelong(unitName);
+            const matchRes = getSuperByBelong(rawUnit);
             standardName = matchRes.standardName;
             if (matchRes.super) {
                 superOrg = matchRes.super;
             } else {
-                missingOrgList.push(`输入:${rawLine} 标准全称:${standardName}`);
+                missingOrgList.push(`输入:${rawUnit} 标准全称:${standardName}`);
                 superOrg = defaultSuper;
             }
         }
@@ -731,18 +643,16 @@ function generate() {
                 index: rowIndex,
                 superOrg: superOrg,
                 belongOrg: standardName,
-                role: lineRole,
+                role: role,
                 loginAccount: account,
                 userName: account,
                 phone: phone
             });
-            // 自定义角色加紫色标记区分
-            const roleHtml = customRole ? `<span class="text-lineRolePurple">${lineRole}</span>` : lineRole;
             html += `<tr class="fluid-table-row">
                 <td class="py-3 px-4">${rowIndex}</td>
                 <td class="py-3 px-4">${superOrg || "无上级"}</td>
                 <td class="py-3 px-4">${standardName}</td>
-                <td class="py-3 px-4">${roleHtml}</td>
+                <td class="py-3 px-4">${role}</td>
                 <td class="py-3 px-4 font-mono bg-gradient-to-r from-fluidBlue to-fluidOrange bg-clip-text text-transparent">${account}</td>
                 <td class="py-3 px-4">${phone}</td>
             </tr>`;
@@ -800,7 +710,7 @@ function clearAll() {
     document.getElementById("unitList").value = "";
     document.getElementById("phoneList").value = "";
     document.getElementById("tbody").innerHTML = "";
-    document.getElementById("realTimeMatchBox").innerHTML = "<span class='text-fluidTextMuted'>输入所属机构后实时展示匹配结果，简写自动识别标准全称，支持每行自定义角色</span>";
+    document.getElementById("realTimeMatchBox").innerHTML = "<span class='text-fluidTextMuted'>输入所属机构后实时展示匹配结果，简写自动识别标准全称</span>";
     resultData = [];
 }
 
@@ -815,7 +725,7 @@ window.onload = async function () {
     const unitInput = document.getElementById("unitList");
     unitInput.addEventListener("input", realTimeMatchPreview);
     unitInput.addEventListener("blur", realTimeMatchPreview);
-    document.getElementById("realTimeMatchBox").innerHTML = "<span class='text-fluidTextMuted'>输入所属机构后实时展示匹配结果，简写自动识别标准全称，支持每行自定义角色</span>";
+    document.getElementById("realTimeMatchBox").innerHTML = "<span class='text-fluidTextMuted'>输入所属机构后实时展示匹配结果，简写自动识别标准全称</span>";
     document.getElementById("superOrg").addEventListener("input", realTimeMatchPreview);
 };
 </script>
