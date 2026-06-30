@@ -12,13 +12,11 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  /* 匹配图片橙红几何渐变背景 */
   background: linear-gradient(145deg, #ff9033 0%, #e04848 50%, #702060 100%);
   color: #fefefe;
   position: relative;
   overflow-x: hidden;
 }
-/* 动态粒子画布 */
 #particles-canvas {
   position: fixed;
   top: 0;
@@ -32,7 +30,6 @@ body {
   max-width: 900px;
   margin: 30px auto;
   padding: 32px;
-  /* 深色亚克力卡片（对应图左侧深色侧边栏） */
   background: rgba(30, 12, 18, 0.42);
   border-radius: 24px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
@@ -48,7 +45,6 @@ h2 {
   margin-bottom: 32px;
   font-size: 28px;
   font-weight: 600;
-  /* 暖橙渐变文字 */
   background: linear-gradient(90deg, #fff8f0, #ffcc99);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -68,7 +64,6 @@ label {
 input, textarea {
   width: 100%;
   padding: 13px 18px;
-  /* 半透深色输入框 */
   border: 1px solid rgba(255, 210, 180, 0.22);
   border-radius: 14px;
   font-size: 14px;
@@ -113,6 +108,7 @@ input:focus, textarea:focus {
   display: flex;
   gap: 10px;
   margin-bottom: 12px;
+  flex-wrap: wrap;
 }
 button {
   padding: 9px 18px;
@@ -124,7 +120,6 @@ button {
   transition: all 0.3s ease;
   backdrop-filter: blur(4px);
 }
-/* 主橙色按钮（匹配图片底部橙色操作按钮） */
 .btn-blue {
   background: linear-gradient(135deg, #ff9138, #ff6b22);
   color: #ffffff;
@@ -133,7 +128,6 @@ button {
   box-shadow: 0 0 18px rgba(255, 120, 30, 0.55);
   transform: translateY(-2px);
 }
-/* 绿色复制按钮 */
 .btn-green {
   background: linear-gradient(135deg, #34b97b, #20a062);
   color: white;
@@ -142,7 +136,6 @@ button {
   box-shadow: 0 0 15px rgba(52, 185, 123, 0.5);
   transform: translateY(-2px);
 }
-/* 浅灰剪切按钮（图片浅色面板辅助按钮） */
 .btn-gray {
   background: rgba(255, 240, 230, 0.18);
   border: 1px solid rgba(255, 215, 190, 0.25);
@@ -153,7 +146,6 @@ button {
   box-shadow: 0 0 12px rgba(255, 200, 160, 0.25);
   transform: translateY(-2px);
 }
-/* 红色清空/重置按钮 */
 .btn-red {
   background: linear-gradient(135deg, #e74c3c, #c0392b);
   color: white;
@@ -162,29 +154,12 @@ button {
   box-shadow: 0 0 15px rgba(231, 76, 60, 0.5);
   transform: translateY(-2px);
 }
-/* 紫色导出按钮保留原有色系，适配暖背景 */
-.btn-purple {
-  background: linear-gradient(135deg, #9d50bb, #7c3da0);
-  color: #fff;
-}
-.btn-purple:hover {
-  box-shadow: 0 0 15px rgba(157, 80, 187, 0.5);
-  transform: translateY(-2px);
-}
 textarea {
   resize: vertical;
   min-height: 100px;
 }
 ::placeholder {
   color: rgba(255, 230, 210, 0.55);
-}
-/* 日期输入框点击唤起选择器（页面已删除起止日期输入，样式保留不影响） */
-.date-input {
-  position: relative;
-  width: 100%;
-}
-.date-input input[type="date"] {
-  cursor: pointer;
 }
 </style>
 </head>
@@ -205,7 +180,6 @@ textarea {
     <input type="text" id="customTitle" placeholder="请手动输入报告主标题">
   </div>
 
-  <!-- 年月选择行保留 -->
   <div class="date-row">
     <div class="item">
       <label>报告年份</label>
@@ -233,26 +207,25 @@ textarea {
     </div>
   </div>
 
-  <!-- 已完整删除：开始日期、结束日期整行DOM，无注释残留 -->
-
   <div class="item">
     <label>本月工作内容（可编辑修改模板）</label>
     <div class="btn-bar">
       <button class="btn-green" onclick="copyWork()">复制</button>
       <button class="btn-gray" onclick="cutWork()">剪切</button>
+      <button class="btn-gray" onclick="refreshTemplate()">手动刷新服务次数</button>
       <button class="btn-red" onclick="resetTemplate()">恢复默认模板</button>
     </div>
     <textarea id="mainWork" rows="12" placeholder="系统工作模板内容"></textarea>
   </div>
 
   <div class="item">
-    <label id="eventLabel">运维事件记录表（粘贴字段：事件内容、问题分析、完成状态、服务对象、需求提出、处理日期、处理人）</label>
+    <label id="eventLabel">运维事件记录表（粘贴字段：系统名称、事件内容、问题分析、完成状态、服务对象、需求提出、处理日期、处理人）</label>
     <div class="btn-bar">
       <button class="btn-green" onclick="copyEvent()">复制</button>
       <button class="btn-gray" onclick="cutEvent()">剪切</button>
       <button class="btn-red" onclick="clearEvent()">清空</button>
     </div>
-    <textarea id="eventList" rows="12" placeholder="直接从Excel整行粘贴数据"></textarea>
+    <textarea id="eventList" rows="12" placeholder="粘贴示例：机关智能化	系统巡检	无	是	教育厅	业务	2026-06-30	乔鹏飞"></textarea>
   </div>
 
   <div class="item" style="text-align:center;">
@@ -301,7 +274,6 @@ class Particle {
   }
 }
 
-// 初始化粒子
 for (let i = 0; i < 100; i++) {
   particles.push(new Particle());
 }
@@ -335,8 +307,6 @@ function animate() {
 }
 animate();
 
-// 起止日期输入框已删除，对应点击绑定代码全部移除
-
 // --- 业务全局变量 ---
 const titleSel = document.getElementById('titleSel');
 const titleInputBox = document.getElementById('titleInputBox');
@@ -344,35 +314,51 @@ const eventLabel = document.getElementById('eventLabel');
 const reportMonthSel = document.getElementById('reportMonth');
 const reportYearSel = document.getElementById('reportYear');
 const mainWorkTextarea = document.getElementById('mainWork');
+const eventListTextarea = document.getElementById('eventList');
 
-// 获取当月总天数
 function getMonthDayCount(year, monthZero) {
   return new Date(year, monthZero + 1, 0).getDate();
 }
 
-// 判断当前是否多系统模式
 function isCurrentMultiSys() {
   const val = titleSel.value;
   return val === '自定义' || val.indexOf('、') > -1;
 }
 
-// 生成对应模板（自动区分单/多系统）
+// ========== 修复后的统计函数 ==========
+function countSmartOfficeEvent() {
+  const lines = eventListTextarea.value.trim().split('\n').filter(s => s.trim());
+  let count = 0;
+  lines.forEach((line, index) => {
+    // 兼容制表符、任意空格分割列
+    const cols = line.trim().split(/[\t\s]+/);
+    const sysName = (cols[0] || '').trim();
+    console.log(`第${index+1}行第一列：`, sysName);
+    // 模糊匹配“机关智能化”，不用完整全称
+    if (sysName.includes('机关智能化')) {
+      count++;
+    }
+  });
+  console.log('机关智能化总条数：', count);
+  return count;
+}
+
 function getTemplateText() {
   const y = parseInt(reportYearSel.value);
   const mNum = parseInt(reportMonthSel.value);
   const mZero = mNum - 1;
   const days = getMonthDayCount(y, mZero);
   const mStr = `${mNum}月`;
+  const smartCount = countSmartOfficeEvent();
+  const serviceTimes = smartCount > 0 ? smartCount : 14;
 
   if (isCurrentMultiSys()) {
-    // 多系统固定模板
     return `${mStr}全月（${days}天）的机关智能化系统、民办教育管理系统、学生体质健康系统巡检工作已合并统计，期间各系统完成日巡检${days}次，并形成了每日巡检记录表，反映了每日系统运行状态与健康情况；${mStr}机关智能化系统、民办教育管理系统、学生体质健康系统巡检服务存储均在正常范围内无异常存储问题，同步监控存储容量波动与用户数据导出功能稳定性；巡检服务存储均在正常范围内无异常存储问题；各平台正常登录、无报错问题，系统响应速度小于4秒，未发现重大运行异常。
-1.服务配合与支撑：机关智能化系统 ${mStr} 通过电话、微信等远程方式为用户提供日常运维问题解答、操作指导14 次，积极响应并闭环用户问题及咨询，保障业务顺畅推进；民办机构管理系统未开放，只进行每日系统巡检与健康检查；体质健康系统未开放，只进行每日系统巡检与健康检查；
+1.服务配合与支撑：机关智能化系统 ${mStr} 通过电话、微信等远程方式为用户提供日常运维问题解答、操作指导以及每日系统巡检与健康检查${serviceTimes}次，积极响应并闭环用户问题及咨询，保障业务顺畅推进；民办机构管理系统未开放，只进行每日系统巡检与健康检查；体质健康系统未开放，只进行每日系统巡检与健康检查；
 2.安全运维：机关智能化系统、民办机构系统、体质健康系统${mStr}执行系统安全监控，并对系统进行了全面的安全审查，未发现安全隐患。
 3.故障处理：机关智能化系统、民办机构系统、体质健康系统${mStr}无故障。
 4.需求处置：机关智能化系统无新增功能优化需求；民办机构系统无新增功能需求；体质健康系统无新增功能需求。`;
   } else {
-    // 单系统固定模板
     return `${mStr}基础教育大数据服务平台完成月巡检1次，并形成了每月巡检记录表，反映了每月系统运行状态与健康情况；系统巡检服务存储均在正常范围内无异常存储问题，平台正常登录、无报错问题，系统响应速度小于5秒，未发现重大运行异常。
 1.服务配合与支撑：本月基础教育大数据系统通过电话、微信等远程方式为用户提供了日常运维问题解答、操作指导等支撑工作。
 2.安全运维：基础教育大数据系统进行了全面的安全审查，未发现安全隐患。
@@ -381,23 +367,23 @@ function getTemplateText() {
   }
 }
 
-// 刷新文本框内容
 function refreshTemplate() {
   mainWorkTextarea.value = getTemplateText();
 }
 
-// 页面初始化加载模板
 refreshTemplate();
 
-// 监听月份、年份、标题切换，自动刷新模板
 reportMonthSel.addEventListener('change', refreshTemplate);
 reportYearSel.addEventListener('change', refreshTemplate);
 titleSel.addEventListener('change', () => {
   updateLabel();
   refreshTemplate();
 });
+eventListTextarea.addEventListener('input', refreshTemplate);
+eventListTextarea.addEventListener('paste', () => {
+  setTimeout(refreshTemplate, 50);
+});
 
-// 切换标题时更新表格字段说明
 function updateLabel() {
   let val = titleSel.value;
   titleInputBox.style.display = val === '自定义' ? 'block' : 'none';
@@ -409,10 +395,8 @@ function updateLabel() {
 }
 updateLabel();
 
-// 起止日期格式化函数fmt全部删除，不再使用
-
 function splitLine(str){
-  return str.trim().split(/\t/);
+  return str.trim().split(/[\t\s]+/);
 }
 
 function copyWork(){
@@ -438,19 +422,19 @@ function cutEvent(){
 }
 function clearEvent(){
   document.getElementById('eventList').value='';
+  refreshTemplate();
 }
 
 function generateAndExport(){
+  refreshTemplate();
   let titleSelVal = titleSel.value;
   let mainTitle = titleSelVal === '自定义' ? document.getElementById('customTitle').value.trim() : titleSelVal;
   const isMultiSys = (titleSelVal === '自定义') || (mainTitle.indexOf('、') > -1);
 
   let reportYear = reportYearSel.value;
   let reportMonth = reportMonthSel.value;
-  // 移除startDate、endDate读取与起止周期文本
   let monthText = `${reportMonth.replace('0','')}月`;
   let titleLine1 = `${mainTitle}${reportYear}年${reportMonth.replace('0','')}月月度总结报告`;
-  // 报告副标题去掉起止日期，为空
   let periodText = "";
 
   let mainWorkContent = mainWorkTextarea.value.trim();
@@ -556,7 +540,6 @@ table{width:100%;border-collapse:collapse;margin-top:10px;}
 .main-title-line2{
   margin-bottom:20px;
 }
-/* 一级标题：黑体三号、不加粗 */
 .sub-title{
   font-family:"黑体";
   font-size:16pt;
@@ -564,7 +547,6 @@ table{width:100%;border-collapse:collapse;margin-top:10px;}
   margin:15px 0 8px 0;
   text-indent:0;
 }
-/* 正文：仿宋三号、首行缩进2字符、不加粗 */
 .main-content p{
   font-family:"仿宋";
   font-size:16pt;
