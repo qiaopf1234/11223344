@@ -516,8 +516,13 @@
         // ===== 复制 & 清空 =====
         function copyText() {
             const resultDiv = document.getElementById('result');
-            const textItems = resultDiv.querySelectorAll('.result-item');
-            const lines = Array.from(textItems).map(el => el.textContent.trim());
+            const items = resultDiv.querySelectorAll('.result-item');
+            const lines = [];
+            items.forEach(el => {
+                // 只取文字内容，排除 .num 序号标签
+                const text = el.childNodes[1].textContent.trim();
+                lines.push(text);
+            });
             const text = lines.join('\n');
             if (!text) {
                 alert('暂无内容可复制，请先生成事件记录。');
