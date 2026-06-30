@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工作事件生成器 · 学籍制证业务版</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            font-family: "Microsoft YaHei", "PingFang SC", system-ui, -apple-system, sans-serif;
+            background: linear-gradient(145deg, #f6f9fc 0%, #e6f0f9 100%);
+        }
+
+        .main-card {
+            width: 100%;
+            max-width: 1300px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 40px;
+            padding: 36px 40px;
+            box-shadow: 0 20px 60px rgba(26, 67, 113, 0.15), 0 8px 24px rgba(0, 20, 50, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            margin-bottom: 24px;
+            border-bottom: 2px solid rgba(52, 102, 173, 0.1);
+            padding-bottom: 16px;
+        }
+
+        .header h2 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1a3a6b;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header h2::before {
+            content: "📋";
+            font-size: 32px;
+        }
+
+        .header .badge {
+            background: #2a5f9e;
+            color: #fff;
+            font-size: 13px;
+            padding: 4px 16px;
+            border-radius: 20px;
+            font-weight: 500;
+            box-shadow: 0 2px 8px rgba(42, 95, 158, 0.3);
+        }
+
+        .tips {
+            color: #3a5a7a;
+            font-size: 14px;
+            background: rgba(42, 95, 158, 0.06);
+            padding: 10px 18px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+            border-left: 4px solid #2a5f9e;
+            line-height: 1.6;
+        }
+
+        .row {
+            display: flex;
+            gap: 28px;
+            flex-wrap: wrap;
+        }
+
+        .col {
+            flex: 1;
+            min-width: 260px;
+        }
+
+        .col label {
+            display: block;
+            font-weight: 600;
+            color: #1a3a6b;
+            margin: 12px 0 6px;
+            font-size: 15px;
+        }
+
+        /* 通用输入框样式 */
+        .col select,
+        .col input[type="number"] {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1.5px solid #d0dce8;
+            border-radius: 12px;
+            font-size: 15px;
+            background: #ffffff;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+            color: #1a2a3a;
+        }
+
+        .col select:focus,
+        .col input[type="number"]:focus {
+            border-color: #2a5f9e;
+            box-shadow: 0 0 0 3px rgba(42, 95, 158, 0.15);
+        }
+
+        /* ===== 重点修复：让两个数字框变短 ===== */
+        .range-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 6px 0;
+        }
+
+        /* 使用 !important 强制覆盖全局的 width:100% */
+        .range-wrap input[type="number"] {
+            width: 90px !important;
+            flex-shrink: 0;
+            text-align: center;
+            padding: 10px 6px;  /* 左右内边距减小，更紧凑 */
+        }
+
+        .range-wrap span {
+            color: #3a5a7a;
+            font-weight: 500;
+            font-size: 16px;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 16px 0 8px;
+        }
+
+        .btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 30px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            background: #2a5f9e;
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(42, 95, 158, 0.25);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(42, 95, 158, 0.35);
+        }
+
+        .btn:active {
+            transform: scale(0.96);
+        }
+
+        .btn-secondary {
+            background: #e8edf4;
+            color: #1a3a6b;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .btn-secondary:hover {
+            background: #d5dde8;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        .btn-danger {
+            background: #d45c5c;
+            box-shadow: 0 4px 12px rgba(212, 92, 92, 0.25);
+        }
+
+        .btn-danger:hover {
+            background: #c04a4a;
+            box-shadow: 0 8px 20px rgba(212, 92, 92, 0.35);
+        }
+
+        .textarea-wrap textarea {
+            width: 100%;
+            height: 160px;
+            padding: 12px 16px;
+            border: 1.5px solid #d0dce8;
+            border-radius: 12px;
+            font-size: 14px;
+            resize: vertical;
+            font-family: inherit;
+            background: #ffffff;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+            color: #1a2a3a;
+            line-height: 1.6;
+        }
+
+        .textarea-wrap textarea:focus {
+            border-color: #2a5f9e;
+            box-shadow: 0 0 0 3px rgba(42, 95, 158, 0.12);
+        }
+
+        .result-area {
+            margin-top: 28px;
+            border-top: 2px solid rgba(42, 95, 158, 0.08);
+            padding-top: 20px;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .result-header .count {
+            font-size: 14px;
+            color: #3a5a7a;
+            background: rgba(42, 95, 158, 0.06);
+            padding: 4px 16px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        #result {
+            width: 100%;
+            height: 420px;
+            padding: 16px 20px;
+            border: 1.5px solid #e2eaf2;
+            border-radius: 16px;
+            overflow-y: auto;
+            background: #fafcff;
+            font-size: 14px;
+            line-height: 1.9;
+            color: #1a2a3a;
+        }
+
+        #result::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #result::-webkit-scrollbar-track {
+            background: #eef3f8;
+            border-radius: 10px;
+        }
+
+        #result::-webkit-scrollbar-thumb {
+            background: #b0c8dd;
+            border-radius: 10px;
+        }
+
+        #result::-webkit-scrollbar-thumb:hover {
+            background: #8aaccc;
+        }
+
+        .result-item {
+            padding: 2px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.02);
+        }
+
+        .result-item .num {
+            display: inline-block;
+            width: 32px;
+            color: #7a9abb;
+            font-weight: 500;
+            font-size: 13px;
+        }
+
+        @media (max-width: 640px) {
+            .main-card {
+                padding: 20px;
+                border-radius: 28px;
+            }
+            .header h2 {
+                font-size: 22px;
+            }
+            .btn {
+                padding: 8px 18px;
+                font-size: 14px;
+            }
+            .range-wrap input[type="number"] {
+                width: 70px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-card">
+        <!-- 头部 -->
+        <div class="header">
+            <h2>工作日事件记录生成器</h2>
+            
+        </div>
+
+       
+
+        <!-- 操作区 -->
+        <div class="row">
+            <div class="col">
+                <label for="weekDay">📅 选择工作日</label>
+                <select id="weekDay">
+                    <option value="mon">周一 </option>
+                    <option value="tue">周二 </option>
+                    <option value="wed">周三 </option>
+                    <option value="thu">周四 </option>
+                    <option value="fri">周五 </option>
+                </select>
+
+                <label>📊 生成条数范围</label>
+                <div class="range-wrap">
+                    <input type="number" id="minNum" value="90" min="30">
+                    <span>～</span>
+                    <input type="number" id="maxNum" value="200" min="50">
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn" onclick="genData()">✨ 一键生成</button>
+                    <button class="btn btn-secondary" onclick="copyText()">📋 复制全部</button>
+                    <button class="btn btn-danger" onclick="clearRes()">🗑️ 清空</button>
+                </div>
+            </div>
+
+            <div class="col textarea-wrap">
+                <label for="addOther">➕ 临时额外工作（一行一条）</label>
+                <textarea id="addOther" placeholder=""></textarea>
+            </div>
+        </div>
+
+        <!-- 结果区 -->
+        <div class="result-area">
+            <div class="result-header">
+                <span style="font-weight:600; color:#1a3a6b;">📄 生成记录</span>
+                <span class="count" id="countDisplay">共 0 条</span>
+            </div>
+            <div id="result"></div>
+        </div>
+    </div>
+
+    <script>
+        // ===== 换词词库 =====
+        const wordMap = {
+            '处理': ['处置', '协调', '跟进', '落实', '办理'],
+            '核对': ['校验', '核查', '比对', '查实', '校对'],
+            '整理': ['汇总', '归集', '梳理', '统计', '编排'],
+            '排查': ['检查', '查验', '检修', '定位', '筛查'],
+            '维护': ['值守', '保障', '维持', '运维', '看管'],
+            '解答': ['回复', '回应', '解惑', '说明', '讲解'],
+            '指导': ['指引', '告知', '教导', '提示', '建议'],
+            '上传': ['提交', '报送', '录入', '导入', '传输'],
+            '修改': ['调整', '更正', '修订', '更新', '改写'],
+            '同步': ['刷新', '更新', '匹配', '统一'],
+            '筛选': ['过滤', '挑选', '提取', '甄别'],
+            '对接': ['联络', '沟通', '协调', '配合'],
+            '确认': ['核实', '验证', '确保', '认定'],
+            '设置': ['配置', '设定', '调整', '定义'],
+            '生成': ['创建', '制作', '产出', '生成'],
+            '删除': ['移除', '清理', '注销', '撤销']
+        };
+
+        function replaceWord(sentence) {
+            let result = sentence;
+            for (let key in wordMap) {
+                if (result.includes(key)) {
+                    const options = wordMap[key];
+                    const replacement = options[Math.floor(Math.random() * options.length)];
+                    result = result.replace(key, replacement);
+                    break;
+                }
+            }
+            return result;
+        }
+
+        // ===== 按工作日的业务短句库 =====
+        const baseLib = {
+            mon: [
+                '在待分配列表按班级筛选本年度毕业生信息',
+                '清理待分配列表中上一年度遗留学生学籍数据',
+                '上传学生证件照片后迁移毕业生信息至毕业证列表',
+                '核查学籍系统学生毕业状态是否标记为已毕业',
+                '确认学籍系统已生成学生毕业证书号并完成教育局审核',
+                '核对学籍系统与制证系统登记学校名称保持一致',
+                '补全学籍系统空白身份证号、空白毕业证号数据',
+                '使用盟市专用模板手动导入鄂尔多斯学生证书编号',
+                '下载标准导入模板规范录入学生完整学籍信息',
+                '规范Excel表格粘贴方式，仅粘贴数值保留源格式',
+                '排查导入表格格式错误导致批量导入失败问题',
+                '9个业务答疑微信群实时响应各校管理员咨询',
+                '逐条解答学校学籍、制证全流程操作疑问',
+                '收集各校实操高频问题分类整理问题台账',
+                '每日定时巡检制证系统运行状态保障业务稳定',
+                '配合教育局完成毕业生数据迁移接口联调',
+                '向各校下发操作手册并组织线上培训'
+            ],
+            tue: [
+                '单独勾选指定学生单独制证，保留原有照片与证书号',
+                '重新上传学生照片覆盖原有错误证件照片',
+                '调整学生证件照片文件大小至50KB以内',
+                '将照片文件名修改为纯身份证号，大写X无空格',
+                '统一照片格式为jpg/png，损坏图片重新转换格式',
+                '学生照片打包无内层文件夹，生成zip压缩包上传',
+                '分班级分批次上传学生照片，分批排查上传异常',
+                '点击系统分配毕业证书号，解决证号参数为空报错',
+                '批量上传学生证件照片，处理照片核验失败问题',
+                '核对学籍系统户口所在地，完善省市县三级信息',
+                '修复户口所在地为空导致的核验失败报错',
+                '核对学籍出生年月，修正系统年龄计算异常数据',
+                '对接教育厅申请修改学籍入学、毕业年月信息',
+                '等待凌晨4点系统自动同步学籍更新数据',
+                '同步完成后重新导入数据读取更新后学生信息',
+                '修复身份证号校验不通过的学生信息'
+            ],
+            wed: [
+                '修改学籍系统补考学生毕业在校状态用于补制证书',
+                '联系属地教育局协助调整学籍毕业状态信息',
+                '筛选待制证学生批量发起制证任务覆盖旧证书',
+                '初中制证选择义务教育合格证，无需填写证书编号',
+                '制证人数过多导致连接拒绝，错峰重新发起制证',
+                '排查pdf无照片报错，重新修复并上传学生照片',
+                '查看制证流程流程图，跟进教育局审核流转进度',
+                '编辑学校信息修正6位以上合规区划编码',
+                '核对学生身份证号，解决证照主体代码校验失败',
+                '告知学生使用身份证号在蒙速办查询电子毕业证',
+                '引导用户在帮助中心下载系统操作手册',
+                '开启密文数据按钮查看正常证书号、户口信息',
+                '确认制证任务已全部进入待审核队列',
+                '处理制证系统超时重试任务'
+            ],
+            thu: [
+                '前往政务服务局重新制作更换学校公章、校长个人章',
+                '将政务局回执单印章信息维护至制证系统公章模块',
+                '系统维护印章名称去除回执单后缀标识',
+                '修改公章维护模块印章绑定对应负责人账号',
+                '规范公章尺寸42*42、个人签名章尺寸20*20',
+                '使用新版WPS/数科OFD打开证书解决单章显示问题',
+                '联系政务服务局处理失效、不存在的电子印章',
+                '新制印章名称与旧回执印章名称区分避免冲突',
+                '证照设置界面添加对应学段，匹配正确上级教育局',
+                '高中/中职绑定盟市教育局，初中绑定旗县教育局',
+                '完全中学同时添加初、高中两个学段主管单位',
+                '联系已提交教育局驳回错误单据重新选择审核机构',
+                '中职学校提交盖章修改申请表至盟市教育局汇总',
+                '自治区直属学校直接报送制证名称修改表至教育厅',
+                '协助上级审核部门完成首批证书抽查'
+            ],
+            fri: [
+                '对已签发证书执行批量注销操作撤回学生数据',
+                '批量注销后删除学生信息回退至待分配列表',
+                '未签发证书直接批量删除，撤回至待分配重新制证',
+                '休学学生无需制证直接删除待分配列表信息',
+                '签发完成后休学学生先注销证书再清理信息',
+                '制证完成后休学学生根据审核状态撤回数据',
+                '导入信息后休学学生数据留存无需额外处理',
+                '区分已办事项、待办事项流转操作权限',
+                '引导用户在个人中心自助修改手机号、登录密码',
+                '对接后台处理被禁用系统操作账号权限问题',
+                '汇总典型报错案例制作标准化答疑话术',
+                '整理验收所需一线日常业务工作记录台账',
+                '归档每日、每周学生咨询问题处理记录',
+                '梳理每周高频易错操作，制作业务办理提示',
+                '统一告知各校下周集中制证业务办理注意事项',
+                '对接多部门完成电子证照跨系统协同工作',
+                '完成本周业务数据备份与日志归档'
+            ]
+        };
+
+        // ===== 核心生成逻辑 =====
+        function getRandomItems(arr, count) {
+            const result = [];
+            const pool = [...arr];
+            for (let i = 0; i < count; i++) {
+                const idx = Math.floor(Math.random() * pool.length);
+                result.push(replaceWord(pool[idx]));
+            }
+            return result;
+        }
+
+        function genData() {
+            const dayKey = document.getElementById('weekDay').value;
+            const minVal = parseInt(document.getElementById('minNum').value) || 90;
+            const maxVal = parseInt(document.getElementById('maxNum').value) || 200;
+            const extraText = document.getElementById('addOther').value.trim();
+            const extraLines = extraText ? extraText.split('\n').filter(s => s.trim()) : [];
+
+            const totalCount = Math.floor(Math.random() * (maxVal - minVal + 1)) + minVal;
+            const baseList = baseLib[dayKey] || [];
+            const baseNeeded = Math.max(0, totalCount - extraLines.length);
+
+            const generated = getRandomItems(baseList, baseNeeded);
+            const allItems = [...generated, ...extraLines];
+            allItems.sort(() => Math.random() - 0.5);
+
+            const resultDiv = document.getElementById('result');
+            let html = '';
+            allItems.forEach((item, idx) => {
+                html += `<div class="result-item"><span class="num">${idx+1}</span>${item}</div>`;
+            });
+            resultDiv.innerHTML = html;
+            document.getElementById('countDisplay').textContent = `共 ${allItems.length} 条`;
+        }
+
+        // ===== 复制 & 清空 =====
+        function copyText() {
+            const resultDiv = document.getElementById('result');
+            const textItems = resultDiv.querySelectorAll('.result-item');
+            const lines = Array.from(textItems).map(el => el.textContent.trim());
+            const text = lines.join('\n');
+            if (!text) {
+                alert('暂无内容可复制，请先生成事件记录。');
+                return;
+            }
+            navigator.clipboard.writeText(text).then(() => {
+                alert('✅ 已复制全部记录，可直接粘贴到表格或文档。');
+            }).catch(() => {
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+                alert('✅ 已复制成功（兼容模式）。');
+            });
+        }
+
+        function clearRes() {
+            document.getElementById('result').innerHTML = '';
+            document.getElementById('countDisplay').textContent = '共 0 条';
+        }
+
+        //window.addEventListener('DOMContentLoaded', genData);
+    </script>
+
+</body>
+</html>
