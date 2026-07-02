@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>工作事件生成器 · 学籍制证业务版</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>毛玻璃 · 星云粒子 · 工作日事件生成器</title>
     <style>
+        /* ===== 全局重置 & 基础 ===== */
         * {
             margin: 0;
             padding: 0;
@@ -18,66 +19,104 @@
             justify-content: center;
             padding: 24px;
             font-family: "Microsoft YaHei", "PingFang SC", system-ui, -apple-system, sans-serif;
-            background: linear-gradient(145deg, #f6f9fc 0%, #e6f0f9 100%);
+            background: #0b0b1a;
+            overflow-x: hidden;
+            position: relative;
         }
 
+        /* ===== Canvas 星云粒子背景 ===== */
+        #nebula-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* ===== 毛玻璃主卡片 ===== */
         .main-card {
+            position: relative;
+            z-index: 1;
             width: 100%;
             max-width: 1300px;
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-radius: 40px;
-            padding: 36px 40px;
-            box-shadow: 0 20px 60px rgba(26, 67, 113, 0.15), 0 8px 24px rgba(0, 20, 50, 0.08);
-            border: 1px solid rgba(255, 255, 255, 0.5);
+            background: rgba(18, 20, 40, 0.55);
+            backdrop-filter: blur(24px) saturate(1.6);
+            -webkit-backdrop-filter: blur(24px) saturate(1.6);
+            border-radius: 48px;
+            padding: 36px 42px;
+            box-shadow:
+                0 30px 80px rgba(0, 0, 0, 0.7),
+                inset 0 1px 0 rgba(255, 255, 255, 0.08),
+                0 0 0 1px rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: box-shadow 0.4s ease;
         }
 
+        .main-card:hover {
+            box-shadow:
+                0 40px 100px rgba(0, 0, 0, 0.8),
+                inset 0 1px 0 rgba(255, 255, 255, 0.12),
+                0 0 0 1px rgba(255, 255, 255, 0.08);
+        }
+
+        /* ===== 头部 ===== */
         .header {
             display: flex;
             align-items: center;
             justify-content: space-between;
             flex-wrap: wrap;
-            margin-bottom: 24px;
-            border-bottom: 2px solid rgba(52, 102, 173, 0.1);
+            margin-bottom: 20px;
             padding-bottom: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         }
 
         .header h2 {
             font-size: 28px;
             font-weight: 700;
-            color: #1a3a6b;
+            color: #f0f4ff;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 14px;
+            text-shadow: 0 0 30px rgba(120, 80, 255, 0.15);
+            letter-spacing: 0.5px;
         }
 
         .header h2::before {
             content: "📋";
             font-size: 32px;
+            filter: drop-shadow(0 0 12px rgba(120, 80, 255, 0.3));
         }
 
         .header .badge {
-            background: #2a5f9e;
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
             color: #fff;
             font-size: 13px;
-            padding: 4px 16px;
-            border-radius: 20px;
-            font-weight: 500;
-            box-shadow: 0 2px 8px rgba(42, 95, 158, 0.3);
+            padding: 6px 22px;
+            border-radius: 30px;
+            font-weight: 600;
+            box-shadow: 0 4px 20px rgba(108, 92, 231, 0.35);
+            letter-spacing: 0.3px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
+        /* ===== 提示条 ===== */
         .tips {
-            color: #3a5a7a;
+            color: #c8d6e5;
             font-size: 14px;
-            background: rgba(42, 95, 158, 0.06);
-            padding: 10px 18px;
-            border-radius: 12px;
-            margin-bottom: 24px;
-            border-left: 4px solid #2a5f9e;
-            line-height: 1.6;
+            background: rgba(108, 92, 231, 0.10);
+            padding: 12px 20px;
+            border-radius: 16px;
+            margin-bottom: 26px;
+            border-left: 4px solid #6c5ce7;
+            line-height: 1.7;
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-left-width: 4px;
         }
 
+        /* ===== 行布局 ===== */
         .row {
             display: flex;
             gap: 28px;
@@ -86,136 +125,215 @@
 
         .col {
             flex: 1;
-            min-width: 260px;
+            min-width: 240px;
         }
 
         .col label {
             display: block;
             font-weight: 600;
-            color: #1a3a6b;
-            margin: 12px 0 6px;
+            color: #e8eeff;
+            margin: 14px 0 6px;
             font-size: 15px;
+            letter-spacing: 0.3px;
+            text-shadow: 0 0 20px rgba(108, 92, 231, 0.08);
         }
 
-        /* 通用输入框样式 */
+        /* ===== 毛玻璃输入控件 ===== */
         .col select,
-        .col input[type="number"] {
+        .col input[type="number"],
+        .col input[type="date"] {
             width: 100%;
-            padding: 10px 14px;
-            border: 1.5px solid #d0dce8;
-            border-radius: 12px;
+            padding: 11px 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
             font-size: 15px;
-            background: #ffffff;
-            transition: border-color 0.2s, box-shadow 0.2s;
+            background: rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            color: #f0f4ff;
             outline: none;
-            color: #1a2a3a;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.2);
+            font-family: inherit;
+        }
+
+        .col select option {
+            background: #1a1a3a;
+            color: #f0f4ff;
         }
 
         .col select:focus,
-        .col input[type="number"]:focus {
-            border-color: #2a5f9e;
-            box-shadow: 0 0 0 3px rgba(42, 95, 158, 0.15);
+        .col input[type="number"]:focus,
+        .col input[type="date"]:focus {
+            border-color: rgba(108, 92, 231, 0.5);
+            background: rgba(255, 255, 255, 0.07);
+            box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.12), inset 0 2px 8px rgba(0, 0, 0, 0.2);
         }
 
-        /* ===== 重点修复：让两个数字框变短 ===== */
+        .col select:hover,
+        .col input[type="number"]:hover,
+        .col input[type="date"]:hover {
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+
+/* ===== 日期输入框：自定义白色日历图标，且保留点击弹出功能 ===== */
+.glass-input[type="date"] {
+    color-scheme: dark;
+    color: #f0f4ff;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='16' y1='2' x2='16' y2='6'%3E%3C/line%3E%3Cline x1='8' y1='2' x2='8' y2='6'%3E%3C/line%3E%3Cline x1='3' y1='10' x2='21' y2='10'%3E%3C/line%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 18px 18px;
+    padding-right: 40px;
+    position: relative;
+}
+
+/* 原生日历指示器：完全透明但保持可点击，且覆盖整个输入框 */
+.glass-input[type="date"]::-webkit-calendar-picker-indicator {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    background: none;
+    color: transparent;
+    /* 确保点击区域覆盖整个输入框 */
+    z-index: 2;
+}
+
+/* 为了让背景图标不被指示器遮挡，确保指示器是透明的 */
+.glass-input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    background: none;
+}
+        /* ===== 数字范围 ===== */
         .range-wrap {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             margin: 6px 0;
         }
 
-        /* 使用 !important 强制覆盖全局的 width:100% */
         .range-wrap input[type="number"] {
             width: 90px !important;
             flex-shrink: 0;
             text-align: center;
-            padding: 10px 6px;  /* 左右内边距减小，更紧凑 */
+            padding: 11px 4px;
         }
 
         .range-wrap span {
-            color: #3a5a7a;
+            color: #a8b8d0;
             font-weight: 500;
             font-size: 16px;
+            text-shadow: 0 0 12px rgba(108, 92, 231, 0.1);
         }
 
+        /* ===== 毛玻璃按钮 ===== */
         .btn-group {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
-            margin: 16px 0 8px;
+            gap: 12px;
+            margin: 18px 0 8px;
         }
 
         .btn {
-            padding: 10px 24px;
+            padding: 11px 28px;
             border: none;
             border-radius: 30px;
             font-size: 15px;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.25s ease;
-            background: #2a5f9e;
-            color: #fff;
-            box-shadow: 0 4px 12px rgba(42, 95, 158, 0.25);
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            font-family: inherit;
+            letter-spacing: 0.3px;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
         }
 
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(42, 95, 158, 0.35);
+        .btn-primary {
+            background: linear-gradient(135deg, #6c5ce7, #a29bfe);
+            color: #fff;
+            box-shadow: 0 6px 28px rgba(108, 92, 231, 0.35);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .btn:active {
+        .btn-primary:hover {
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 12px 40px rgba(108, 92, 231, 0.5);
+        }
+
+        .btn-primary:active {
             transform: scale(0.96);
         }
 
         .btn-secondary {
-            background: #e8edf4;
-            color: #1a3a6b;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            background: rgba(255, 255, 255, 0.06);
+            color: #d0d8ec;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            backdrop-filter: blur(4px);
         }
 
         .btn-secondary:hover {
-            background: #d5dde8;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
         }
 
         .btn-danger {
-            background: #d45c5c;
-            box-shadow: 0 4px 12px rgba(212, 92, 92, 0.25);
+            background: rgba(214, 87, 87, 0.2);
+            color: #ff8a8a;
+            box-shadow: 0 2px 12px rgba(214, 87, 87, 0.1);
+            border: 1px solid rgba(214, 87, 87, 0.15);
+            backdrop-filter: blur(4px);
         }
 
         .btn-danger:hover {
-            background: #c04a4a;
-            box-shadow: 0 8px 20px rgba(212, 92, 92, 0.35);
+            background: rgba(214, 87, 87, 0.3);
+            color: #ffb0b0;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(214, 87, 87, 0.2);
         }
 
+        /* ===== 文本域 ===== */
         .textarea-wrap textarea {
             width: 100%;
             height: 160px;
-            padding: 12px 16px;
-            border: 1.5px solid #d0dce8;
-            border-radius: 12px;
+            padding: 14px 18px;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 16px;
             font-size: 14px;
             resize: vertical;
             font-family: inherit;
-            background: #ffffff;
-            transition: border-color 0.2s, box-shadow 0.2s;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            color: #e0e8f5;
+            transition: all 0.3s ease;
             outline: none;
-            color: #1a2a3a;
-            line-height: 1.6;
+            line-height: 1.7;
+            box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.15);
         }
 
         .textarea-wrap textarea:focus {
-            border-color: #2a5f9e;
-            box-shadow: 0 0 0 3px rgba(42, 95, 158, 0.12);
+            border-color: rgba(108, 92, 231, 0.4);
+            background: rgba(255, 255, 255, 0.06);
+            box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.08), inset 0 2px 12px rgba(0, 0, 0, 0.15);
         }
 
+        .textarea-wrap textarea::placeholder {
+            color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* ===== 结果区 ===== */
         .result-area {
             margin-top: 28px;
-            border-top: 2px solid rgba(42, 95, 158, 0.08);
+            border-top: 1px solid rgba(255, 255, 255, 0.04);
             padding-top: 20px;
         }
 
@@ -224,112 +342,211 @@
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            margin-bottom: 12px;
+            margin-bottom: 14px;
+        }
+
+        .result-header .label {
+            font-weight: 600;
+            color: #e8eeff;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-shadow: 0 0 20px rgba(108, 92, 231, 0.08);
         }
 
         .result-header .count {
             font-size: 14px;
-            color: #3a5a7a;
-            background: rgba(42, 95, 158, 0.06);
-            padding: 4px 16px;
-            border-radius: 20px;
+            color: #a8b8d0;
+            background: rgba(255, 255, 255, 0.04);
+            padding: 4px 18px;
+            border-radius: 30px;
             font-weight: 500;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            backdrop-filter: blur(4px);
         }
 
+        /* ===== 结果列表 ===== */
         #result {
             width: 100%;
             height: 420px;
-            padding: 16px 20px;
-            border: 1.5px solid #e2eaf2;
-            border-radius: 16px;
+            padding: 16px 22px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            border-radius: 18px;
             overflow-y: auto;
-            background: #fafcff;
+            background: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
             font-size: 14px;
-            line-height: 1.9;
-            color: #1a2a3a;
+            line-height: 2;
+            color: #d8e2f5;
+            box-shadow: inset 0 4px 24px rgba(0, 0, 0, 0.2);
+            transition: border-color 0.3s ease;
+            white-space: pre-wrap;
+        }
+
+        #result:hover {
+            border-color: rgba(255, 255, 255, 0.08);
         }
 
         #result::-webkit-scrollbar {
-            width: 6px;
+            width: 5px;
         }
 
         #result::-webkit-scrollbar-track {
-            background: #eef3f8;
+            background: rgba(255, 255, 255, 0.02);
             border-radius: 10px;
         }
 
         #result::-webkit-scrollbar-thumb {
-            background: #b0c8dd;
+            background: rgba(108, 92, 231, 0.3);
             border-radius: 10px;
         }
 
         #result::-webkit-scrollbar-thumb:hover {
-            background: #8aaccc;
+            background: rgba(108, 92, 231, 0.5);
         }
 
-        .result-item {
-            padding: 2px 0;
-            border-bottom: 1px solid rgba(0, 0, 0, 0.02);
-        }
-
-        .result-item .num {
-            display: inline-block;
-            width: 32px;
-            color: #7a9abb;
-            font-weight: 500;
-            font-size: 13px;
-        }
-
-        @media (max-width: 640px) {
+        /* ===== 响应式 ===== */
+        @media (max-width: 740px) {
             .main-card {
-                padding: 20px;
-                border-radius: 28px;
+                padding: 20px 18px;
+                border-radius: 32px;
             }
             .header h2 {
-                font-size: 22px;
+                font-size: 20px;
+            }
+            .header h2::before {
+                font-size: 24px;
             }
             .btn {
-                padding: 8px 18px;
-                font-size: 14px;
+                padding: 9px 18px;
+                font-size: 13px;
             }
             .range-wrap input[type="number"] {
-                width: 70px !important;
+                width: 68px !important;
+            }
+            .col {
+                min-width: 180px;
+            }
+            .row {
+                gap: 16px;
+            }
+            #result {
+                height: 300px;
+                padding: 12px 14px;
+                font-size: 13px;
+                line-height: 1.8;
+            }
+            .tips {
+                font-size: 13px;
+                padding: 10px 14px;
+            }
+            .header .badge {
+                font-size: 11px;
+                padding: 4px 14px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 12px;
+            }
+            .main-card {
+                padding: 16px 12px;
+                border-radius: 24px;
+            }
+            .header h2 {
+                font-size: 17px;
+                gap: 8px;
+            }
+            .header h2::before {
+                font-size: 20px;
+            }
+            .btn-group {
+                gap: 8px;
+            }
+            .btn {
+                padding: 8px 14px;
+                font-size: 12px;
+            }
+            .col select,
+            .col input[type="number"],
+            .col input[type="date"] {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+            .range-wrap input[type="number"] {
+                width: 56px !important;
+                padding: 8px 2px;
+            }
+            #result {
+                height: 240px;
+                padding: 10px 12px;
+                font-size: 12px;
+                line-height: 1.7;
+            }
+            .tips {
+                font-size: 12px;
+                padding: 8px 12px;
+                margin-bottom: 16px;
+            }
+            .result-header .label {
+                font-size: 14px;
+            }
+            .result-header .count {
+                font-size: 12px;
+                padding: 2px 12px;
+            }
+            .textarea-wrap textarea {
+                height: 120px;
+                font-size: 13px;
+                padding: 10px 12px;
+            }
+            .col label {
+                font-size: 13px;
+                margin: 10px 0 4px;
             }
         }
     </style>
 </head>
 <body>
 
+    <!-- ===== Canvas 星云粒子 ===== -->
+    <canvas id="nebula-canvas"></canvas>
+
+    <!-- ===== 主卡片 ===== -->
     <div class="main-card">
+
         <!-- 头部 -->
         <div class="header">
             <h2>工作日事件记录生成器</h2>
-            
+            <span class="badge">✦ 星云 · 毛玻璃</span>
         </div>
 
-       
+        
 
         <!-- 操作区 -->
         <div class="row">
             <div class="col">
-                <label for="weekDay">📅 选择工作日</label>
-                <select id="weekDay">
-                    <option value="mon">周一 </option>
-                    <option value="tue">周二 </option>
-                    <option value="wed">周三 </option>
-                    <option value="thu">周四 </option>
-                    <option value="fri">周五 </option>
+                <label for="genMode">📌 生成模式</label>
+                <select id="genMode">
+                    <option value="simple">仅生成运维事件（单行纯文本）</option>
+                    <option value="table">完整台账（多字段表格）</option>
                 </select>
+
+                <label for="selDate">📅 选择业务日期</label>
+                <input type="date" id="selDate" class="glass-input" />
 
                 <label>📊 生成条数范围</label>
                 <div class="range-wrap">
-                    <input type="number" id="minNum" value="90" min="30">
+                    <input type="number" id="minNum" value="90" min="30" />
                     <span>～</span>
-                    <input type="number" id="maxNum" value="200" min="50">
+                    <input type="number" id="maxNum" value="200" min="50" />
                 </div>
 
                 <div class="btn-group">
-                    <button class="btn" onclick="genData()">✨ 一键生成</button>
+                    <button class="btn btn-primary" onclick="genData()">✨ 一键生成</button>
                     <button class="btn btn-secondary" onclick="copyText()">📋 复制全部</button>
                     <button class="btn btn-danger" onclick="clearRes()">🗑️ 清空</button>
                 </div>
@@ -344,7 +561,7 @@
         <!-- 结果区 -->
         <div class="result-area">
             <div class="result-header">
-                <span style="font-weight:600; color:#1a3a6b;">📄 生成记录</span>
+                <span class="label">📄 生成结果</span>
                 <span class="count" id="countDisplay">共 0 条</span>
             </div>
             <div id="result"></div>
@@ -352,40 +569,162 @@
     </div>
 
     <script>
-        // ===== 换词词库 =====
-        const wordMap = {
-            '处理': ['处置', '协调', '跟进', '落实', '办理'],
-            '核对': ['校验', '核查', '比对', '查实', '校对'],
-            '整理': ['汇总', '归集', '梳理', '统计', '编排'],
-            '排查': ['检查', '查验', '检修', '定位', '筛查'],
-            '维护': ['值守', '保障', '维持', '运维', '看管'],
-            '解答': ['回复', '回应', '解惑', '说明', '讲解'],
-            '指导': ['指引', '告知', '教导', '提示', '建议'],
-            '上传': ['提交', '报送', '录入', '导入', '传输'],
-            '修改': ['调整', '更正', '修订', '更新', '改写'],
-            '同步': ['刷新', '更新', '匹配', '统一'],
-            '筛选': ['过滤', '挑选', '提取', '甄别'],
-            '对接': ['联络', '沟通', '协调', '配合'],
-            '确认': ['核实', '验证', '确保', '认定'],
-            '设置': ['配置', '设定', '调整', '定义'],
-            '生成': ['创建', '制作', '产出', '生成'],
-            '删除': ['移除', '清理', '注销', '撤销']
-        };
+        // ================================================================
+        //  1. 星云粒子引擎 (Canvas)
+        // ================================================================
+        (function initNebula() {
+            const canvas = document.getElementById('nebula-canvas');
+            const ctx = canvas.getContext('2d');
+            let width, height;
+            let particles = [];
+            const PARTICLE_COUNT = 320;
+            const CONNECTION_DIST = 120;
 
-        function replaceWord(sentence) {
-            let result = sentence;
-            for (let key in wordMap) {
-                if (result.includes(key)) {
-                    const options = wordMap[key];
-                    const replacement = options[Math.floor(Math.random() * options.length)];
-                    result = result.replace(key, replacement);
-                    break;
+            function resize() {
+                width = window.innerWidth;
+                height = window.innerHeight;
+                canvas.width = width;
+                canvas.height = height;
+            }
+            window.addEventListener('resize', resize);
+            resize();
+
+            class Particle {
+                constructor() {
+                    this.reset(true);
+                }
+                reset(init = false) {
+                    this.x = Math.random() * width;
+                    this.y = Math.random() * height;
+                    this.size = Math.random() * 3.2 + 1.0;
+                    this.vx = (Math.random() - 0.5) * 0.22;
+                    this.vy = (Math.random() - 0.5) * 0.22;
+                    const hue = 220 + Math.random() * 70;
+                    const sat = 60 + Math.random() * 35;
+                    const lig = 50 + Math.random() * 30;
+                    this.color = `hsla(${hue}, ${sat}%, ${lig}%, 0.7)`;
+                    this.glowColor = `hsla(${hue}, ${sat + 10}%, ${lig + 20}%, 0.18)`;
+                    this.phase = Math.random() * Math.PI * 2;
+                    this.phaseSpeed = 0.002 + Math.random() * 0.006;
+                    this.isCore = Math.random() < 0.08;
+                    if (this.isCore) {
+                        this.size = 6 + Math.random() * 10;
+                        this.glowColor = `hsla(${hue}, ${sat + 10}%, ${lig + 30}%, 0.25)`;
+                    }
+                }
+                update() {
+                    this.x += this.vx + Math.sin(this.phase) * 0.04;
+                    this.y += this.vy + Math.cos(this.phase * 0.7) * 0.04;
+                    this.phase += this.phaseSpeed;
+                    if (this.x < -20) this.x = width + 20;
+                    if (this.x > width + 20) this.x = -20;
+                    if (this.y < -20) this.y = height + 20;
+                    if (this.y > height + 20) this.y = -20;
+                }
+                draw() {
+                    if (this.isCore) {
+                        const grad = ctx.createRadialGradient(this.x, this.y, 0, this.x, this.y, this.size * 3);
+                        grad.addColorStop(0, this.glowColor);
+                        grad.addColorStop(1, 'transparent');
+                        ctx.fillStyle = grad;
+                        ctx.beginPath();
+                        ctx.arc(this.x, this.y, this.size * 3, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.shadowColor = this.glowColor;
+                    ctx.shadowBlur = this.isCore ? 28 : 14;
+                    ctx.fillStyle = this.color;
+                    ctx.beginPath();
+                    ctx.arc(this.x, this.y, this.size * (0.7 + 0.3 * Math.sin(this.phase * 0.5)), 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                    if (this.size > 2.5) {
+                        ctx.fillStyle = 'rgba(255,255,255,0.15)';
+                        ctx.beginPath();
+                        ctx.arc(this.x - this.size * 0.2, this.y - this.size * 0.2, this.size * 0.25, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
                 }
             }
-            return result;
-        }
 
-        // ===== 按工作日的业务短句库 =====
+            for (let i = 0; i < PARTICLE_COUNT; i++) {
+                particles.push(new Particle());
+            }
+
+            function drawConnections() {
+                for (let i = 0; i < particles.length; i++) {
+                    for (let j = i + 1; j < particles.length; j++) {
+                        const a = particles[i];
+                        const b = particles[j];
+                        const dx = a.x - b.x;
+                        const dy = a.y - b.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < CONNECTION_DIST && dist > 0) {
+                            const alpha = (1 - dist / CONNECTION_DIST) * 0.12;
+                            ctx.strokeStyle = `rgba(162, 155, 254, ${alpha})`;
+                            ctx.lineWidth = 0.6;
+                            ctx.beginPath();
+                            ctx.moveTo(a.x, a.y);
+                            ctx.lineTo(b.x, b.y);
+                            ctx.stroke();
+                        }
+                    }
+                }
+            }
+
+            function drawNebulaGlow() {
+                const glows = [
+                    { x: width * 0.15, y: height * 0.2, r: 320, c: 'rgba(108,92,231,0.04)' },
+                    { x: width * 0.85, y: height * 0.7, r: 400, c: 'rgba(162,155,254,0.04)' },
+                    { x: width * 0.5, y: height * 0.5, r: 500, c: 'rgba(0,206,201,0.02)' },
+                    { x: width * 0.75, y: height * 0.15, r: 280, c: 'rgba(214,87,87,0.02)' },
+                ];
+                for (const g of glows) {
+                    const grad = ctx.createRadialGradient(g.x, g.y, 0, g.x, g.y, g.r);
+                    grad.addColorStop(0, g.c);
+                    grad.addColorStop(1, 'transparent');
+                    ctx.fillStyle = grad;
+                    ctx.beginPath();
+                    ctx.arc(g.x, g.y, g.r, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            function animate() {
+                ctx.clearRect(0, 0, width, height);
+                const bgGrad = ctx.createRadialGradient(
+                    width * 0.5, height * 0.4, 0,
+                    width * 0.5, height * 0.4, Math.max(width, height) * 0.8
+                );
+                bgGrad.addColorStop(0, '#14142e');
+                bgGrad.addColorStop(0.5, '#0d0d24');
+                bgGrad.addColorStop(1, '#08081a');
+                ctx.fillStyle = bgGrad;
+                ctx.fillRect(0, 0, width, height);
+                drawNebulaGlow();
+                for (const p of particles) {
+                    p.update();
+                    p.draw();
+                }
+                drawConnections();
+                requestAnimationFrame(animate);
+            }
+            animate();
+            window.addEventListener('resize', () => {
+                resize();
+                for (const p of particles) {
+                    p.x = Math.min(Math.max(p.x, 0), width);
+                    p.y = Math.min(Math.max(p.y, 0), height);
+                }
+            });
+        })();
+
+
+        // ================================================================
+        //  2. 业务逻辑
+        // ================================================================
+        const handlerList = ["于思雨","李浩翔","乔鹏飞","雷晓芳","刘树清","宋志英","思雨","刘国霞","薛涛","石佳霖"];
+        const fixedAnalysis = "日常运维";
         const baseLib = {
             mon: [
                 '在待分配列表按班级筛选本年度毕业生信息',
@@ -478,58 +817,117 @@
             ]
         };
 
-        // ===== 核心生成逻辑 =====
-        function getRandomItems(arr, count) {
+        const wordMap = {
+            '处理': ['处置', '协调', '跟进', '落实', '办理'],
+            '核对': ['校验', '核查', '比对', '查实', '校对'],
+            '整理': ['汇总', '归集', '梳理', '统计', '编排'],
+            '排查': ['检查', '查验', '检修', '定位', '筛查'],
+            '维护': ['值守', '保障', '维持', '运维', '看管'],
+            '解答': ['回复', '回应', '解惑', '说明', '讲解'],
+            '指导': ['指引', '告知', '教导', '提示', '建议'],
+            '上传': ['提交', '报送', '录入', '导入', '传输'],
+            '修改': ['调整', '更正', '修订', '更新', '改写'],
+            '同步': ['刷新', '更新', '匹配', '统一'],
+            '筛选': ['过滤', '挑选', '提取', '甄别'],
+            '对接': ['联络', '沟通', '协调', '配合'],
+            '确认': ['核实', '验证', '确保', '认定'],
+            '设置': ['配置', '设定', '调整', '定义'],
+            '生成': ['创建', '制作', '产出', '生成'],
+            '删除': ['移除', '清理', '注销', '撤销']
+        };
+
+        function replaceWord(sentence) {
+            let result = sentence;
+            for (let key in wordMap) {
+                if (result.includes(key)) {
+                    const options = wordMap[key];
+                    const replacement = options[Math.floor(Math.random() * options.length)];
+                    result = result.replace(key, replacement);
+                    break;
+                }
+            }
+            return result;
+        }
+
+        function getWeekKey(dateStr) {
+            const d = new Date(dateStr);
+            const week = d.getDay();
+            const map = {1:'mon',2:'tue',3:'wed',4:'thu',5:'fri'};
+            return map[week] || 'mon';
+        }
+
+        function getRandomHandler() {
+            return handlerList[Math.floor(Math.random() * handlerList.length)];
+        }
+
+        // 单行纯运维模式
+        function buildSimpleLine(desc) {
+            return desc;
+        }
+        // 多字段表格模式（制表符分割）
+        function buildTableLine(desc, date) {
+            const handler = getRandomHandler();
+            const solved = "是";
+            const dept = "教育厅";
+            return `${desc}\t${fixedAnalysis}\t${solved}\t教育厅\t${dept}\t${date}\t${handler}\t${date}\t${date}`;
+        }
+
+        function getRandomItems(arr, count, date, mode) {
             const result = [];
             const pool = [...arr];
             for (let i = 0; i < count; i++) {
                 const idx = Math.floor(Math.random() * pool.length);
-                result.push(replaceWord(pool[idx]));
+                const desc = replaceWord(pool[idx]);
+                if(mode === 'simple'){
+                    result.push(buildSimpleLine(desc));
+                }else{
+                    result.push(buildTableLine(desc, date));
+                }
             }
             return result;
         }
 
         function genData() {
-            const dayKey = document.getElementById('weekDay').value;
+            const dateVal = document.getElementById('selDate').value;
+            const mode = document.getElementById('genMode').value;
+            if (!dateVal) {
+                alert("请先选择业务日期！");
+                return;
+            }
+            const dayKey = getWeekKey(dateVal);
             const minVal = parseInt(document.getElementById('minNum').value) || 90;
             const maxVal = parseInt(document.getElementById('maxNum').value) || 200;
             const extraText = document.getElementById('addOther').value.trim();
             const extraLines = extraText ? extraText.split('\n').filter(s => s.trim()) : [];
 
             const totalCount = Math.floor(Math.random() * (maxVal - minVal + 1)) + minVal;
-            const baseList = baseLib[dayKey] || [];
+            const baseList = baseLib[dayKey] || baseLib['mon'];
             const baseNeeded = Math.max(0, totalCount - extraLines.length);
 
-            const generated = getRandomItems(baseList, baseNeeded);
-            const allItems = [...generated, ...extraLines];
+            const generated = getRandomItems(baseList, baseNeeded, dateVal, mode);
+            const extraRows = extraLines.map(txt => {
+                if(mode === 'simple') return buildSimpleLine(txt);
+                return buildTableLine(txt, dateVal);
+            });
+            const allItems = [...generated, ...extraRows];
             allItems.sort(() => Math.random() - 0.5);
 
+            // 复制不加表头，输出只纯数据行
+            const fullText = allItems.join("\n");
             const resultDiv = document.getElementById('result');
-            let html = '';
-            allItems.forEach((item, idx) => {
-                html += `<div class="result-item"><span class="num">${idx+1}</span>${item}</div>`;
-            });
-            resultDiv.innerHTML = html;
+            resultDiv.textContent = fullText;
             document.getElementById('countDisplay').textContent = `共 ${allItems.length} 条`;
         }
 
-        // ===== 复制 & 清空 =====
         function copyText() {
             const resultDiv = document.getElementById('result');
-            const items = resultDiv.querySelectorAll('.result-item');
-            const lines = [];
-            items.forEach(el => {
-                // 只取文字内容，排除 .num 序号标签
-                const text = el.childNodes[1].textContent.trim();
-                lines.push(text);
-            });
-            const text = lines.join('\n');
+            const text = resultDiv.textContent.trim();
             if (!text) {
-                alert('暂无内容可复制，请先生成事件记录。');
+                alert('暂无记录，请先生成内容。');
                 return;
             }
             navigator.clipboard.writeText(text).then(() => {
-                alert('✅ 已复制全部记录，可直接粘贴到表格或文档。');
+               
             }).catch(() => {
                 const ta = document.createElement('textarea');
                 ta.value = text;
@@ -537,16 +935,21 @@
                 ta.select();
                 document.execCommand('copy');
                 document.body.removeChild(ta);
-                alert('✅ 已复制成功（兼容模式）。');
+                
             });
         }
 
         function clearRes() {
-            document.getElementById('result').innerHTML = '';
+            document.getElementById('result').textContent = '';
             document.getElementById('countDisplay').textContent = '共 0 条';
         }
 
-        //window.addEventListener('DOMContentLoaded', genData);
+        // 页面加载：不填充日期、不自动生成
+        window.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('selDate').value = "";
+            document.getElementById('result').textContent = "";
+            document.getElementById('countDisplay').textContent = "共 0 条";
+        });
     </script>
 
 </body>
